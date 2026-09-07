@@ -5,12 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>💣 数字炸弹 · 完整版</title>
 <style>
-/* ==================== 全局变量与基础样式 ==================== */
-:root {
-  --neon:#00f0ff;
-  --blue:#4da6ff;
-  --red:#ff6b6b;
-}
+:root { --neon:#00f0ff; --blue:#4da6ff; --red:#ff6b6b; }
 * { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent; }
 html, body { height:100%; width:100%; overflow:hidden; position:fixed; inset:0; background:#05000a; color:#fff; font-family:system-ui,sans-serif; }
 body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
@@ -120,7 +115,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
 .chat-notif-header { display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; color:var(--neon); font-weight:700; }
 .chat-notif-close { background:none; border:none; color:#aaa; cursor:pointer; font-size:0.8rem; }
 .chat-notif-body { font-size:0.8rem; color:#ddd; margin-top:6px; word-break:break-word; }
-/* 名称编辑覆盖层 */
 #name-edit-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.9); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:3300; padding:20px; }
 #name-edit-overlay.active { display:flex; }
 .name-edit-input { width:200px; padding:10px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:10px; color:#fff; font-size:1rem; text-align:center; outline:none; margin:10px 0; }
@@ -555,13 +549,11 @@ const Privacy = {
 };
 privacyScreen.addEventListener('click', function(e){ Privacy._handleClick(e); });
 
-/* 私密信息显示：本地模式用隐私遮罩，远程模式只显示给自己 */
 function showPrivateInfo(userName, skillName, infoText){
   if(Privacy.isLocal()){
     messageDisplay.textContent=userName+' 使用了 '+skillName;
     Privacy.reveal(getCurrentPlayer().name, skillName+' 的结果', infoText, null);
   } else {
-    /* 远程模式：公共消息只显示技能名，结果通过toast只显示给自己 */
     messageDisplay.textContent=userName+' 使用了 '+skillName;
     showCheatToast(skillName+' 结果：'+infoText);
   }
@@ -735,7 +727,6 @@ function showBattleArea(){
   if(G.mode.includes('remote') && G.conn && G.conn.open) chatToggleBtn.style.display='inline-block';
 }
 
-/* 名称编辑功能 */
 let nameEditTarget = null;
 function openNameEditor(playerId) {
   nameEditTarget = playerId;
@@ -759,7 +750,6 @@ $('name-edit-confirm').addEventListener('click', function() {
   closeNameEditor();
 });
 $('name-edit-cancel').addEventListener('click', closeNameEditor);
-/* 点击名称标签编辑名称 */
 opponentName.addEventListener('click', function() {
   if (G.mode.includes('local') || (G.mode.includes('remote') && G.isHost)) {
     openNameEditor(getMyOpponent().id);
@@ -822,17 +812,10 @@ function endGame(){
   Privacy.hide();
   if(G.skillTimer){ clearInterval(G.skillTimer); G.skillTimer=null; }
   clearHostTimeout(); clearAiTimeouts();
-  if(Privacy.isLocal()){
-    const p1=getPlayer('p1'), p2=getPlayer('p2');
-    if(p1.hp<=0&&p2.hp<=0) messageDisplay.textContent='🤝 平局！';
-    else if(p1.hp<=0) messageDisplay.textContent='🎉 '+p2.name+' 获胜！';
-    else messageDisplay.textContent='🎉 '+p1.name+' 获胜！';
-  } else {
-    const me=getMyPlayer(), opp=getMyOpponent();
-    if(me.hp<=0&&opp.hp<=0) messageDisplay.textContent='🤝 平局！';
-    else if(me.hp<=0) messageDisplay.textContent='😵 我输了...';
-    else messageDisplay.textContent='🎉 我赢了！';
-  }
+  const p1=getPlayer('p1'), p2=getPlayer('p2');
+  if(p1.hp<=0&&p2.hp<=0) messageDisplay.textContent='🤝 平局！';
+  else if(p1.hp<=0) messageDisplay.textContent='🎉 '+p2.name+' 获胜！';
+  else messageDisplay.textContent='🎉 '+p1.name+' 获胜！';
   setKeypadEnabled(false);
   surrenderBtn.style.display='none';
   gameOverBtn.style.display='block';
