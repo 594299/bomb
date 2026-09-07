@@ -63,7 +63,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
 .shake { animation:shakeAnim 0.5s both; }
 @keyframes shakeAnim { 0%,100%{transform:translate(0,0);} 20%{transform:translate(-8px,6px);} 40%{transform:translate(7px,-5px);} 60%{transform:translate(-5px,-4px);} 80%{transform:translate(5px,4px);} }
 #remote-cheat-btn { padding:4px 8px; border:1.5px solid rgba(255,255,255,0.2); border-radius:8px; background:rgba(0,0,0,0.4); color:#666; font-size:0.75rem; font-weight:700; cursor:pointer; margin-right:8px; display:none; }
-#remote-cheat-btn.active { color:#00ff88; border-color:#00ff88; background:rgba(0,255,136,0.1); }
+#remote-cheat-btn.active { color:#00ff88; border-color:#00ff88; background:rgba(0,255,166,0.1); }
 #cheat-toast { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.85); padding:10px 20px; border-radius:10px; font-size:0.9rem; font-weight:700; z-index:3000; opacity:0; transition:opacity 0.3s; pointer-events:none; }
 #cheat-toast.show { opacity:1; }
 #surrender-btn { padding:6px 12px; border:1px solid rgba(255,80,80,0.4); border-radius:15px; background:rgba(255,50,50,0.08); color:#ff6666; font-size:0.65rem; font-weight:700; cursor:pointer; margin-top:4px; display:none; }
@@ -85,7 +85,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
 #rematch-btn { border:2px solid #ff8800; background:rgba(255,136,0,0.1); color:#ff8800; }
 #skill-timer { font-size:2rem; font-weight:900; color:var(--neon); margin:10px 0; }
 #opponent-area.rotated { transform:rotate(180deg); }
-/* [PRIVACY] 隐私遮罩 */
 #privacy-screen { position:absolute; inset:0; background:rgba(0,0,0,0.98); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:2500; padding:20px; cursor:pointer; text-align:center; }
 #privacy-screen.active { display:flex; }
 #privacy-screen.revealed .privacy-handoff { display:none; }
@@ -96,6 +95,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
 .privacy-hide-btn { padding:10px 24px; border:1px solid rgba(255,255,255,0.3); border-radius:20px; background:rgba(255,255,255,0.05); color:#aaa; font-size:0.8rem; cursor:pointer; margin-top:16px; }
 .privacy-result { font-size:1.2rem; color:var(--neon); font-weight:700; margin:10px 0; line-height:1.5; }
 .privacy-label { font-size:0.8rem; color:#888; }
+#conn-status { font-size:0.65rem; color:#888; margin-top:8px; }
 </style>
 </head>
 <body>
@@ -107,13 +107,11 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
       <div id="room-info">未连接</div>
     </div>
   </div>
-
   <div id="main-menu" class="overlay">
     <div class="overlay-title">选择模式</div>
     <button class="btn" id="normal-mode-btn">🎮 普通模式</button>
     <button class="btn secondary" id="skill-mode-btn">⚡ 技能模式</button>
   </div>
-
   <div id="normal-submenu" class="overlay hidden">
     <div class="overlay-title">普通模式</div>
     <button class="btn" id="normal-local-btn">📱 本地双人</button>
@@ -121,7 +119,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <button class="btn" id="normal-remote-btn">🌐 远程对战</button>
     <button class="btn secondary" id="normal-back-btn">返回</button>
   </div>
-
   <div id="skill-submenu" class="overlay hidden">
     <div class="overlay-title">技能模式</div>
     <button class="btn" id="skill-local-btn">📱 本地双人</button>
@@ -129,7 +126,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <button class="btn" id="skill-remote-btn">🌐 远程对战</button>
     <button class="btn secondary" id="skill-back-btn">返回</button>
   </div>
-
   <div id="setup-overlay" class="overlay hidden">
     <div class="overlay-title">⚙️ 游戏设置</div>
     <div class="setting-row">
@@ -148,7 +144,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <button class="btn" id="start-game-btn">开始游戏</button>
     <button class="btn secondary" id="back-menu-btn1">返回</button>
   </div>
-
   <div id="remote-lobby" class="overlay hidden">
     <div class="overlay-title">远程对战</div>
     <button class="btn" id="create-room-btn">创建房间</button>
@@ -156,9 +151,9 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <input type="text" class="room-input" id="join-room-input" placeholder="房间码" maxlength="6">
     <button class="btn" id="join-room-btn">加入房间</button>
     <div id="lobby-message" style="margin-top:15px;color:#ff6666;font-size:0.8rem;"></div>
+    <div id="conn-status"></div>
     <button class="btn secondary" id="back-menu-btn2">返回</button>
   </div>
-
   <div id="remote-waiting" class="overlay hidden">
     <div class="overlay-title">房间码</div>
     <div class="room-display" id="waiting-room-code">------</div>
@@ -166,7 +161,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <button class="btn" id="cancel-waiting-btn">取消</button>
     <button class="btn small" id="copy-link-btn" style="display:none;">📋 复制邀请链接</button>
   </div>
-
   <div id="remote-setup-overlay" class="overlay hidden">
     <div class="overlay-title">⚙️ 远程游戏设置</div>
     <div class="setting-row">
@@ -178,7 +172,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     </div>
     <button class="btn" id="remote-start-btn">开始游戏</button>
   </div>
-
   <div id="battle-area">
     <div class="player-area" id="opponent-area">
       <div class="highlight" id="opponent-highlight">
@@ -226,14 +219,11 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
       </div>
     </div>
   </div>
-
   <div id="skill-select-overlay">
     <div class="overlay-title" id="skill-select-title">选择技能</div>
     <div id="skill-timer">15</div>
     <div class="skill-select-grid" id="skill-select-grid"></div>
   </div>
-
-  <!-- [PRIVACY] 隐私遮罩 -->
   <div id="privacy-screen">
     <div class="privacy-handoff">
       <div class="p-title" id="privacy-title">🔒 请将设备交给对方</div>
@@ -241,14 +231,21 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     </div>
     <div id="privacy-content"></div>
   </div>
-
   <div id="cheat-toast"></div>
 </div>
 
-<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<!-- [FIX] 使用多个CDN源加载PeerJS，提高可用性 -->
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" onerror="try{document.currentScript.remove();throw new Error('peerjs CDN1 failed')}catch(e){}" ></script>
 <script>
-(function() {
+(function(){
 'use strict';
+
+// ==================== [FIX] 多信令服务器配置 ====================
+const PEER_SERVERS = [
+  { id: 'bomb-room', host: '0.peerjs.com', port: 443, path: '/', ssl: 1 },
+  { id: 'bomb-room-alt', host: 'peerjs.maker.tech', port: 443, path: '/', ssl: 1 },
+  { id: 'bomb-room-fallback', host: 'wss://0.peerjs.com', port: 443, path: '/', ssl: 1 },
+];
 
 // ==================== 技能定义（36个） ====================
 const ALL_SKILLS = [
@@ -284,7 +281,7 @@ const ALL_SKILLS = [
   { id:'pause',     name:'🕐 暂停',   desc:'对方跳过下回合。冷却5。', cooldown:5, category:'control' },
   { id:'lock',      name:'🚫 封锁',   desc:'对方禁用技能直到爆炸。冷却5。', cooldown:5, category:'control' },
   { id:'swap',      name:'🔄 交换',   desc:'与对方交换生命值。冷却6。', cooldown:6, category:'control' },
-  { id:'slow',      name:'🐌 减速',   desc:'对方回合标记减速（威慑）。冷却4。', cooldown:4, category:'control' },
+  { id:'slow',      name:'🐌 减速',   desc:'对方回合标记减速。冷却4。', cooldown:4, category:'control' },
   { id:'blind',     name:'🙈 致盲',   desc:'对方下回合看不到范围。冷却5。', cooldown:5, category:'control' },
   { id:'steal',     name:'🤏 窃取',   desc:'复制对方一个技能。冷却6。', cooldown:6, category:'control' },
   { id:'curse',     name:'😈 诅咒',   desc:'对方下次踩雷额外+1伤害。冷却5。', cooldown:5, category:'control' }
@@ -307,7 +304,9 @@ const G = {
   pendingSkillSelect:null, pendingSkillOptions:null,
   skillTimer:null, skillTimerCount:15, hostTimeout:null,
   hostSkillComplete:null, aiTimeouts:[],
-  players:{ p1:makePlayer('p1'), p2:makePlayer('p2') }
+  players:{ p1:makePlayer('p1'), p2:makePlayer('p2') },
+  connRetryCount:0, connRetryTimer:null,
+  peerServerIndex:0
 };
 let skillSelectPhase = null;
 
@@ -328,7 +327,7 @@ const inputDisplay=$('input-display'), messageDisplay=$('message-display');
 const keypadButtons=document.querySelectorAll('#keypad .key-btn');
 const joinRoomInput=$('join-room-input'), lobbyMessage=$('lobby-message');
 const waitingRoomCode=$('waiting-room-code'), waitingText=$('waiting-text');
-const copyLinkBtn=$('copy-link-btn');
+const copyLinkBtn=$('copy-link-btn'), connStatus=$('conn-status');
 const remoteCheatBtn=$('remote-cheat-btn'), localCheatBtn=$('local-cheat-btn');
 const cheatToast=$('cheat-toast');
 const surrenderBtn=$('surrender-btn'), gameOverBtn=$('game-over-btn'), rematchBtn=$('rematch-btn');
@@ -363,7 +362,6 @@ function isPrime(n){
   for(let i=2;i*i<=n;i++) if(n%i===0) return false;
   return true;
 }
-// Fisher-Yates洗牌，严格均匀、保证3个选项不重复
 function getRandomSkills(count){
   const arr=[...ALL_SKILLS];
   for(let i=arr.length-1;i>0;i--){
@@ -375,20 +373,108 @@ function getRandomSkills(count){
 function getSkillById(id){ return ALL_SKILLS.find(s=>s.id===id); }
 function clearHostTimeout(){ if(G.hostTimeout){ clearTimeout(G.hostTimeout); G.hostTimeout=null; } }
 function clearAiTimeouts(){ G.aiTimeouts.forEach(t=>clearTimeout(t)); G.aiTimeouts=[]; }
-// AI安全调度：只在活跃、非处理中、AI回合时执行
 function scheduleAi(fn, delay){
   const t=setTimeout(()=>{
     if(G.active && !G.processing && G.currentPlayer==='p2' && G.mode.includes('ai')) fn();
   },delay);
   G.aiTimeouts.push(t);
 }
+function setConnStatus(msg){
+  if(connStatus) connStatus.textContent = msg || '';
+}
 
-// ==================== [PRIVACY] 本地双人隐私系统 ====================
+// ==================== [FIX] PeerJS 多服务器自动切换 ====================
+function createPeer(id, onOpen, onError) {
+  if (typeof Peer === 'undefined') {
+    onError('PeerJS库未加载，请检查网络连接');
+    return;
+  }
+  function tryServer(idx) {
+    if (idx >= PEER_SERVERS.length) {
+      onError('所有信令服务器均不可用，请检查网络连接');
+      return;
+    }
+    const server = PEER_SERVERS[idx];
+    setConnStatus('正在连接信令服务器 ' + (idx+1) + '/' + PEER_SERVERS.length + '...');
+    console.log('尝试信令服务器:', server.host, 'id:', id);
+    try {
+      G.peer = new Peer(id, {
+        debug: 0,
+        host: server.host.replace('wss://','').replace('https://',''),
+        port: server.port,
+        path: server.path,
+        ssl: server.ssl,
+        secure: true
+      });
+      G.peer.on('open', function(peerId) {
+        console.log('信令服务器连接成功, peerId:', peerId);
+        setConnStatus('已连接到信令服务器');
+        onOpen(peerId);
+      });
+      G.peer.on('error', function(err) {
+        console.warn('信令服务器错误:', err.type, err);
+        if (err.type === 'unavailable-id' || err.type === 'peer-unavailable') {
+          onError(err.type + ': ' + id);
+        } else {
+          tryServer(idx + 1);
+        }
+      });
+      setTimeout(function() {
+        if (!G.peer || !G.peer._peerId) {
+          console.log('服务器超时，尝试下一个...');
+          tryServer(idx + 1);
+        }
+      }, 5000);
+    } catch(e) {
+      console.warn('创建Peer失败，尝试下一个服务器:', e);
+      tryServer(idx + 1);
+    }
+  }
+  tryServer(0);
+}
+
+// ==================== [FIX] 连接重试机制 ====================
+function attemptJoinRoom(code, retryCount) {
+  retryCount = retryCount || 0;
+  const MAX_RETRIES = 8;
+  setConnStatus('正在连接房间 ' + code + '... (尝试 ' + (retryCount+1) + '/' + MAX_RETRIES + ')');
+  
+  if (retryCount >= MAX_RETRIES) {
+    setConnStatus('连接失败，房间可能已不存在或Host已退出');
+    lobbyMessage.textContent = '❌ 连接超时，请确认房间码正确且Host在线';
+    return;
+  }
+
+  createPeer('guest-' + code + '-' + retryCount, function(peerId) {
+    setConnStatus('信令服务器已连接，正在连接Host...');
+    try {
+      const conn = G.peer.connect('bomb-' + code, { reliable: true });
+      setupConnection(conn);
+      conn.on('open', function() {
+        setConnStatus('已连接到Host');
+        waitingText.textContent = '已连接，等待Host开始游戏...';
+        lobbyMessage.textContent = '';
+      });
+      setTimeout(function() {
+        if (G.conn && !G.conn.open) {
+          attemptJoinRoom(code, retryCount + 1);
+        }
+      }, 3000);
+    } catch(e) {
+      console.warn('连接Host失败:', e);
+      setTimeout(function() { attemptJoinRoom(code, retryCount + 1); }, 1500);
+    }
+  }, function(errMsg) {
+    setConnStatus('信令服务器连接失败: ' + errMsg);
+    lobbyMessage.textContent = '❌ 无法连接到信令服务器，请检查网络连接后重试';
+  });
+}
+
+// ==================== 隐私遮罩 ====================
 const Privacy = {
   _onDone:null, _state:'idle',
-  isLocal(){ return G.mode.includes('local'); },
-  // 换手遮罩：点击一次关闭遮罩并回调
-  handoff(playerName, onDone){
+  isLocal: function(){ return G.mode.includes('local'); },
+  handoff: function(playerName, onDone){
     if(!this.isLocal()){ if(onDone) onDone(); return; }
     this._onDone=onDone; this._state='handoff';
     privacyTitle.textContent='🔒 请将设备交给 '+playerName;
@@ -396,8 +482,7 @@ const Privacy = {
     privacyScreen.classList.remove('revealed');
     privacyScreen.classList.add('active');
   },
-  // 私密信息展示：点击揭示→点击隐藏→点击关闭
-  reveal(playerName, label, resultText, onDone){
+  reveal: function(playerName, label, resultText, onDone){
     if(!this.isLocal()){ if(onDone) onDone(); return; }
     this._onDone=onDone||null; this._state='reveal-hidden';
     privacyTitle.textContent='🔒 '+playerName+' 的私密信息';
@@ -408,7 +493,7 @@ const Privacy = {
     privacyScreen.classList.remove('revealed');
     privacyScreen.classList.add('active');
   },
-  _handleClick(e){
+  _handleClick: function(e){
     if(e.target.id==='privacy-hide'){
       e.stopPropagation();
       privacyScreen.classList.remove('revealed');
@@ -431,15 +516,14 @@ const Privacy = {
       if(cb) cb();
     }
   },
-  hide(){
+  hide: function(){
     privacyScreen.classList.remove('active','revealed');
     privacyContent.innerHTML='';
     this._state='idle'; this._onDone=null;
   }
 };
-privacyScreen.addEventListener('click', e=>Privacy._handleClick(e));
+privacyScreen.addEventListener('click', function(e){ Privacy._handleClick(e); });
 
-// 信息类技能结果输出（本地走隐私遮罩，其他模式直接显示）
 function showPrivateInfo(userName, skillName, infoText){
   if(Privacy.isLocal()){
     messageDisplay.textContent=userName+' 使用了 '+skillName;
@@ -448,10 +532,8 @@ function showPrivateInfo(userName, skillName, infoText){
     messageDisplay.textContent=userName+' '+skillName+'：'+infoText;
   }
 }
-
-// 对手获得技能的公开提示（非本地模式；本地模式双方技能互相保密）
 function announceOpponentSkill(playerId, skillName){
-  if(Privacy.isLocal()) return; // 本地模式绝不广播技能名
+  if(Privacy.isLocal()) return;
   const me=getMyPlayer();
   if(playerId===me.id) return;
   const p=getPlayer(playerId);
@@ -467,7 +549,7 @@ function renderPlayers(){
   renderLives(opponentLivesEl, opp.hp, opp.maxHP, opp.id==='p1'?'blue':'red');
   const cur=getCurrentPlayer();
   if(cur.id===me.id){ meHighlight.classList.add('active'); opponentHighlight.classList.remove('active'); }
-  else { meHighlight.classList.remove('active'); opponentHighlight.classList.add('active'); }
+  else { meHighlight.classList.remove('active'); opponentHighlight.classList.remove('active'); }
 }
 function renderLives(container, hp, maxHP, color){
   container.innerHTML='';
@@ -524,7 +606,6 @@ function showExplosion(target){
   area.appendChild(ex);
   setTimeout(()=>ex.remove(),700);
 }
-// 技能栏：本地模式渲染当前回合玩家的技能；其他模式渲染自己的
 function renderSkills(){
   skillsBar.innerHTML='';
   if(!G.isSkillMode || battleArea.style.display==='none'){
@@ -548,12 +629,11 @@ function renderSkills(){
       btn.disabled=!canAct;
       if(canAct) btn.classList.add('ready');
     }
-    btn.addEventListener('click',()=>useSkill(skill.id));
+    btn.addEventListener('click',function(){ useSkill(skill.id); });
     skillsBar.appendChild(btn);
   });
   renderOpponentSkills();
 }
-// 对手技能展示：本地模式隐藏（防偷看），AI/远程模式显示对手技能
 function renderOpponentSkills(){
   opponentSkillsBar.innerHTML='';
   if(!G.isSkillMode || battleArea.style.display==='none' || Privacy.isLocal()){
@@ -597,6 +677,7 @@ function hideAll(){
   clearHostTimeout(); clearAiTimeouts();
   G.pendingSkillSelect=null; G.pendingSkillOptions=null;
   skillSelectPhase=null; G.hostSkillComplete=null;
+  if(G.connRetryTimer){ clearTimeout(G.connRetryTimer); G.connRetryTimer=null; }
 }
 function showMainMenu(){ hideAll(); mainMenu.classList.remove('hidden'); if(!G.conn) roomInfo.textContent='未连接'; }
 function showNormalSubmenu(){ hideAll(); normalSubmenu.classList.remove('hidden'); }
@@ -608,7 +689,7 @@ function showSetup(mode){
   setupOverlay.classList.remove('hidden');
   aiLevelRow.style.display=mode.includes('ai')?'flex':'none';
 }
-function showRemoteLobby(){ hideAll(); remoteLobby.classList.remove('hidden'); }
+function showRemoteLobby(){ hideAll(); remoteLobby.classList.remove('hidden'); setConnStatus(''); }
 function showRemoteWaiting(){ hideAll(); remoteWaiting.classList.remove('hidden'); }
 function showBattleArea(){
   hideAll();
@@ -659,9 +740,8 @@ function startNewRound(){
   messageDisplay.textContent='💥 炸弹重置！新的一轮！';
   renderSkills();
   updateTurnIndicator();
-  // [PRIVACY] 本地模式新一轮换手提示
   if(Privacy.isLocal()){
-    Privacy.handoff(getCurrentPlayer().name, ()=>{
+    Privacy.handoff(getCurrentPlayer().name, function(){
       renderSkills(); updateTurnIndicator(); syncIfRemote();
     });
   }
@@ -717,7 +797,6 @@ function initGame(){
   renderPlayers(); updateRange(); updateInputDisplay();
   messageDisplay.textContent='游戏开始！';
   updateTurnIndicator();
-  // 技能模式：双方轮流选技能（远程Guest端由sync驱动，不在此编排）
   if(G.isSkillMode){
     if(!(G.mode.includes('remote')&&!G.isHost)){
       startRoundSkillSelect();
@@ -728,8 +807,7 @@ function initGame(){
   syncIfRemote();
 }
 
-// ==================== 双方轮流选技能流程 ====================
-// 本轮行动方先选 → 对方选 → startNewRound()
+// ==================== 双方轮流选技能 ====================
 function startRoundSkillSelect(){
   if(!G.isSkillMode||!G.active){ startNewRound(); return; }
   const first=G.currentPlayer;
@@ -737,10 +815,10 @@ function startRoundSkillSelect(){
   G.processing=true;
   setKeypadEnabled(false);
   skillSelectPhase=first;
-  triggerSkillSelectForPlayer(first, ()=>{
+  triggerSkillSelectForPlayer(first, function(){
     if(!G.active) return;
     skillSelectPhase=second;
-    triggerSkillSelectForPlayer(second, ()=>{
+    triggerSkillSelectForPlayer(second, function(){
       skillSelectPhase=null;
       startNewRound();
     });
@@ -751,18 +829,15 @@ function triggerSkillSelectForPlayer(playerId, onComplete){
   if(G.mode.includes('ai')&&playerId==='p2'){
     aiSelectSkillWithCallback(onComplete);
   } else if(G.mode.includes('remote')&&G.isHost&&playerId==='p2'){
-    // Host下发三选一给Guest
     G.pendingSkillSelect='p2';
     G.pendingSkillOptions=getRandomSkills(3).map(s=>s.id);
     G.hostSkillComplete=onComplete;
     syncIfRemote();
     startHostTimeout('p2', onComplete);
   } else if(G.mode.includes('remote')&&!G.isHost&&playerId==='p2'){
-    // Guest：等待Host推送选项（applySync中触发界面）
     G.processing=true;
     setKeypadEnabled(false);
   } else {
-    // 本地人类玩家（p1/p2）或远程Host自己
     showSkillSelectWithCallback(playerId, onComplete);
   }
 }
@@ -786,9 +861,8 @@ function showSkillSelectWithCallback(forPlayerId, onComplete){
       skillSelectOverlay.classList.remove('active','rotated');
       renderSkills();
       announceOpponentSkill(forPlayerId, skill.name);
-      // [PRIVACY] 本地模式：选完后用遮罩私密展示所选技能，防止对方看到
       if(Privacy.isLocal()){
-        Privacy.reveal(player.name, '你选择了', skill.name+'<br><span style="font-size:0.7rem;color:#aaa;">'+skill.desc+'</span>', ()=>{
+        Privacy.reveal(player.name, '你选择了', skill.name+'<br><span style="font-size:0.7rem;color:#aaa;">'+skill.desc+'</span>', function(){
           if(onComplete) onComplete();
         });
       } else {
@@ -799,7 +873,7 @@ function showSkillSelectWithCallback(forPlayerId, onComplete){
       const card=document.createElement('div');
       card.className='skill-select-card';
       card.innerHTML='<div class="skill-icon">'+skill.name.split(' ')[0]+'</div><div class="skill-name">'+skill.name+'</div><div class="skill-desc">'+skill.desc+'</div>';
-      card.addEventListener('click',()=>doSelect(skill));
+      card.addEventListener('click',function(){ doSelect(skill); });
       skillSelectGrid.appendChild(card);
     });
     if(Privacy.isLocal()&&forPlayerId==='p2') skillSelectOverlay.classList.add('rotated');
@@ -811,7 +885,7 @@ function showSkillSelectWithCallback(forPlayerId, onComplete){
     G.skillTimerCount=15;
     skillTimerEl.textContent=G.skillTimerCount;
     if(G.skillTimer) clearInterval(G.skillTimer);
-    G.skillTimer=setInterval(()=>{
+    G.skillTimer=setInterval(function(){
       G.skillTimerCount--;
       skillTimerEl.textContent=G.skillTimerCount;
       if(G.skillTimerCount<=0){
@@ -820,7 +894,6 @@ function showSkillSelectWithCallback(forPlayerId, onComplete){
       }
     },1000);
   }
-  // [PRIVACY] 本地模式：先换手遮罩，确保设备在正确玩家手中再显示三选一
   if(Privacy.isLocal()){
     Privacy.handoff(player.name+'（选择技能）', actuallyShow);
   } else {
@@ -836,17 +909,16 @@ function aiSelectSkillWithCallback(onComplete){
   getPlayer('p2').cooldowns={};
   G.processing=true;
   messageDisplay.textContent='🤖 AI 正在选择技能...';
-  scheduleAi(()=>{
+  scheduleAi(function(){
     if(!G.active){ if(onComplete) onComplete(); return; }
     announceOpponentSkill('p2',skill.name);
     renderSkills();
     if(onComplete) onComplete();
   },900);
 }
-// Host替Guest超时随机选（从下发的三选一中选）
 function startHostTimeout(playerId, onComplete){
   clearHostTimeout();
-  G.hostTimeout=setTimeout(()=>{
+  G.hostTimeout=setTimeout(function(){
     if(G.active&&G.pendingSkillSelect===playerId&&G.isHost){
       const player=getPlayer(playerId);
       let opts=[];
@@ -865,7 +937,6 @@ function startHostTimeout(playerId, onComplete){
     }
   },20000);
 }
-// Guest端：根据Host下发的选项显示选择界面
 function showSkillSelectWithOptions(forPlayerId, optionIds){
   const player=getPlayer(forPlayerId);
   let options=(optionIds&&optionIds.length>0)?optionIds.map(getSkillById).filter(s=>s):getRandomSkills(3);
@@ -889,7 +960,7 @@ function showSkillSelectWithOptions(forPlayerId, optionIds){
     const card=document.createElement('div');
     card.className='skill-select-card';
     card.innerHTML='<div class="skill-icon">'+skill.name.split(' ')[0]+'</div><div class="skill-name">'+skill.name+'</div><div class="skill-desc">'+skill.desc+'</div>';
-    card.addEventListener('click',()=>doSelect(skill));
+    card.addEventListener('click',function(){ doSelect(skill); });
     skillSelectGrid.appendChild(card);
   });
   skillSelectOverlay.classList.remove('rotated');
@@ -900,7 +971,7 @@ function showSkillSelectWithOptions(forPlayerId, optionIds){
   G.skillTimerCount=15;
   skillTimerEl.textContent=G.skillTimerCount;
   if(G.skillTimer) clearInterval(G.skillTimer);
-  G.skillTimer=setInterval(()=>{
+  G.skillTimer=setInterval(function(){
     G.skillTimerCount--;
     skillTimerEl.textContent=G.skillTimerCount;
     if(G.skillTimerCount<=0){
@@ -924,7 +995,6 @@ function processGuess(guess, isSkillAttack, guesserId){
     }
   }
   let isHit=(guess===G.bombNumber)||isSkillAttack;
-  // 作弊：范围≤10时直接命中（本地双人双方均可，其他模式仅我方）
   if(G.cheatMode&&!isSkillAttack&&(G.high-G.low+1)<=10){
     const me=getMyPlayer();
     if(Privacy.isLocal()||guesser.id===me.id) isHit=true;
@@ -936,7 +1006,7 @@ function processGuess(guess, isSkillAttack, guesserId){
   G.processing=true;
   setKeypadEnabled(false);
   const delay=Privacy.isLocal()?800:500;
-  setTimeout(()=>{
+  setTimeout(function(){
     if(!G.active) return;
     if(isHit){
       let damage=1;
@@ -966,7 +1036,6 @@ function processGuess(guess, isSkillAttack, guesserId){
           defender.hp=2; defender.rebirth=false;
           messageDisplay.textContent='🕊️ '+defender.name+' 重生！以2血复活';
         } else {
-          // 本地模式：被炸者是当前回合玩家（画面下方"me"位置随回合）
           showExplosion(Privacy.isLocal()?'me':(defender.id===getMyPlayer().id?'me':'opponent'));
           messageDisplay.textContent='💥 踩中炸弹 '+G.bombNumber+'！'+defender.name+' -'+damage+'血';
         }
@@ -1006,7 +1075,6 @@ function processGuess(guess, isSkillAttack, guesserId){
     }
   },delay);
 }
-// 踩雷结算后：技能模式双方重选技能；普通模式直接开新轮
 function afterHitSkillPhase(){
   if(G.isSkillMode&&!(G.mode.includes('remote')&&!G.isHost)){
     startRoundSkillSelect();
@@ -1032,7 +1100,6 @@ function switchTurn(){
       return;
     }
     G.currentPlayer=opponent.id;
-    // 新回合开始结算毒伤
     if(opponent.poison>0){
       opponent.poison--;
       opponent.hp-=1;
@@ -1048,7 +1115,6 @@ function switchTurn(){
     if(G.mode.includes('ai')&&G.currentPlayer==='p2') scheduleAi(aiTurn,900);
     syncIfRemote();
   }
-  // [PRIVACY] 本地模式换手遮罩
   if(Privacy.isLocal()){
     Privacy.handoff(opponent.name, doSwitch);
   } else {
@@ -1061,7 +1127,6 @@ function useSkill(skillId, playerId){
   if(!G.active||G.processing) return;
   const user=playerId?getPlayer(playerId):(Privacy.isLocal()?getCurrentPlayer():getMyPlayer());
   if(user.id!==G.currentPlayer) return;
-  // 远程Guest：转发给Host执行
   if(G.mode.includes('remote')&&!G.isHost&&!playerId){
     if(G.conn) G.conn.send({type:'action',action:'skill',playerId:user.id,skillId:skillId});
     return;
@@ -1076,9 +1141,7 @@ function useSkill(skillId, playerId){
   if(Privacy.isLocal()) userName=user.name;
   else userName=user.id===getMyPlayer().id?'我':(G.mode.includes('ai')?'AI':'对方');
   user.cooldowns[skillId]=skill.cooldown;
-  let turnConsumed=false;
   switch(skillId){
-    // ===== 信息类（本地模式走隐私遮罩） =====
     case 'detect':
       showPrivateInfo(userName,'📡探测','炸弹是'+(G.bombNumber%2===0?'偶数':'奇数')); break;
     case 'peek': {
@@ -1112,7 +1175,6 @@ function useSkill(skillId, playerId){
       const near=dist<=Math.ceil((G.high-G.low)*0.15)?'（离中点很近）':'（离中点较远）';
       showPrivateInfo(userName,'🏘️邻域','炸弹在范围'+zone+near); break;
     }
-    // ===== 范围类 =====
     case 'binary': {
       if(G.low>=G.high){ messageDisplay.textContent='⚠️ 范围无法再缩小'; delete user.cooldowns[skillId]; renderSkills(); return; }
       const mid=Math.floor((G.low+G.high)/2);
@@ -1150,11 +1212,10 @@ function useSkill(skillId, playerId){
       updateRange();
       messageDisplay.textContent='⚓ '+userName+'锚定！范围→'+G.low+'~'+G.high;
       break;
-    // ===== 攻击类 =====
     case 'suicide':
       renderSkills();
       processGuess(G.bombNumber,true,user.id);
-      return; // 回合已消耗
+      return;
     case 'double':
       user.double=true;
       messageDisplay.textContent='⚡ '+userName+'双倍！踩雷伤害x2已激活';
@@ -1207,7 +1268,6 @@ function useSkill(skillId, playerId){
         messageDisplay.textContent='⚔️ '+userName+'处决失败：对方血量>2';
       }
       break;
-    // ===== 防御类 =====
     case 'shield':
       user.shield=true;
       messageDisplay.textContent='🛡️ '+userName+'护盾已激活';
@@ -1234,7 +1294,6 @@ function useSkill(skillId, playerId){
       user.fortify=2;
       messageDisplay.textContent='🏰 '+userName+'堡垒！抵挡2次伤害';
       break;
-    // ===== 控制类 =====
     case 'speed':
       user.speed=true;
       messageDisplay.textContent='🏃 '+userName+'加速！本回合可猜2次';
@@ -1265,7 +1324,7 @@ function useSkill(skillId, playerId){
     case 'steal': {
       const oppSkill=opponent.skills&&opponent.skills[0];
       if(oppSkill){
-        user.skills=[{...oppSkill}];
+        user.skills=[Object.assign({},oppSkill)];
         user.cooldowns={};
         messageDisplay.textContent='🤏 '+userName+'窃取了 '+oppSkill.name+'！';
         if(!Privacy.isLocal()) opponentSkillsBar.style.display='flex';
@@ -1287,21 +1346,20 @@ function useSkill(skillId, playerId){
 
 // ==================== AI ====================
 function aiChooseSkill(ai, human, options){
-  // 策略：低血选治疗/护盾，对方低血选处决，否则优先攻击/信息类
-  const scores=options.map(s=>{
+  const scores=options.map(function(s){
     let sc=Math.random()*10;
     if(ai.hp<=2){
-      if(['heal','bigheal','shield','rebirth','fortify'].includes(s.id)) sc+=100;
+      if(['heal','bigheal','shield','rebirth','fortify'].indexOf(s.id)>=0) sc+=100;
       if(s.id==='swap'&&human.hp>ai.hp) sc+=120;
     }
     if(human.hp<=2&&s.id==='execute') sc+=150;
-    if(s.id==='suicide'&&human.hp<=2) sc+=80;
-    if(['detect','peek','binary','fuzzy'].includes(s.id)) sc+=30;
-    if(['poison','lock','pause'].includes(s.id)) sc+=40;
+    if(s.id==='suicide'&&human.hp<=1) sc+=80;
+    if(['detect','peek','binary','fuzzy'].indexOf(s.id)>=0) sc+=30;
+    if(['poison','lock','pause'].indexOf(s.id)>=0) sc+=40;
     if(s.id==='double'||s.id==='triple') sc+=25;
-    return {s,sc};
+    return {s:s,sc:sc};
   });
-  scores.sort((a,b)=>b.sc-a.sc);
+  scores.sort(function(a,b){return b.sc-a.sc;});
   return scores[0].s;
 }
 function aiTurn(){
@@ -1310,7 +1368,6 @@ function aiTurn(){
   setKeypadEnabled(false);
   messageDisplay.textContent='🤖 AI思考中...';
   const ai=getPlayer('p2'), human=getPlayer('p1');
-  // 1. 考虑使用技能
   if(G.isSkillMode&&ai.skills.length>0&&!ai.lock){
     const skill=ai.skills[0];
     const cd=ai.cooldowns[skill.id]||0;
@@ -1322,14 +1379,13 @@ function aiTurn(){
       if(Math.random()<useProb){
         const shouldUse=(
           (skill.id==='execute'&&human.hp<=2)||
-          (['heal','bigheal'].includes(skill.id)&&ai.hp<=2)||
+          (['heal','bigheal'].indexOf(skill.id)>=0&&ai.hp<=2)||
           (skill.id==='shield'&&ai.hp<=3)||
           (skill.id==='suicide'&&human.hp<=1)||
-          ['detect','peek','binary','fuzzy','poison','lock','pause','double','curse','gamble','digitsum','prime','magnitude','modulo','neighbor','anchor','shrink'].includes(skill.id)
+          ['detect','peek','binary','fuzzy','poison','lock','pause','double','curse','gamble','digitsum','prime','magnitude','modulo','neighbor','anchor','shrink'].indexOf(skill.id)>=0
         );
         if(shouldUse||Math.random()<0.4){
           useSkill(skill.id,'p2');
-          // 技能不消耗回合（除suicide已return），继续猜
           if(G.active&&G.processing&&G.currentPlayer==='p2'){
             scheduleAi(aiGuess,1000);
           }
@@ -1338,7 +1394,6 @@ function aiTurn(){
       }
     }
   }
-  // 2. 直接猜
   scheduleAi(aiGuess,900);
 }
 function aiGuess(){
@@ -1349,20 +1404,17 @@ function aiGuess(){
   if(G.aiLevel===1){
     guess=Math.floor(Math.random()*range)+G.low;
   } else if(G.aiLevel===2){
-    // 中等：偏向中点±25%
     const mid=(G.low+G.high)/2;
     const spread=range*0.25;
     guess=Math.round(mid+(Math.random()*2-1)*spread);
     guess=Math.max(G.low,Math.min(G.high,guess));
   } else {
-    // 困难：精确二分
     guess=Math.floor((G.low+G.high)/2);
   }
-  // 展示AI输入动画
   G.playerInput=String(guess);
   updateInputDisplay();
   messageDisplay.textContent='🤖 AI 输入了 '+guess;
-  scheduleAi(()=>{
+  scheduleAi(function(){
     if(!G.active) return;
     G.playerInput='';
     G.processing=false;
@@ -1371,15 +1423,14 @@ function aiGuess(){
 }
 
 // ==================== 键盘输入 ====================
-keypadButtons.forEach(btn=>{
-  btn.addEventListener('click',()=>{
+keypadButtons.forEach(function(btn){
+  btn.addEventListener('click',function(){
     const val=btn.dataset.value;
     const action=btn.dataset.action;
     if(action==='cheat'){
       if(G.mode.includes('local')||G.mode.includes('ai')){
         G.cheatMode=!G.cheatMode;
         showCheatToast(G.cheatMode?'🔓 作弊已开启（范围≤10必中）':'🔒 作弊已关闭');
-        // [PRIVACY] 按钮外观不变，防止对手从图标判断作弊状态
       }
       return;
     }
@@ -1420,7 +1471,7 @@ function syncIfRemote(){
     playerInput:'', processing:G.processing, cheatMode:G.cheatMode,
     pendingSkillSelect:G.pendingSkillSelect, pendingSkillOptions:G.pendingSkillOptions,
     message:messageDisplay.textContent,
-    p1:{...G.players.p1}, p2:{...G.players.p2}
+    p1:Object.assign({},G.players.p1), p2:Object.assign({},G.players.p2)
   };
   try{ G.conn.send({type:'sync',state:state}); }catch(e){}
 }
@@ -1445,7 +1496,6 @@ function applySync(state){
   if(state.message) messageDisplay.textContent=state.message;
   updateTurnIndicator();
   renderSkills();
-  // Guest技能选择界面驱动
   if(state.pendingSkillSelect==='p2'&&G.myRole==='guest'&&!skillSelectOverlay.classList.contains('active')){
     showSkillSelectWithOptions('p2',state.pendingSkillOptions);
   }
@@ -1453,27 +1503,26 @@ function applySync(state){
     skillSelectOverlay.classList.remove('active','rotated');
     if(G.skillTimer){ clearInterval(G.skillTimer); G.skillTimer=null; }
   }
-  // 游戏结束按钮
   if(!G.active){
     surrenderBtn.style.display='none';
     gameOverBtn.style.display='block';
-    rematchBtn.style.display='none'; // Guest端由Host控制重开
+    rematchBtn.style.display='none';
   }
 }
 function setupConnection(conn){
   G.conn=conn;
-  conn.on('open',()=>{
+  conn.on('open',function(){
     roomInfo.textContent='房间: '+G.roomCode;
     if(G.isHost){
       waitingText.textContent='对手已加入！';
-      setTimeout(()=>{ showRemoteSetup(); },600);
+      setTimeout(function(){ showRemoteSetup(); },600);
     } else {
       showBattleArea();
       messageDisplay.textContent='已连接，等待Host开始游戏...';
       setKeypadEnabled(false);
     }
   });
-  conn.on('data',data=>{
+  conn.on('data',function(data){
     if(data.type==='sync'&&G.myRole==='guest'){
       applySync(data.state);
     } else if(data.type==='action'&&G.isHost){
@@ -1483,16 +1532,16 @@ function setupConnection(conn){
       G.isSkillMode=data.isSkillMode;
       G.mode=data.isSkillMode?'remote-skill':'remote-normal';
     } else if(data.type==='rematch'&&G.myRole==='guest'){
-      // Host发起重开，等sync到达
     }
   });
-  conn.on('close',()=>{
+  conn.on('close',function(){
     roomInfo.textContent='对手已断开';
+    setConnStatus('连接已断开');
     showCheatToast('⚠️ 对手已断开连接');
     if(G.active){ endGame(); }
     G.conn=null;
   });
-  conn.on('error',err=>{
+  conn.on('error',function(err){
     lobbyMessage.textContent='连接错误: '+err;
   });
 }
@@ -1527,74 +1576,65 @@ function handleGuestAction(data){
     syncIfRemote();
   }
 }
-function initPeer(){
-  if(G.peer){ try{G.peer.destroy();}catch(e){} G.peer=null; }
-  G.peer=new Peer();
-}
 
-$('create-room-btn').addEventListener('click',()=>{
+// ==================== [FIX] 创建房间 - 多服务器自动切换 ====================
+$('create-room-btn').addEventListener('click',function(){
   G.roomCode=generateRoomCode();
   G.isHost=true;
   G.myRole='host';
   lobbyMessage.textContent='';
-  initPeer();
-  G.peer.on('open',id=>{
-    const hostId='bomb-'+G.roomCode;
-    // 用固定房间码作为peer id后缀，重新创建
-    G.peer.destroy();
-    G.peer=new Peer(hostId);
-    G.peer.on('open',()=>{
-      showRemoteWaiting();
-      waitingRoomCode.textContent=G.roomCode;
-      waitingText.textContent='等待对手加入...';
-      copyLinkBtn.style.display='block';
-      G.peer.on('connection',conn=>{
-        if(G.conn){ try{conn.close();}catch(e){} return; }
-        setupConnection(conn);
-      });
-      G.peer.on('error',err=>{
-        if(err.type==='unavailable-id'){
-          waitingText.textContent='房间码已被占用，请重试';
-        }
-      });
+  setConnStatus('正在创建房间...');
+  
+  createPeer('bomb-' + G.roomCode, function(peerId) {
+    showRemoteWaiting();
+    waitingRoomCode.textContent=G.roomCode;
+    waitingText.textContent='等待对手加入...';
+    copyLinkBtn.style.display='block';
+    lobbyMessage.textContent='';
+    setConnStatus('房间已创建，可分享链接邀请对手');
+    
+    G.peer.on('connection',function(conn){
+      if(G.conn){ try{conn.close();}catch(e){} return; }
+      setupConnection(conn);
     });
-    G.peer.on('error',err=>{ lobbyMessage.textContent='创建失败: '+err.type; });
+    G.peer.on('error',function(err){
+      if(err.type==='unavailable-id'){
+        waitingText.textContent='房间码冲突，正在重新生成...';
+        setTimeout(function(){ $('create-room-btn').click(); }, 500);
+      }
+    });
+  }, function(errMsg) {
+    setConnStatus('创建房间失败: ' + errMsg);
+    lobbyMessage.textContent = '❌ 无法创建房间，请检查网络连接';
   });
-  G.peer.on('error',err=>{ lobbyMessage.textContent='网络错误: '+err.type; });
 });
-copyLinkBtn.addEventListener('click',()=>{
-  const url=location.origin+location.pathname+'?room='+G.roomCode;
-  if(navigator.clipboard){
-    navigator.clipboard.writeText(url).then(()=>showCheatToast('📋 链接已复制')).catch(()=>showCheatToast(url));
-  } else showCheatToast('复制失败，手动复制: '+url);
-});
-$('join-room-btn').addEventListener('click',()=>{
+
+$('join-room-btn').addEventListener('click',function(){
   const code=joinRoomInput.value.trim().toUpperCase();
   if(code.length!==6){ lobbyMessage.textContent='请输入6位房间码'; return; }
   G.roomCode=code;
   G.isHost=false;
   G.myRole='guest';
   lobbyMessage.textContent='';
-  initPeer();
-  G.peer.on('open',()=>{
-    const conn=G.peer.connect('bomb-'+code,{reliable:true});
-    setupConnection(conn);
-    waitingText.textContent='连接中...';
-    setTimeout(()=>{
-      if(!G.conn||!G.conn.open) lobbyMessage.textContent='连接超时，请检查房间码';
-    },8000);
-  });
-  G.peer.on('error',err=>{
-    if(err.type==='peer-unavailable') lobbyMessage.textContent='房间不存在或已关闭';
-    else lobbyMessage.textContent='错误: '+err.type;
-  });
+  attemptJoinRoom(code, 0);
 });
-$('cancel-waiting-btn').addEventListener('click',()=>{
+
+copyLinkBtn.addEventListener('click',function(){
+  // [FIX] 使用当前页面URL + room参数
+  const baseUrl = window.location.origin + window.location.pathname;
+  const url=baseUrl+'?room='+G.roomCode;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(url).then(function(){showCheatToast('📋 链接已复制')}).catch(function(){showCheatToast(url)});
+  } else showCheatToast('复制失败，手动复制: '+url);
+});
+
+$('cancel-waiting-btn').addEventListener('click',function(){
   if(G.peer){ try{G.peer.destroy();}catch(e){} G.peer=null; }
   G.conn=null;
   showRemoteLobby();
 });
-$('remote-start-btn').addEventListener('click',()=>{
+
+$('remote-start-btn').addEventListener('click',function(){
   readSetupInputs(true);
   G.mode=G.isSkillMode?'remote-skill':'remote-normal';
   if(G.conn&&G.conn.open){
@@ -1602,14 +1642,26 @@ $('remote-start-btn').addEventListener('click',()=>{
   }
   initGame();
 });
-// URL自动填房间码
-(function(){
-  const params=new URLSearchParams(location.search);
-  const room=params.get('room');
-  if(room&&room.length===6){
-    joinRoomInput.value=room.toUpperCase();
-    showRemoteLobby();
-    lobbyMessage.textContent='已填入房间码，点击加入';
+
+// ==================== [FIX] URL自动加入 - 更健壮的解析 ====================
+(function checkUrlRoom() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get('room');
+    if (room && room.length === 6) {
+      setTimeout(function() {
+        joinRoomInput.value = room.toUpperCase();
+        showRemoteLobby();
+        lobbyMessage.textContent = '已填入房间码，点击加入...';
+        setTimeout(function() {
+          if (joinRoomInput.value === room.toUpperCase()) {
+            $('join-room-btn').click();
+          }
+        }, 300);
+      }, 500);
+    }
+  } catch(e) {
+    console.warn('URL参数解析失败:', e);
   }
 })();
 
@@ -1618,26 +1670,26 @@ $('normal-mode-btn').addEventListener('click',showNormalSubmenu);
 $('skill-mode-btn').addEventListener('click',showSkillSubmenu);
 $('normal-back-btn').addEventListener('click',showMainMenu);
 $('skill-back-btn').addEventListener('click',showMainMenu);
-$('normal-local-btn').addEventListener('click',()=>showSetup('local-normal'));
-$('normal-ai-btn').addEventListener('click',()=>showSetup('ai-normal'));
-$('skill-local-btn').addEventListener('click',()=>showSetup('local-skill'));
-$('skill-ai-btn').addEventListener('click',()=>showSetup('ai-skill'));
-$('normal-remote-btn').addEventListener('click',()=>{ G.isSkillMode=false; showRemoteLobby(); });
-$('skill-remote-btn').addEventListener('click',()=>{ G.isSkillMode=true; showRemoteLobby(); });
+$('normal-local-btn').addEventListener('click',function(){showSetup('local-normal')});
+$('normal-ai-btn').addEventListener('click',function(){showSetup('ai-normal')});
+$('skill-local-btn').addEventListener('click',function(){showSetup('local-skill')});
+$('skill-ai-btn').addEventListener('click',function(){showSetup('ai-skill')});
+$('normal-remote-btn').addEventListener('click',function(){ G.isSkillMode=false; showRemoteLobby(); });
+$('skill-remote-btn').addEventListener('click',function(){ G.isSkillMode=true; showRemoteLobby(); });
 $('back-menu-btn1').addEventListener('click',showMainMenu);
 $('back-menu-btn2').addEventListener('click',showMainMenu);
-aiLevelRow.querySelectorAll('.ai-level-btn').forEach(b=>{
-  b.addEventListener('click',()=>{
-    aiLevelRow.querySelectorAll('.ai-level-btn').forEach(x=>x.classList.remove('active'));
+aiLevelRow.querySelectorAll('.ai-level-btn').forEach(function(b){
+  b.addEventListener('click',function(){
+    aiLevelRow.querySelectorAll('.ai-level-btn').forEach(function(x){x.classList.remove('active')});
     b.classList.add('active');
     G.aiLevel=parseInt(b.dataset.level);
   });
 });
-$('start-game-btn').addEventListener('click',()=>{
+$('start-game-btn').addEventListener('click',function(){
   readSetupInputs(false);
   initGame();
 });
-surrenderBtn.addEventListener('click',()=>{
+surrenderBtn.addEventListener('click',function(){
   if(!G.active) return;
   if(G.mode.includes('remote')&&!G.isHost){
     if(G.conn) G.conn.send({type:'action',action:'surrender',playerId:'p2'});
@@ -1655,16 +1707,15 @@ surrenderBtn.addEventListener('click',()=>{
   endGame();
   syncIfRemote();
 });
-gameOverBtn.addEventListener('click',()=>{
+gameOverBtn.addEventListener('click',function(){
   if(G.mode.includes('remote')){
-    // 保留连接，回到大厅可以再来
     if(G.isHost){ showRemoteWaiting(); waitingRoomCode.textContent=G.roomCode; waitingText.textContent='对手已断开或游戏结束'; }
     else { showRemoteLobby(); }
   } else {
     showMainMenu();
   }
 });
-rematchBtn.addEventListener('click',()=>{
+rematchBtn.addEventListener('click',function(){
   rematchBtn.disabled=true;
   if(G.mode.includes('remote')){
     if(G.isHost&&G.conn&&G.conn.open){
@@ -1675,7 +1726,7 @@ rematchBtn.addEventListener('click',()=>{
     initGame();
   }
 });
-remoteCheatBtn.addEventListener('click',()=>{
+remoteCheatBtn.addEventListener('click',function(){
   if(G.mode.includes('remote')&&G.isHost){
     G.cheatMode=!G.cheatMode;
     remoteCheatBtn.classList.toggle('active',G.cheatMode);
@@ -1684,7 +1735,6 @@ remoteCheatBtn.addEventListener('click',()=>{
   }
 });
 
-// 初始
 showMainMenu();
 })();
 </script>
