@@ -429,9 +429,9 @@ function getMyPlayer(){
 }
 function getMyOpponent(){ return getOpponentPlayer(getMyPlayer().id); }
 function isMyTurn(){
-  if(!G.active || G.processing) return false;
+  if(!G.active) return false;
   if(G.mode.includes('local')) return true;
-  if(G.mode.includes('ai')) return G.currentPlayer==='p1';
+  if(G.mode.includes('ai')) return G.currentPlayer==='p1' && !G.processing;
   if(G.mode.includes('remote')) return (G.currentPlayer==='p1'&&G.myRole==='host')||(G.currentPlayer==='p2'&&G.myRole==='guest');
   return false;
 }
@@ -790,6 +790,11 @@ function applySync(state){
     surrenderBtn.style.display='none';
     gameOverBtn.style.display='block';
     rematchBtn.style.display='none';
+  }
+  // 强制更新键盘状态
+  if(G.myRole==='guest'){
+    const shouldEnable = G.active && !G.processing && isMyTurn();
+    setKeypadEnabled(shouldEnable);
   }
 }
 
