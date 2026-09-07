@@ -432,7 +432,6 @@ function isMyTurn(){
   if(!G.active) return false;
   if(G.mode.includes('local')) return true;
   if(G.mode.includes('ai')) return G.currentPlayer==='p1' && !G.processing;
-  // 远程模式：不再检查 processing，避免 Guest 端因同步延迟导致键盘锁死
   if(G.mode.includes('remote')) return (G.currentPlayer==='p1'&&G.myRole==='host')||(G.currentPlayer==='p2'&&G.myRole==='guest');
   return false;
 }
@@ -1651,8 +1650,13 @@ function updateTurnIndicator(){
     turnIndicator.textContent=G.mode.includes('ai')?'🤖 AI思考中...':'👆 对方回合...';
     turnIndicator.classList.add('turn-opponent');
   }
-  const shouldEnable = G.active && !G.processing && isMyTurn();
-  setKeypadEnabled(shouldEnable);
+  // 关键修复：轮到我就强制解锁键盘
+  if(G.active && cur.id===me.id && !Privacy.isLocal() && !G.processing) {
+    setKeypadEnabled(true);
+  } else {
+    const shouldEnable = G.active && !G.processing && isMyTurn();
+    setKeypadEnabled(shouldEnable);
+  }
   renderSkills();
 }
 function setKeypadEnabled(enabled){
