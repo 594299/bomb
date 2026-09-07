@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>💣 数字炸弹 · 完整修复版</title>
+<title>💣 数字炸弹 · 远程键盘修复版</title>
 <style>
 :root { --neon:#00f0ff; --blue:#4da6ff; --red:#ff6b6b; --green:#00ff88; --orange:#ff8800; }
 * { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent; }
@@ -130,13 +130,13 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
       <div id="room-info">未连接</div>
     </div>
   </div>
-  
+
   <div id="main-menu" class="overlay">
     <div class="overlay-title">选择模式</div>
     <button class="btn" id="normal-mode-btn">🎮 普通模式</button>
     <button class="btn secondary" id="skill-mode-btn">⚡ 技能模式</button>
   </div>
-  
+
   <div id="normal-submenu" class="overlay hidden">
     <div class="overlay-title">普通模式</div>
     <button class="btn" id="normal-local-btn">📱 本地双人</button>
@@ -144,7 +144,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <button class="btn" id="normal-remote-btn">🌐 远程对战</button>
     <button class="btn secondary" id="normal-back-btn">返回</button>
   </div>
-  
+
   <div id="skill-submenu" class="overlay hidden">
     <div class="overlay-title">技能模式</div>
     <button class="btn" id="skill-local-btn">📱 本地双人</button>
@@ -152,7 +152,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <button class="btn" id="skill-remote-btn">🌐 远程对战</button>
     <button class="btn secondary" id="skill-back-btn">返回</button>
   </div>
-  
+
   <div id="setup-overlay" class="overlay hidden">
     <div class="overlay-title">⚙️ 游戏设置</div>
     <div class="setting-row">
@@ -171,7 +171,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <button class="btn" id="start-game-btn">开始游戏</button>
     <button class="btn secondary" id="back-menu-btn1">返回</button>
   </div>
-  
+
   <div id="remote-lobby" class="overlay hidden">
     <div class="overlay-title">远程对战</div>
     <button class="btn" id="create-room-btn">创建房间</button>
@@ -182,7 +182,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <div id="conn-status"></div>
     <button class="btn secondary" id="back-menu-btn2">返回</button>
   </div>
-  
+
   <div id="remote-waiting" class="overlay hidden">
     <div class="overlay-title">房间码</div>
     <div class="room-display" id="waiting-room-code">------</div>
@@ -190,7 +190,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <button class="btn" id="cancel-waiting-btn">取消</button>
     <button class="btn small" id="copy-link-btn" style="display:none;">📋 复制邀请链接</button>
   </div>
-  
+
   <div id="remote-setup-overlay" class="overlay hidden">
     <div class="overlay-title">⚙️ 远程游戏设置</div>
     <div class="setting-row">
@@ -202,7 +202,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     </div>
     <button class="btn" id="remote-start-btn">开始游戏</button>
   </div>
-  
+
   <div id="battle-area">
     <div class="player-area" id="opponent-area">
       <div class="highlight" id="opponent-highlight">
@@ -249,13 +249,13 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
       </div>
     </div>
   </div>
-  
+
   <div id="skill-select-overlay">
     <div class="overlay-title" id="skill-select-title">选择技能</div>
     <div id="skill-timer">30</div>
     <div class="skill-select-grid" id="skill-select-grid"></div>
   </div>
-  
+
   <div id="privacy-screen">
     <div class="privacy-handoff" id="privacy-handoff">
       <div class="p-title" id="privacy-title">🔒 请将设备交给对方</div>
@@ -263,7 +263,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     </div>
     <div id="privacy-content"></div>
   </div>
-  
+
   <div id="chat-overlay" class="overlay hidden">
     <div class="chat-container">
       <div class="chat-header">
@@ -277,7 +277,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
       </div>
     </div>
   </div>
-  
+
   <div id="chat-notification">
     <div class="chat-notif-header">
       <span>💬 新消息</span>
@@ -285,14 +285,14 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     </div>
     <div class="chat-notif-body" id="chat-notif-body"></div>
   </div>
-  
+
   <div id="name-edit-overlay">
     <div class="overlay-title">✏️ 编辑名称</div>
     <input type="text" class="name-edit-input" id="name-edit-input" placeholder="输入新名称" maxlength="10">
     <button class="btn" id="name-edit-confirm">确认</button>
     <button class="btn secondary" id="name-edit-cancel">取消</button>
   </div>
-  
+
   <div id="number-select-overlay" class="overlay hidden">
     <div class="overlay-title" id="number-select-title">选择数字</div>
     <div style="color:#888;font-size:0.85rem;margin-bottom:5px;" id="number-select-range">范围：1 - 100</div>
@@ -302,7 +302,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
       <button class="btn secondary" id="number-select-cancel" style="min-width:100px;margin-top:0;">取消</button>
     </div>
   </div>
-  
+
   <div id="cheat-toast"></div>
 </div>
 
@@ -432,6 +432,7 @@ function isMyTurn(){
   if(!G.active) return false;
   if(G.mode.includes('local')) return true;
   if(G.mode.includes('ai')) return G.currentPlayer==='p1' && !G.processing;
+  // 远程模式：不再检查 processing，避免 Guest 端因同步延迟导致键盘锁死
   if(G.mode.includes('remote')) return (G.currentPlayer==='p1'&&G.myRole==='host')||(G.currentPlayer==='p2'&&G.myRole==='guest');
   return false;
 }
@@ -517,11 +518,10 @@ chatNotifClose.addEventListener('click', function() {
   if (notifTimeout) clearTimeout(notifTimeout);
 });
 
-// ==================== 本地隐私系统（改进版） ====================
+// ==================== 本地隐私系统 ====================
 const Privacy = {
   _onDone:null, _state:'idle',
   isLocal: function(){ return G.mode && G.mode.includes('local'); },
-  
   confirmTurn: function(playerName, onDone){
     if(!this.isLocal()){ if(onDone) onDone(); return; }
     this._onDone=onDone; this._state='confirm';
@@ -533,7 +533,6 @@ const Privacy = {
     privacyScreen.classList.remove('revealed');
     privacyScreen.classList.add('active');
   },
-  
   showSecret: function(playerName, title, content, onDone){
     if(!this.isLocal()){ if(onDone) onDone(); return; }
     this._onDone=onDone||null; this._state='secret';
@@ -544,7 +543,6 @@ const Privacy = {
     privacyScreen.classList.remove('revealed');
     privacyScreen.classList.add('active');
   },
-  
   hide: function(){
     privacyScreen.classList.remove('active','revealed');
     privacyContent.innerHTML='';
@@ -662,7 +660,7 @@ function setupConnection(conn){
     startPing();
   }
   if(conn.open){ handleOpen(); } else { conn.on('open', handleOpen); }
-  
+
   conn.on('data',function(data){
     if(data.type==='ping') return;
     if(data.type==='sync'&&G.myRole==='guest'){
@@ -677,7 +675,6 @@ function setupConnection(conn){
     } else if(data.type==='rematch'&&G.myRole==='guest'){
       messageDisplay.textContent='Host 发起了重赛';
       rematchBtn.disabled=false;
-      // Guest自动准备
       setTimeout(function(){ if(G.mode.includes('remote')&&!G.isHost) initGame(); }, 500);
     } else if(data.type==='chat'){
       if(data.text){
@@ -690,11 +687,10 @@ function setupConnection(conn){
         }
       }
     } else if(data.type==='private'&&G.myRole==='guest'){
-      // Host发来的私密结果
       showCheatToast(data.title + '：' + data.text);
     }
   });
-  
+
   conn.on('close',function(){
     stopPing();
     roomInfo.textContent='对手已断开';
@@ -704,7 +700,7 @@ function setupConnection(conn){
     if(G.active){ endGame(); }
     G.conn=null;
   });
-  
+
   conn.on('error',function(err){
     lobbyMessage.textContent='连接错误: '+err;
   });
@@ -791,7 +787,7 @@ function applySync(state){
     gameOverBtn.style.display='block';
     rematchBtn.style.display='none';
   }
-  // 强制更新键盘状态
+  // 关键修复：Guest 端每次同步后强制刷新键盘状态
   if(G.myRole==='guest'){
     const shouldEnable = G.active && !G.processing && isMyTurn();
     setKeypadEnabled(shouldEnable);
@@ -906,22 +902,17 @@ function startNewRound(){
   G.low=G.minVal; G.high=G.maxVal;
   G.bombNumber=Math.floor(Math.random()*(G.maxVal-G.minVal+1))+G.minVal;
   G.playerInput=''; G.processing=false;
-  
-  // 新回合减少双方冷却
   reduceCooldowns('p1');
   reduceCooldowns('p2');
-  
   updateRange(); updateInputDisplay();
   messageDisplay.textContent='💥 炸弹重置！新的一轮！';
   renderSkills();
   updateTurnIndicator();
-  
   if(Privacy.isLocal()){
     Privacy.confirmTurn(getCurrentPlayer().name, function(){
       renderSkills(); updateTurnIndicator(); syncIfRemote();
     });
   }
-  
   if(G.mode.includes('ai')&&G.currentPlayer==='p2'&&G.active){
     setTimeout(aiTurn, 900);
   }
@@ -987,8 +978,6 @@ function initGame(){
   } else if(G.mode.includes('ai')&&G.currentPlayer==='p2'){
     setTimeout(aiTurn, 900);
   }
-  
-  // 关键修复：确保键盘状态正确
   setKeypadEnabled(G.active && !G.processing && isMyTurn());
   syncIfRemote();
 }
@@ -1208,14 +1197,14 @@ function processGuess(guess, isSkillAttack, guesserId){
   G.processing=true;
   setKeypadEnabled(false);
   const delay=Privacy.isLocal()?800:500;
-  
+
   setTimeout(function(){
     if(!G.active) return;
     if(isHit){
       let damage=1;
       if(guesser.triple){ damage=3; guesser.triple=false; }
       else if(guesser.double){ damage=2; guesser.double=false; }
-      
+
       if(defender.shield && !guesser.pierce){
         defender.shield=false;
         messageDisplay.textContent='🛡️ '+defender.name+' 的护盾抵挡了伤害！';
@@ -1244,10 +1233,7 @@ function processGuess(guess, isSkillAttack, guesserId){
       }
       guesser.pierce=false;
       defender.trapNumber=null;
-      
-      // 爆炸后清除封锁
       getPlayer('p1').lock=false; getPlayer('p2').lock=false;
-      
       renderPlayers();
       if(getPlayer('p1').hp<=0||getPlayer('p2').hp<=0){ endGame(); return; }
       afterHitSkillPhase();
@@ -1315,7 +1301,7 @@ function switchTurn(){
   current.reflect=false;
   G.playerInput=''; updateInputDisplay();
   reduceCooldowns(current.id);
-  
+
   function doSwitch(){
     if(opponent.skipNext){
       opponent.skipNext=false;
@@ -1334,7 +1320,7 @@ function switchTurn(){
     if(G.mode.includes('ai')&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
     syncIfRemote();
   }
-  
+
   if(Privacy.isLocal()){
     Privacy.confirmTurn(opponent.name, doSwitch);
   } else {
@@ -1352,7 +1338,6 @@ function useSkill(skillId, playerId){
       G.conn.send({type:'action',action:'skill',playerId:user.id,skillId:skillId});
       G.processing=true;
       setKeypadEnabled(false);
-      // Guest动作超时恢复
       clearGuestActionTimeout();
       guestActionTimeout = setTimeout(function(){
         if(G.processing&&G.active){
@@ -1374,8 +1359,7 @@ function useSkill(skillId, playerId){
   if(Privacy.isLocal()) userName=user.name;
   else userName=user.id===getMyPlayer().id?'我':(G.mode.includes('ai')?'AI':'对方');
   user.cooldowns[skillId]=skill.cooldown;
-  
-  // 辅助：展示私密信息（本地遮罩，远程定向）
+
   function reveal(title, text){
     if(Privacy.isLocal()){
       messageDisplay.textContent=userName+' 使用了 '+skill.name;
@@ -1392,26 +1376,14 @@ function useSkill(skillId, playerId){
       else messageDisplay.textContent='🤖 AI 使用了 '+skill.name;
     }
   }
-  
+
   switch(skillId){
-    case 'detect':
-      reveal('📡探测','炸弹是'+(G.bombNumber%2===0?'偶数':'奇数')); break;
-    case 'peek': {
-      const s=String(G.bombNumber);
-      const pos=Math.random()<0.5?'个位':'最高位';
-      const val=pos==='个位'?s[s.length-1]:s[0];
-      reveal('🔍透视','炸弹的'+pos+'是 '+val); break;
-    }
-    case 'digitsum': {
-      const sum=String(G.bombNumber).split('').reduce((a,b)=>a+parseInt(b),0);
-      reveal('🧮数字和','各位数字之和为 '+sum); break;
-    }
-    case 'prime':
-      reveal('🔢质数','炸弹'+(isPrime(G.bombNumber)?'是':'不是')+'质数'); break;
-    case 'magnitude':
-      reveal('📏量级','炸弹是 '+String(G.bombNumber).length+' 位数'); break;
-    case 'modulo':
-      reveal('➗取模','炸弹 mod 3 = '+(G.bombNumber%3)); break;
+    case 'detect': reveal('📡探测','炸弹是'+(G.bombNumber%2===0?'偶数':'奇数')); break;
+    case 'peek': { const s=String(G.bombNumber); const pos=Math.random()<0.5?'个位':'最高位'; const val=pos==='个位'?s[s.length-1]:s[0]; reveal('🔍透视','炸弹的'+pos+'是 '+val); break; }
+    case 'digitsum': { const sum=String(G.bombNumber).split('').reduce((a,b)=>a+parseInt(b),0); reveal('🧮数字和','各位数字之和为 '+sum); break; }
+    case 'prime': reveal('🔢质数','炸弹'+(isPrime(G.bombNumber)?'是':'不是')+'质数'); break;
+    case 'magnitude': reveal('📏量级','炸弹是 '+String(G.bombNumber).length+' 位数'); break;
+    case 'modulo': reveal('➗取模','炸弹 mod 3 = '+(G.bombNumber%3)); break;
     case 'binary': {
       if(G.low>=G.high){ messageDisplay.textContent='⚠️ 范围无法再缩小'; delete user.cooldowns[skillId]; renderSkills(); return; }
       const mid=Math.floor((G.low+G.high)/2);
@@ -1427,99 +1399,31 @@ function useSkill(skillId, playerId){
       messageDisplay.textContent='🚚 '+userName+'移动！炸弹'+(G.bombNumber>old?'向上':(G.bombNumber<old?'向下':'(已到边界未动)'))+'移动';
       break;
     }
-    case 'shuffle':
-      G.bombNumber=Math.floor(Math.random()*(G.high-G.low+1))+G.low;
-      messageDisplay.textContent='🔀 '+userName+'洗牌！炸弹位置重置';
-      break;
-    case 'shrink':
-      G.low=Math.min(G.low+5,G.bombNumber);
-      G.high=Math.max(G.high-5,G.bombNumber);
-      updateRange();
-      messageDisplay.textContent='🔽 '+userName+'收缩！范围→'+G.low+'~'+G.high;
-      break;
-    case 'expand':
-      G.low=Math.max(G.minVal,G.low-10);
-      G.high=Math.min(G.maxVal,G.high+10);
-      updateRange();
-      messageDisplay.textContent='🔼 '+userName+'扩张！范围→'+G.low+'~'+G.high;
-      break;
-    case 'suicide':
-      renderSkills();
-      processGuess(G.bombNumber,true,user.id);
-      return;
-    case 'double':
-      user.double=true;
-      messageDisplay.textContent='⚡ '+userName+'双倍！踩雷伤害x2已激活';
-      break;
-    case 'triple':
-      user.triple=true;
-      messageDisplay.textContent='💥 '+userName+'三倍！踩雷x3，猜错自伤1';
-      break;
+    case 'shuffle': G.bombNumber=Math.floor(Math.random()*(G.high-G.low+1))+G.low; messageDisplay.textContent='🔀 '+userName+'洗牌！炸弹位置重置'; break;
+    case 'shrink': G.low=Math.min(G.low+5,G.bombNumber); G.high=Math.max(G.high-5,G.bombNumber); updateRange(); messageDisplay.textContent='🔽 '+userName+'收缩！范围→'+G.low+'~'+G.high; break;
+    case 'expand': G.low=Math.max(G.minVal,G.low-10); G.high=Math.min(G.maxVal,G.high+10); updateRange(); messageDisplay.textContent='🔼 '+userName+'扩张！范围→'+G.low+'~'+G.high; break;
+    case 'suicide': renderSkills(); processGuess(G.bombNumber,true,user.id); return;
+    case 'double': user.double=true; messageDisplay.textContent='⚡ '+userName+'双倍！踩雷伤害x2已激活'; break;
+    case 'triple': user.triple=true; messageDisplay.textContent='💥 '+userName+'三倍！踩雷x3，猜错自伤1'; break;
     case 'gamble': {
-      if(Math.random()<0.5){
-        opponent.hp=Math.max(0,opponent.hp-1);
-        messageDisplay.textContent='🎲 赌博成功！'+opponent.name+' -1血';
-      } else {
-        user.hp=Math.max(0,user.hp-1);
-        messageDisplay.textContent='🎲 赌博失败！'+userName+' -1血';
-      }
+      if(Math.random()<0.5){ opponent.hp=Math.max(0,opponent.hp-1); messageDisplay.textContent='🎲 赌博成功！'+opponent.name+' -1血'; }
+      else { user.hp=Math.max(0,user.hp-1); messageDisplay.textContent='🎲 赌博失败！'+userName+' -1血'; }
       renderPlayers();
       if(getPlayer('p1').hp<=0||getPlayer('p2').hp<=0){ endGame(); return; }
       break;
     }
-    case 'lifesteal':
-      user.lifesteal=true;
-      messageDisplay.textContent='🌙 '+userName+'吸血已激活';
-      break;
-    case 'pierce':
-      user.pierce=true;
-      messageDisplay.textContent='🗡️ '+userName+'穿透！本回合无视护盾';
-      break;
-    case 'shield':
-      user.shield=true;
-      messageDisplay.textContent='🛡️ '+userName+'护盾已激活';
-      break;
-    case 'heal':
-      user.hp=Math.min(user.maxHP,user.hp+1);
-      renderPlayers();
-      messageDisplay.textContent='💊 '+userName+'治疗 +1血 ('+user.hp+'/'+user.maxHP+')';
-      break;
-    case 'bigheal':
-      user.hp=Math.min(user.maxHP,user.hp+2);
-      renderPlayers();
-      messageDisplay.textContent='💖 '+userName+'大治疗 +2血 ('+user.hp+'/'+user.maxHP+')';
-      break;
-    case 'rebirth':
-      user.rebirth=true;
-      messageDisplay.textContent='🕊️ '+userName+'重生已激活';
-      break;
-    case 'reflect':
-      user.reflect=true;
-      messageDisplay.textContent='🪞 '+userName+'反射已激活';
-      break;
-    case 'speed':
-      user.speed=true;
-      messageDisplay.textContent='🏃 '+userName+'加速！本回合可猜2次';
-      break;
-    case 'pause':
-      opponent.skipNext=true;
-      messageDisplay.textContent='🕐 '+userName+'暂停！'+opponent.name+'下回合被跳过';
-      break;
-    case 'lock':
-      opponent.lock=true;
-      messageDisplay.textContent='🚫 '+userName+'封锁！'+opponent.name+'禁用技能直到爆炸';
-      break;
-    case 'blind':
-      opponent.blind=true;
-      messageDisplay.textContent='🙈 '+userName+'致盲！'+opponent.name+'下回合看不到范围';
-      break;
-    case 'swap': {
-      const t=user.hp; user.hp=opponent.hp; opponent.hp=t;
-      renderPlayers();
-      messageDisplay.textContent='🔄 '+userName+'交换生命！'+user.name+':'+user.hp+' '+opponent.name+':'+opponent.hp;
-      if(getPlayer('p1').hp<=0||getPlayer('p2').hp<=0){ endGame(); return; }
-      break;
-    }
+    case 'lifesteal': user.lifesteal=true; messageDisplay.textContent='🌙 '+userName+'吸血已激活'; break;
+    case 'pierce': user.pierce=true; messageDisplay.textContent='🗡️ '+userName+'穿透！本回合无视护盾'; break;
+    case 'shield': user.shield=true; messageDisplay.textContent='🛡️ '+userName+'护盾已激活'; break;
+    case 'heal': user.hp=Math.min(user.maxHP,user.hp+1); renderPlayers(); messageDisplay.textContent='💊 '+userName+'治疗 +1血 ('+user.hp+'/'+user.maxHP+')'; break;
+    case 'bigheal': user.hp=Math.min(user.maxHP,user.hp+2); renderPlayers(); messageDisplay.textContent='💖 '+userName+'大治疗 +2血 ('+user.hp+'/'+user.maxHP+')'; break;
+    case 'rebirth': user.rebirth=true; messageDisplay.textContent='🕊️ '+userName+'重生已激活'; break;
+    case 'reflect': user.reflect=true; messageDisplay.textContent='🪞 '+userName+'反射已激活'; break;
+    case 'speed': user.speed=true; messageDisplay.textContent='🏃 '+userName+'加速！本回合可猜2次'; break;
+    case 'pause': opponent.skipNext=true; messageDisplay.textContent='🕐 '+userName+'暂停！'+opponent.name+'下回合被跳过'; break;
+    case 'lock': opponent.lock=true; messageDisplay.textContent='🚫 '+userName+'封锁！'+opponent.name+'禁用技能直到爆炸'; break;
+    case 'blind': opponent.blind=true; messageDisplay.textContent='🙈 '+userName+'致盲！'+opponent.name+'下回合看不到范围'; break;
+    case 'swap': { const t=user.hp; user.hp=opponent.hp; opponent.hp=t; renderPlayers(); messageDisplay.textContent='🔄 '+userName+'交换生命！'+user.name+':'+user.hp+' '+opponent.name+':'+opponent.hp; if(getPlayer('p1').hp<=0||getPlayer('p2').hp<=0){ endGame(); return; } break; }
     case 'trap': {
       G.processing=true;
       showNumberPicker('设置陷阱数字', G.low, G.high, function(num){
@@ -1556,7 +1460,7 @@ function reduceCooldowns(playerId){
   renderSkills();
 }
 
-// ==================== AI 系统（改进版） ====================
+// ==================== AI 系统 ====================
 function aiChooseSkill(ai, human, options){
   const range = G.high - G.low + 1;
   const scores = options.map(function(s){
@@ -1566,19 +1470,15 @@ function aiChooseSkill(ai, human, options){
       if(s.id==='swap'&&human.hp>ai.hp) sc += 120;
     }
     if(s.id==='suicide'&&human.hp<=1&&!human.shield&&!human.reflect) sc += 90;
-    
-    // 根据范围大小调整情报/攻击价值
     if(range > 30){
       if(['detect','peek','digitsum','binary','insight'].indexOf(s.id)>=0) sc += 40;
     } else if(range < 10){
       if(['double','triple','suicide','pause','lock'].indexOf(s.id)>=0) sc += 50;
     }
-    
     if(['pause','lock'].indexOf(s.id)>=0) sc += 35;
     if(s.id==='gamble') sc += 10;
     if(s.id==='shuffle'&&range<5) sc -= 30;
     if(s.id==='move') sc += 15;
-    
     return {s:s,sc:sc};
   });
   scores.sort(function(a,b){return b.sc-a.sc;});
@@ -1591,7 +1491,6 @@ function aiTurn(){
   setKeypadEnabled(false);
   messageDisplay.textContent='🤖 AI思考中...';
   const ai=getPlayer('p2'), human=getPlayer('p1');
-  
   if(G.isSkillMode&&ai.skills.length>0&&!ai.lock){
     const skill=ai.skills[0];
     const cd=ai.cooldowns[skill.id]||0;
@@ -1625,7 +1524,6 @@ function aiGuess(){
   const ai=getPlayer('p2');
   let guess;
   const range=G.high-G.low+1;
-  
   if(G.aiLevel===1){
     guess=Math.floor(Math.random()*range)+G.low;
   } else if(G.aiLevel===2){
@@ -1635,23 +1533,18 @@ function aiGuess(){
     guess=Math.round(mid+offset);
     guess=Math.max(G.low,Math.min(G.high,guess));
   } else {
-    // 困难：最优策略，但20%概率失误，且不总是猜正中点
     if(Math.random()<0.2){
       guess=Math.floor(Math.random()*range)+G.low;
     } else {
       const mid=(G.low+G.high)/2;
-      if((G.low+G.high)%2===0){
-        guess=Math.round(mid);
-      } else {
-        guess=Math.floor(mid)+(Math.random()<0.5?0:1);
-      }
+      if((G.low+G.high)%2===0){ guess=Math.round(mid); }
+      else { guess=Math.floor(mid)+(Math.random()<0.5?0:1); }
       if(range>3&&Math.random()<0.3){
         guess+=(Math.random()<0.5?1:-1);
         guess=Math.max(G.low,Math.min(G.high,guess));
       }
     }
   }
-  
   G.playerInput=String(guess);
   updateInputDisplay();
   messageDisplay.textContent='🤖 AI 输入了 '+guess;
@@ -1734,7 +1627,6 @@ function updateRange(){
     rangeDisplay.textContent='🙈 范围被遮蔽...';
     rangeDisplay.style.opacity='0.4';
   } else if(cur.blind && Privacy.isLocal()){
-    // 本地模式：被致盲的玩家回合，如果当前是该玩家，显示遮蔽
     rangeDisplay.textContent='🙈 范围被遮蔽...';
     rangeDisplay.style.opacity='0.4';
   } else {
@@ -1759,16 +1651,13 @@ function updateTurnIndicator(){
     turnIndicator.textContent=G.mode.includes('ai')?'🤖 AI思考中...':'👆 对方回合...';
     turnIndicator.classList.add('turn-opponent');
   }
-  
-  // 关键修复：确保键盘状态正确
   const shouldEnable = G.active && !G.processing && isMyTurn();
   setKeypadEnabled(shouldEnable);
   renderSkills();
 }
 function setKeypadEnabled(enabled){
-  keypadButtons.forEach(btn=>{ 
-    btn.disabled = !enabled; 
-    // 确保视觉反馈
+  keypadButtons.forEach(btn=>{
+    btn.disabled = !enabled;
     if(!enabled){
       btn.style.opacity = '0.25';
       btn.style.pointerEvents = 'none';
