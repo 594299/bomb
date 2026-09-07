@@ -96,6 +96,19 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
 .privacy-result { font-size:1.2rem; color:var(--neon); font-weight:700; margin:10px 0; line-height:1.5; }
 .privacy-label { font-size:0.8rem; color:#888; }
 #conn-status { font-size:0.65rem; color:#888; margin-top:8px; }
+#chat-toggle-btn { display:none; background:none; border:1.5px solid rgba(255,255,255,0.2); border-radius:8px; padding:4px 8px; font-size:0.9rem; cursor:pointer; color:#ccc; }
+#chat-overlay { z-index:3100; }
+.chat-container { width:90%; max-width:400px; height:70%; background:#111; border-radius:15px; border:1px solid rgba(255,255,255,0.2); display:flex; flex-direction:column; overflow:hidden; }
+.chat-header { display:flex; justify-content:space-between; align-items:center; padding:10px 15px; background:rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.1); font-weight:700; }
+.chat-close-btn { background:none; border:none; color:#aaa; font-size:1.2rem; cursor:pointer; }
+.chat-messages { flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:6px; }
+.chat-msg { max-width:80%; padding:6px 10px; border-radius:10px; font-size:0.8rem; word-break:break-word; }
+.chat-msg.mine { align-self:flex-end; background:rgba(0,240,255,0.15); border:1px solid rgba(0,240,255,0.3); color:#e0faff; }
+.chat-msg.opponent { align-self:flex-start; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#ddd; }
+.chat-msg.system { align-self:center; background:none; border:none; color:#888; font-size:0.7rem; }
+.chat-input-row { display:flex; padding:8px; border-top:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); }
+#chat-input { flex:1; padding:8px 12px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:15px; color:#fff; font-size:0.85rem; outline:none; }
+#chat-send-btn { margin-left:6px; padding:8px 15px; border:none; border-radius:15px; background:var(--neon); color:#000; font-weight:700; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -103,6 +116,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
   <div id="header">
     <h1>💣 数字炸弹</h1>
     <div id="header-right">
+      <button id="chat-toggle-btn">💬</button>
       <button id="remote-cheat-btn">⚡</button>
       <div id="room-info">未连接</div>
     </div>
@@ -231,71 +245,77 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     </div>
     <div id="privacy-content"></div>
   </div>
+  <div id="chat-overlay" class="overlay hidden">
+    <div class="chat-container">
+      <div class="chat-header">
+        <span>💬 聊天</span>
+        <button class="chat-close-btn" id="chat-close-btn">✕</button>
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="输入消息..." maxlength="200">
+        <button id="chat-send-btn">发送</button>
+      </div>
+    </div>
+  </div>
   <div id="cheat-toast"></div>
 </div>
 
-<!-- [FIX] 使用多个CDN源加载PeerJS，提高可用性 -->
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" onerror="try{document.currentScript.remove();throw new Error('peerjs CDN1 failed')}catch(e){}" ></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 (function(){
 'use strict';
 
-// ==================== [FIX] 多信令服务器配置 ====================
-// [FIX] 增强 STUN/TURN 服务器配置，提高 NAT 穿透成功率
+// ==================== 多信令服务器配置 ====================
 const PEER_SERVERS = [
-  { id: 'bomb-room', host: '0.peerjs.com', port: 443, path: '/', ssl: 1 },
-  { id: 'bomb-room-alt', host: 'peerjs.maker.tech', port: 443, path: '/', ssl: 1 },
-  { id: 'bomb-room-fallback', host: 'wss://0.peerjs.com', port: 443, path: '/', ssl: 1 },
+  { host: '0.peerjs.com', port: 443, path: '/', ssl: 1 },
+  { host: 'peerjs.maker.tech', port: 443, path: '/', ssl: 1 },
 ];
-// [FIX] 显式 ICE 服务器配置（STUN + TURN）
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun2.l.google.com:19302' },
-  { urls: 'stun:stun3.l.google.com:19302' },
   { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
   { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:80?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
 ];
 
 // ==================== 技能定义（36个） ====================
 const ALL_SKILLS = [
-  { id:'detect',    name:'📡 探测',   desc:'炸弹是奇数还是偶数。冷却2。', cooldown:2, category:'info' },
-  { id:'peek',      name:'🔍 透视',   desc:'随机看炸弹个位或十位。冷却3。', cooldown:3, category:'info' },
-  { id:'digitsum',  name:'🧮 数字和', desc:'炸弹各位数字之和。冷却3。', cooldown:3, category:'info' },
-  { id:'prime',     name:'🔢 质数',   desc:'炸弹是否为质数。冷却2。', cooldown:2, category:'info' },
-  { id:'fuzzy',     name:'🎯 模糊',   desc:'炸弹所在10%子区间。冷却4。', cooldown:4, category:'info' },
-  { id:'magnitude', name:'📏 量级',   desc:'炸弹是几位数。冷却2。', cooldown:2, category:'info' },
-  { id:'modulo',    name:'➗ 取模',   desc:'炸弹除以3的余数。冷却3。', cooldown:3, category:'info' },
-  { id:'neighbor',  name:'🏘️ 邻域',   desc:'炸弹在范围的前半/后半。冷却3。', cooldown:3, category:'info' },
-  { id:'binary',    name:'✂️ 二分',   desc:'当前范围缩小一半。冷却3。', cooldown:3, category:'range' },
-  { id:'move',      name:'🚚 移动',   desc:'炸弹随机移动±5。冷却3。', cooldown:3, category:'range' },
-  { id:'shuffle',   name:'🔀 洗牌',   desc:'炸弹重新随机。冷却5。', cooldown:5, category:'range' },
-  { id:'shrink',    name:'🔽 收缩',   desc:'范围两端各缩5。冷却4。', cooldown:4, category:'range' },
-  { id:'expand',    name:'🔼 扩张',   desc:'范围两端各扩10。冷却4。', cooldown:4, category:'range' },
-  { id:'anchor',    name:'⚓ 锚定',   desc:'范围缩至炸弹±5。冷却4。', cooldown:4, category:'range' },
-  { id:'suicide',   name:'💣 自爆',   desc:'直接踩雷攻击对手。冷却6。', cooldown:6, category:'attack' },
-  { id:'double',    name:'⚡ 双倍',   desc:'踩雷伤害x2。冷却4。', cooldown:4, category:'attack' },
-  { id:'triple',    name:'💥 三倍',   desc:'伤害x3，猜错自伤1。冷却5。', cooldown:5, category:'attack' },
-  { id:'gamble',    name:'🎲 赌博',   desc:'50%对方-1血/50%自己-1血。冷却4。', cooldown:4, category:'attack' },
-  { id:'lifesteal', name:'🌙 吸血',   desc:'攻击对方时自己+1血。冷却5。', cooldown:5, category:'attack' },
-  { id:'pierce',    name:'🗡️ 穿透',   desc:'本回合伤害无视护盾/堡垒。冷却5。', cooldown:5, category:'attack' },
-  { id:'poison',    name:'☠️ 剧毒',   desc:'对方2回合内每回合-1血。冷却6。', cooldown:6, category:'attack' },
-  { id:'execute',   name:'⚔️ 处决',   desc:'对方≤2血时造成3伤害。冷却7。', cooldown:7, category:'attack' },
-  { id:'shield',    name:'🛡️ 护盾',   desc:'抵挡一次炸弹伤害。冷却5。', cooldown:5, category:'defense' },
-  { id:'heal',      name:'💊 治疗',   desc:'+1生命。冷却6。', cooldown:6, category:'defense' },
-  { id:'bigheal',   name:'💖 大治疗', desc:'+2生命。冷却6。', cooldown:6, category:'defense' },
-  { id:'rebirth',   name:'🕊️ 重生',   desc:'死亡时以2血复活。冷却8。', cooldown:8, category:'defense' },
-  { id:'reflect',   name:'🪞 反射',   desc:'下次炸弹伤害反弹对方。冷却6。', cooldown:6, category:'defense' },
-  { id:'fortify',   name:'🏰 堡垒',   desc:'抵挡2次炸弹伤害。冷却7。', cooldown:7, category:'defense' },
-  { id:'speed',     name:'🏃 加速',   desc:'本回合可连续猜2次。冷却4。', cooldown:4, category:'control' },
-  { id:'pause',     name:'🕐 暂停',   desc:'对方跳过下回合。冷却5。', cooldown:5, category:'control' },
-  { id:'lock',      name:'🚫 封锁',   desc:'对方禁用技能直到爆炸。冷却5。', cooldown:5, category:'control' },
-  { id:'swap',      name:'🔄 交换',   desc:'与对方交换生命值。冷却6。', cooldown:6, category:'control' },
-  { id:'slow',      name:'🐌 减速',   desc:'对方回合标记减速。冷却4。', cooldown:4, category:'control' },
-  { id:'blind',     name:'🙈 致盲',   desc:'对方下回合看不到范围。冷却5。', cooldown:5, category:'control' },
-  { id:'steal',     name:'🤏 窃取',   desc:'复制对方一个技能。冷却6。', cooldown:6, category:'control' },
-  { id:'curse',     name:'😈 诅咒',   desc:'对方下次踩雷额外+1伤害。冷却5。', cooldown:5, category:'control' }
+  { id:'detect',    name:'📡 探测',   desc:'炸弹是奇数还是偶数。冷却2。', cooldown:2 },
+  { id:'peek',      name:'🔍 透视',   desc:'随机看炸弹个位或十位。冷却3。', cooldown:3 },
+  { id:'digitsum',  name:'🧮 数字和', desc:'炸弹各位数字之和。冷却3。', cooldown:3 },
+  { id:'prime',     name:'🔢 质数',   desc:'炸弹是否为质数。冷却2。', cooldown:2 },
+  { id:'fuzzy',     name:'🎯 模糊',   desc:'炸弹所在10%子区间。冷却4。', cooldown:4 },
+  { id:'magnitude', name:'📏 量级',   desc:'炸弹是几位数。冷却2。', cooldown:2 },
+  { id:'modulo',    name:'➗ 取模',   desc:'炸弹除以3的余数。冷却3。', cooldown:3 },
+  { id:'neighbor',  name:'🏘️ 邻域',   desc:'炸弹在范围的前半/后半。冷却3。', cooldown:3 },
+  { id:'binary',    name:'✂️ 二分',   desc:'当前范围缩小一半。冷却3。', cooldown:3 },
+  { id:'move',      name:'🚚 移动',   desc:'炸弹随机移动±5。冷却3。', cooldown:3 },
+  { id:'shuffle',   name:'🔀 洗牌',   desc:'炸弹重新随机。冷却5。', cooldown:5 },
+  { id:'shrink',    name:'🔽 收缩',   desc:'范围两端各缩5。冷却4。', cooldown:4 },
+  { id:'expand',    name:'🔼 扩张',   desc:'范围两端各扩10。冷却4。', cooldown:4 },
+  { id:'anchor',    name:'⚓ 锚定',   desc:'范围缩至炸弹±5。冷却4。', cooldown:4 },
+  { id:'suicide',   name:'💣 自爆',   desc:'直接踩雷攻击对手。冷却6。', cooldown:6 },
+  { id:'double',    name:'⚡ 双倍',   desc:'踩雷伤害x2。冷却4。', cooldown:4 },
+  { id:'triple',    name:'💥 三倍',   desc:'伤害x3，猜错自伤1。冷却5。', cooldown:5 },
+  { id:'gamble',    name:'🎲 赌博',   desc:'50%对方-1血/50%自己-1血。冷却4。', cooldown:4 },
+  { id:'lifesteal', name:'🌙 吸血',   desc:'攻击对方时自己+1血。冷却5。', cooldown:5 },
+  { id:'pierce',    name:'🗡️ 穿透',   desc:'本回合伤害无视护盾/堡垒。冷却5。', cooldown:5 },
+  { id:'poison',    name:'☠️ 剧毒',   desc:'对方2回合内每回合-1血。冷却6。', cooldown:6 },
+  { id:'execute',   name:'⚔️ 处决',   desc:'对方≤2血时造成3伤害。冷却7。', cooldown:7 },
+  { id:'shield',    name:'🛡️ 护盾',   desc:'抵挡一次炸弹伤害。冷却5。', cooldown:5 },
+  { id:'heal',      name:'💊 治疗',   desc:'+1生命。冷却6。', cooldown:6 },
+  { id:'bigheal',   name:'💖 大治疗', desc:'+2生命。冷却6。', cooldown:6 },
+  { id:'rebirth',   name:'🕊️ 重生',   desc:'死亡时以2血复活。冷却8。', cooldown:8 },
+  { id:'reflect',   name:'🪞 反射',   desc:'下次炸弹伤害反弹对方。冷却6。', cooldown:6 },
+  { id:'fortify',   name:'🏰 堡垒',   desc:'抵挡2次炸弹伤害。冷却7。', cooldown:7 },
+  { id:'speed',     name:'🏃 加速',   desc:'本回合可连续猜2次。冷却4。', cooldown:4 },
+  { id:'pause',     name:'🕐 暂停',   desc:'对方跳过下回合。冷却5。', cooldown:5 },
+  { id:'lock',      name:'🚫 封锁',   desc:'对方禁用技能直到爆炸。冷却5。', cooldown:5 },
+  { id:'swap',      name:'🔄 交换',   desc:'与对方交换生命值。冷却6。', cooldown:6 },
+  { id:'slow',      name:'🐌 减速',   desc:'对方下回合只能猜一个数字。冷却4。', cooldown:4 },
+  { id:'blind',     name:'🙈 致盲',   desc:'对方下回合看不到范围。冷却5。', cooldown:5 },
+  { id:'steal',     name:'🤏 窃取',   desc:'复制对方一个技能。冷却6。', cooldown:6 },
+  { id:'curse',     name:'😈 诅咒',   desc:'对方下次踩雷额外+1伤害。冷却5。', cooldown:5 }
 ];
 
 // ==================== 游戏状态 ====================
@@ -346,6 +366,8 @@ const skillsBar=$('skills-bar'), opponentSkillsBar=$('opponent-skills-bar');
 const skillSelectOverlay=$('skill-select-overlay'), skillSelectGrid=$('skill-select-grid');
 const skillSelectTitle=$('skill-select-title'), skillTimerEl=$('skill-timer');
 const privacyScreen=$('privacy-screen'), privacyTitle=$('privacy-title'), privacyContent=$('privacy-content');
+const chatToggleBtn=$('chat-toggle-btn'), chatOverlay=$('chat-overlay'), chatCloseBtn=$('chat-close-btn');
+const chatMessages=$('chat-messages'), chatInput=$('chat-input'), chatSendBtn=$('chat-send-btn');
 
 // ==================== 工具函数 ====================
 function getPlayer(id){ return G.players[id]; }
@@ -393,8 +415,21 @@ function scheduleAi(fn, delay){
 function setConnStatus(msg){
   if(connStatus) connStatus.textContent = msg || '';
 }
+function deepClone(obj){
+  return JSON.parse(JSON.stringify(obj));
+}
+function cleanupRemote(){
+  if(G.peer){ try{G.peer.destroy();}catch(e){} G.peer=null; }
+  if(G.conn){ try{G.conn.close();}catch(e){} G.conn=null; }
+  G.roomCode='';
+  G.isHost=false;
+  G.myRole='';
+  chatToggleBtn.style.display='none';
+  chatOverlay.classList.add('hidden');
+  chatMessages.innerHTML='';
+}
 
-// ==================== [FIX] PeerJS 多服务器自动切换 ====================
+// ==================== PeerJS 多服务器自动切换 ====================
 function createPeer(id, onOpen, onError) {
   if (typeof Peer === 'undefined') {
     onError('PeerJS库未加载，请检查网络连接');
@@ -407,24 +442,27 @@ function createPeer(id, onOpen, onError) {
     }
     const server = PEER_SERVERS[idx];
     setConnStatus('正在连接信令服务器 ' + (idx+1) + '/' + PEER_SERVERS.length + '...');
-    console.log('尝试信令服务器:', server.host, 'id:', id);
     try {
+      if (G.peer) { try { G.peer.destroy(); } catch(e) {} }
       G.peer = new Peer(id, {
         debug: 0,
-        host: server.host.replace('wss://','').replace('https://',''),
+        host: server.host,
         port: server.port,
         path: server.path,
         ssl: server.ssl,
         secure: true,
         iceServers: ICE_SERVERS
       });
+      let opened = false;
       G.peer.on('open', function(peerId) {
-        console.log('信令服务器连接成功, peerId:', peerId);
+        if (opened) return;
+        opened = true;
         setConnStatus('已连接到信令服务器');
         onOpen(peerId);
       });
       G.peer.on('error', function(err) {
-        console.warn('信令服务器错误:', err.type, err);
+        if (opened) return;
+        console.warn('信令服务器错误:', err.type);
         if (err.type === 'unavailable-id' || err.type === 'peer-unavailable') {
           onError(err.type + ': ' + id);
         } else {
@@ -432,31 +470,27 @@ function createPeer(id, onOpen, onError) {
         }
       });
       setTimeout(function() {
-        if (!G.peer || !G.peer._peerId) {
-          console.log('服务器超时，尝试下一个...');
+        if (!opened) {
           tryServer(idx + 1);
         }
-      }, 5000);
+      }, 8000);
     } catch(e) {
-      console.warn('创建Peer失败，尝试下一个服务器:', e);
       tryServer(idx + 1);
     }
   }
   tryServer(0);
 }
 
-// ==================== [FIX] 连接重试机制 ====================
+// ==================== 连接重试机制 ====================
 function attemptJoinRoom(code, retryCount) {
   retryCount = retryCount || 0;
   const MAX_RETRIES = 8;
   setConnStatus('正在连接房间 ' + code + '... (尝试 ' + (retryCount+1) + '/' + MAX_RETRIES + ')');
-  
   if (retryCount >= MAX_RETRIES) {
     setConnStatus('连接失败，房间可能已不存在或Host已退出');
     lobbyMessage.textContent = '❌ 连接超时，请确认房间码正确且Host在线';
     return;
   }
-
   createPeer('guest-' + code + '-' + retryCount, function(peerId) {
     setConnStatus('信令服务器已连接，正在连接Host...');
     try {
@@ -473,7 +507,6 @@ function attemptJoinRoom(code, retryCount) {
         }
       }, 3000);
     } catch(e) {
-      console.warn('连接Host失败:', e);
       setTimeout(function() { attemptJoinRoom(code, retryCount + 1); }, 1500);
     }
   }, function(errMsg) {
@@ -541,15 +574,15 @@ function showPrivateInfo(userName, skillName, infoText){
     messageDisplay.textContent=userName+' 使用了 '+skillName;
     Privacy.reveal(getCurrentPlayer().name, skillName+' 的结果', infoText, null);
   } else {
-    messageDisplay.textContent=userName+' '+skillName+'：'+infoText;
+    messageDisplay.textContent=userName+' 使用了 '+skillName;
+    showCheatToast(skillName+' 结果：'+infoText);
   }
 }
 function announceOpponentSkill(playerId, skillName){
   if(Privacy.isLocal()) return;
   const me=getMyPlayer();
   if(playerId===me.id) return;
-  const p=getPlayer(playerId);
-  messageDisplay.textContent='⚠️ '+p.name+' 获得了新技能';
+  messageDisplay.textContent='⚠️ 对方获得了新技能';
 }
 
 // ==================== 渲染 ====================
@@ -560,8 +593,13 @@ function renderPlayers(){
   opponentName.textContent=opp.name; opponentAvatar.textContent=opp.avatar;
   renderLives(opponentLivesEl, opp.hp, opp.maxHP, opp.id==='p1'?'blue':'red');
   const cur=getCurrentPlayer();
-  if(cur.id===me.id){ meHighlight.classList.add('active'); opponentHighlight.classList.remove('active'); }
-  else { meHighlight.classList.remove('active'); opponentHighlight.classList.remove('active'); }
+  if(cur.id===me.id){
+    meHighlight.classList.add('active');
+    opponentHighlight.classList.remove('active');
+  } else {
+    meHighlight.classList.remove('active');
+    opponentHighlight.classList.add('active');
+  }
 }
 function renderLives(container, hp, maxHP, color){
   container.innerHTML='';
@@ -683,6 +721,8 @@ function hideAll(){
   rematchBtn.style.display='none';
   remoteCheatBtn.style.display='none';
   localCheatBtn.style.display='none';
+  chatToggleBtn.style.display='none';
+  chatOverlay.classList.add('hidden');
   skillSelectOverlay.classList.remove('active','rotated');
   Privacy.hide();
   if(G.skillTimer){ clearInterval(G.skillTimer); G.skillTimer=null; }
@@ -716,6 +756,7 @@ function showBattleArea(){
   if(Privacy.isLocal()) opponentArea.classList.add('rotated');
   else opponentArea.classList.remove('rotated');
   if(G.isSkillMode){ skillsBar.style.display='flex'; renderSkills(); }
+  if(G.mode.includes('remote') && G.conn && G.conn.open) chatToggleBtn.style.display='inline-block';
 }
 
 // ==================== 游戏流程 ====================
@@ -796,8 +837,14 @@ function endGame(){
 }
 function initGame(){
   resetGameState();
-  // [FIX] 远程 guest 不直接显示对战区，等待 Host 发送 start 消息
   if(G.mode.includes('remote')&&!G.isHost){
+    showBattleArea();
+    getPlayer('p1').name='Host'; getPlayer('p1').avatar='🙂';
+    getPlayer('p2').name='我'; getPlayer('p2').avatar='🙂';
+    roomInfo.textContent='房间: '+G.roomCode;
+    renderPlayers(); updateRange(); updateInputDisplay();
+    messageDisplay.textContent='等待Host同步游戏状态...';
+    setKeypadEnabled(false);
     return;
   }
   showBattleArea();
@@ -879,6 +926,7 @@ function showSkillSelectWithCallback(forPlayerId, onComplete){
       player.skills=[skill];
       player.cooldowns={};
       skillSelectOverlay.classList.remove('active','rotated');
+      Privacy.hide();
       renderSkills();
       announceOpponentSkill(forPlayerId, skill.name);
       if(Privacy.isLocal()){
@@ -947,6 +995,7 @@ function startHostTimeout(playerId, onComplete){
       const rs=opts[Math.floor(Math.random()*opts.length)];
       player.skills=[rs]; player.cooldowns={};
       skillSelectOverlay.classList.remove('active','rotated');
+      Privacy.hide();
       if(G.skillTimer){ clearInterval(G.skillTimer); G.skillTimer=null; }
       G.pendingSkillSelect=null; G.pendingSkillOptions=null;
       G.hostSkillComplete=null;
@@ -970,6 +1019,7 @@ function showSkillSelectWithOptions(forPlayerId, optionIds){
     if(G.conn) G.conn.send({type:'action',action:'skill_select',playerId:forPlayerId,skillId:skill.id});
     player.skills=[skill]; player.cooldowns={};
     skillSelectOverlay.classList.remove('active','rotated');
+    Privacy.hide();
     G.pendingSkillSelect=null; G.pendingSkillOptions=null;
     renderSkills();
     G.processing=true;
@@ -1017,7 +1067,11 @@ function processGuess(guess, isSkillAttack, guesserId){
   let isHit=(guess===G.bombNumber)||isSkillAttack;
   if(G.cheatMode&&!isSkillAttack&&(G.high-G.low+1)<=10){
     const me=getMyPlayer();
-    if(Privacy.isLocal()||guesser.id===me.id) isHit=true;
+    if(Privacy.isLocal()){
+      if(guesser.id===G.currentPlayer) isHit=true;
+    } else if(guesser.id===me.id){
+      isHit=true;
+    }
   }
   let guesserName;
   if(Privacy.isLocal()) guesserName=guesser.name;
@@ -1042,7 +1096,8 @@ function processGuess(guess, isSkillAttack, guesserId){
       } else if(defender.reflect&&!isSkillAttack&&!guesser.pierce){
         defender.reflect=false;
         guesser.hp-=damage;
-        showExplosion(guesser.id===getMyPlayer().id||Privacy.isLocal()&&guesser.id===G.currentPlayer?'me':'opponent');
+        const targetArea = Privacy.isLocal() ? (guesser.id===G.currentPlayer?'me':'opponent') : (guesser.id===getMyPlayer().id?'me':'opponent');
+        showExplosion(targetArea);
         messageDisplay.textContent='🪞 伤害被反射！'+guesserName+' -'+damage+'血';
         renderPlayers();
         guesser.pierce=false;
@@ -1056,7 +1111,8 @@ function processGuess(guess, isSkillAttack, guesserId){
           defender.hp=2; defender.rebirth=false;
           messageDisplay.textContent='🕊️ '+defender.name+' 重生！以2血复活';
         } else {
-          showExplosion(Privacy.isLocal()?'me':(defender.id===getMyPlayer().id?'me':'opponent'));
+          const targetArea = Privacy.isLocal() ? 'opponent' : (defender.id===getMyPlayer().id?'me':'opponent');
+          showExplosion(targetArea);
           messageDisplay.textContent='💥 踩中炸弹 '+G.bombNumber+'！'+defender.name+' -'+damage+'血';
         }
       }
@@ -1075,7 +1131,16 @@ function processGuess(guess, isSkillAttack, guesserId){
         guesser.hp-=1;
         messageDisplay.textContent+=' 💥 三倍落空，自己-1血！';
         renderPlayers();
-        if(guesser.hp<=0){ endGame(); return; }
+        if(guesser.hp<=0){
+          if(guesser.rebirth){
+            guesser.hp=2; guesser.rebirth=false;
+            messageDisplay.textContent='🕊️ 重生触发！以2血复活';
+            renderPlayers();
+          } else {
+            endGame();
+            return;
+          }
+        }
       }
       if(guesser.speed){
         guesser.speed=false;
@@ -1107,13 +1172,23 @@ function switchTurn(){
   const current=getCurrentPlayer();
   const opponent=getOpponentPlayer(current.id);
   current.blind=false; current.slow=false;
+  // 清除一次性增益状态
+  current.double=false;
+  current.triple=false;
+  current.lifesteal=false;
+  current.pierce=false;
+  current.speed=false;
+  // reflect 保留，shield/fortify/rebirth 保留
   G.playerInput=''; updateInputDisplay();
   reduceCooldowns(current.id);
   function doSwitch(){
     if(opponent.skipNext){
       opponent.skipNext=false;
+      opponent.slow=false;
+      opponent.blind=false;
       messageDisplay.textContent='🕐 '+opponent.name+' 被暂停，跳过回合！';
       G.processing=false;
+      G.playerInput=''; updateInputDisplay();
       renderSkills(); updateTurnIndicator();
       if(G.mode.includes('ai')&&G.currentPlayer==='p2') scheduleAi(aiTurn,900);
       syncIfRemote();
@@ -1148,7 +1223,11 @@ function useSkill(skillId, playerId){
   const user=playerId?getPlayer(playerId):(Privacy.isLocal()?getCurrentPlayer():getMyPlayer());
   if(user.id!==G.currentPlayer) return;
   if(G.mode.includes('remote')&&!G.isHost&&!playerId){
-    if(G.conn) G.conn.send({type:'action',action:'skill',playerId:user.id,skillId:skillId});
+    if(G.conn){
+      G.conn.send({type:'action',action:'skill',playerId:user.id,skillId:skillId});
+      G.processing=true;
+      setKeypadEnabled(false);
+    }
     return;
   }
   const skill=getSkillById(skillId);
@@ -1161,6 +1240,37 @@ function useSkill(skillId, playerId){
   if(Privacy.isLocal()) userName=user.name;
   else userName=user.id===getMyPlayer().id?'我':(G.mode.includes('ai')?'AI':'对方');
   user.cooldowns[skillId]=skill.cooldown;
+  function applyDamage(target, amount, sourceName) {
+    const t = target;
+    if(t.fortify>0 && !user.pierce){
+      t.fortify--;
+      messageDisplay.textContent='🏰 '+t.name+' 的堡垒抵挡了伤害！(剩余'+t.fortify+'层)';
+      return false;
+    }
+    if(t.shield && !user.pierce){
+      t.shield=false;
+      messageDisplay.textContent='🛡️ '+t.name+' 的护盾抵挡了伤害！';
+      return false;
+    }
+    if(t.reflect && !user.pierce){
+      t.reflect=false;
+      user.hp-=amount;
+      messageDisplay.textContent='🪞 伤害被反射！'+sourceName+' -'+amount+'血';
+      renderPlayers();
+      if(user.hp<=0){
+        if(user.rebirth){ user.hp=2; user.rebirth=false; messageDisplay.textContent='🕊️ 重生触发！'; }
+        else { endGame(); return false; }
+      }
+      return false;
+    }
+    t.hp-=amount;
+    if(t.rebirth&&t.hp<=0){
+      t.hp=2; t.rebirth=false;
+      messageDisplay.textContent='🕊️ '+t.name+' 重生！以2血复活';
+    }
+    renderPlayers();
+    return true;
+  }
   switch(skillId){
     case 'detect':
       showPrivateInfo(userName,'📡探测','炸弹是'+(G.bombNumber%2===0?'偶数':'奇数')); break;
@@ -1246,15 +1356,12 @@ function useSkill(skillId, playerId){
       break;
     case 'gamble': {
       if(Math.random()<0.5){
-        opponent.hp=Math.max(0,opponent.hp-1);
+        applyDamage(opponent, 1, userName);
         messageDisplay.textContent='🎲 赌博成功！'+opponent.name+' -1血';
-        showExplosion(Privacy.isLocal()?'opponent':(opponent.id===getMyPlayer().id?'me':'opponent'));
       } else {
-        user.hp=Math.max(0,user.hp-1);
+        applyDamage(user, 1, userName);
         messageDisplay.textContent='🎲 赌博失败！'+userName+' -1血';
-        showExplosion(Privacy.isLocal()?'me':(user.id===getMyPlayer().id?'me':'opponent'));
       }
-      renderPlayers();
       if(getPlayer('p1').hp<=0||getPlayer('p2').hp<=0){ endGame(); return; }
       break;
     }
@@ -1272,16 +1379,10 @@ function useSkill(skillId, playerId){
       break;
     case 'execute':
       if(opponent.hp<=2){
-        if((opponent.shield||opponent.fortify>0)&&!user.pierce){
-          if(opponent.fortify>0) opponent.fortify--; else opponent.shield=false;
-          messageDisplay.textContent='⚔️ 处决被防御挡下！';
-        } else {
-          opponent.hp-=3;
-          showExplosion(Privacy.isLocal()?'opponent':(opponent.id===getMyPlayer().id?'me':'opponent'));
+        const result = applyDamage(opponent, 3, userName);
+        if(result){
           messageDisplay.textContent='⚔️ '+userName+'处决成功！'+opponent.name+' -3血';
-          if(opponent.rebirth&&opponent.hp<=0){ opponent.hp=2; opponent.rebirth=false; messageDisplay.textContent='🕊️ 重生触发！'; }
         }
-        renderPlayers();
         user.pierce=false;
         if(getPlayer('p1').hp<=0||getPlayer('p2').hp<=0){ endGame(); return; }
       } else {
@@ -1335,7 +1436,7 @@ function useSkill(skillId, playerId){
     }
     case 'slow':
       opponent.slow=true;
-      messageDisplay.textContent='🐌 '+userName+'减速！'+opponent.name+'被标记';
+      messageDisplay.textContent='🐌 '+userName+'减速！'+opponent.name+'下回合只能猜一个数字';
       break;
     case 'blind':
       opponent.blind=true;
@@ -1344,10 +1445,14 @@ function useSkill(skillId, playerId){
     case 'steal': {
       const oppSkill=opponent.skills&&opponent.skills[0];
       if(oppSkill){
-        user.skills=[Object.assign({},oppSkill)];
-        user.cooldowns={};
-        messageDisplay.textContent='🤏 '+userName+'窃取了 '+oppSkill.name+'！';
-        if(!Privacy.isLocal()) opponentSkillsBar.style.display='flex';
+        const newSkill = Object.assign({}, oppSkill);
+        if(user.skills.length > 0){
+          user.skills.push(newSkill);
+        } else {
+          user.skills=[newSkill];
+        }
+        user.cooldowns[newSkill.id]=newSkill.cooldown;
+        messageDisplay.textContent='🤏 '+userName+'窃取了 '+newSkill.name+'！';
       } else {
         messageDisplay.textContent='🤏 '+userName+'窃取失败：对方没有技能';
         delete user.cooldowns[skillId];
@@ -1482,7 +1587,35 @@ keypadButtons.forEach(function(btn){
   });
 });
 
-// ==================== 远程对战（PeerJS） ====================
+// ==================== 聊天功能 ====================
+function addChatMessage(sender, text, type) {
+  const msg = document.createElement('div');
+  msg.className = 'chat-msg ' + type;
+  msg.textContent = (type === 'system' ? text : sender + ': ' + text);
+  chatMessages.appendChild(msg);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+function sendChatMessage() {
+  const text = chatInput.value.trim();
+  if (!text || !G.conn || !G.conn.open || !G.mode.includes('remote')) return;
+  const myName = getMyPlayer().name;
+  addChatMessage(myName, text, 'mine');
+  G.conn.send({ type: 'chat', senderName: myName, text: text });
+  chatInput.value = '';
+}
+chatToggleBtn.addEventListener('click', function() {
+  chatOverlay.classList.toggle('hidden');
+  if (!chatOverlay.classList.contains('hidden')) chatInput.focus();
+});
+chatCloseBtn.addEventListener('click', function() {
+  chatOverlay.classList.add('hidden');
+});
+chatSendBtn.addEventListener('click', sendChatMessage);
+chatInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') sendChatMessage();
+});
+
+// ==================== 远程对战 ====================
 function syncIfRemote(){
   if(!G.mode.includes('remote')||!G.conn||!G.isHost) return;
   const state={
@@ -1491,7 +1624,7 @@ function syncIfRemote(){
     playerInput:'', processing:G.processing, cheatMode:G.cheatMode,
     pendingSkillSelect:G.pendingSkillSelect, pendingSkillOptions:G.pendingSkillOptions,
     message:messageDisplay.textContent,
-    p1:Object.assign({},G.players.p1), p2:Object.assign({},G.players.p2)
+    p1:deepClone(G.players.p1), p2:deepClone(G.players.p2)
   };
   try{ G.conn.send({type:'sync',state:state}); }catch(e){}
 }
@@ -1502,16 +1635,16 @@ function applySync(state){
   G.currentPlayer=state.currentPlayer;
   G.processing=state.processing;
   G.cheatMode=state.cheatMode;
-  const oldPending=G.pendingSkillSelect;
   G.pendingSkillSelect=state.pendingSkillSelect;
   G.pendingSkillOptions=state.pendingSkillOptions;
-  Object.assign(G.players.p1,state.p1);
-  Object.assign(G.players.p2,state.p2);
-  if(battleArea.style.display!=='flex'&&!G.active) return;
+  G.players.p1 = deepClone(state.p1);
+  G.players.p2 = deepClone(state.p2);
   if(battleArea.style.display!=='flex'&&G.active){
     showBattleArea();
     roomInfo.textContent='房间: '+G.roomCode;
+    chatToggleBtn.style.display='inline-block';
   }
+  if(!G.active && battleArea.style.display!=='flex') return;
   renderPlayers(); updateRange();
   if(state.message) messageDisplay.textContent=state.message;
   updateTurnIndicator();
@@ -1537,9 +1670,9 @@ function setupConnection(conn){
       waitingText.textContent='对手已加入！';
       setTimeout(function(){ showRemoteSetup(); },600);
     } else {
-      // [FIX] Guest 也显示远程设置界面，等待 Host 开始游戏
-      showRemoteSetup();
-      messageDisplay.textContent='已连接，等待Host设置并开始游戏...';
+      showRemoteWaiting();
+      waitingRoomCode.textContent=G.roomCode;
+      waitingText.textContent='已连接，等待Host开始游戏...';
       setKeypadEnabled(false);
     }
   });
@@ -1552,14 +1685,24 @@ function setupConnection(conn){
       G.minVal=data.minVal; G.maxVal=data.maxVal;
       G.isSkillMode=data.isSkillMode;
       G.mode=data.isSkillMode?'remote-skill':'remote-normal';
-      // [FIX] Guest 收到 start 消息后再初始化游戏
       initGame();
     } else if(data.type==='rematch'&&G.myRole==='guest'){
+      messageDisplay.textContent='Host 发起了重赛';
+      rematchBtn.disabled=false;
+    } else if(data.type==='chat'){
+      if(data.text){
+        const senderName = data.senderName || '对方';
+        addChatMessage(senderName, data.text, 'opponent');
+        if(chatOverlay.classList.contains('hidden')){
+          showCheatToast('💬 新消息');
+        }
+      }
     }
   });
   conn.on('close',function(){
     roomInfo.textContent='对手已断开';
     setConnStatus('连接已断开');
+    chatToggleBtn.style.display='none';
     showCheatToast('⚠️ 对手已断开连接');
     if(G.active){ endGame(); }
     G.conn=null;
@@ -1600,14 +1743,13 @@ function handleGuestAction(data){
   }
 }
 
-// ==================== [FIX] 创建房间 - 多服务器自动切换 ====================
+// ==================== 创建房间 ====================
 $('create-room-btn').addEventListener('click',function(){
   G.roomCode=generateRoomCode();
   G.isHost=true;
   G.myRole='host';
   lobbyMessage.textContent='';
   setConnStatus('正在创建房间...');
-  
   createPeer('bomb-' + G.roomCode, function(peerId) {
     showRemoteWaiting();
     waitingRoomCode.textContent=G.roomCode;
@@ -1615,7 +1757,6 @@ $('create-room-btn').addEventListener('click',function(){
     copyLinkBtn.style.display='block';
     lobbyMessage.textContent='';
     setConnStatus('房间已创建，可分享链接邀请对手');
-    
     G.peer.on('connection',function(conn){
       if(G.conn){ try{conn.close();}catch(e){} return; }
       setupConnection(conn);
@@ -1643,7 +1784,6 @@ $('join-room-btn').addEventListener('click',function(){
 });
 
 copyLinkBtn.addEventListener('click',function(){
-  // [FIX] 使用当前页面URL + room参数
   const baseUrl = window.location.origin + window.location.pathname;
   const url=baseUrl+'?room='+G.roomCode;
   if(navigator.clipboard){
@@ -1652,8 +1792,7 @@ copyLinkBtn.addEventListener('click',function(){
 });
 
 $('cancel-waiting-btn').addEventListener('click',function(){
-  if(G.peer){ try{G.peer.destroy();}catch(e){} G.peer=null; }
-  G.conn=null;
+  cleanupRemote();
   showRemoteLobby();
 });
 
@@ -1666,34 +1805,24 @@ $('remote-start-btn').addEventListener('click',function(){
   initGame();
 });
 
-// ==================== [FIX] URL自动加入 - 更健壮的解析 ====================
+// ==================== URL自动加入 ====================
 (function checkUrlRoom() {
   try {
     const params = new URLSearchParams(window.location.search);
     const room = params.get('room');
     if (room && room.length === 6) {
-      // [FIX] 延迟更久，确保 PeerJS 库和所有 DOM 元素完全加载
       setTimeout(function() {
         if (joinRoomInput) {
           joinRoomInput.value = room.toUpperCase();
           showRemoteLobby();
           lobbyMessage.textContent = '已填入房间码，即将自动加入...';
-          // 再次延迟确保 UI 渲染完成
           setTimeout(function() {
-            if (joinRoomInput.value === room.toUpperCase()) {
-              $('join-room-btn').click();
-            } else {
-              lobbyMessage.textContent = '自动加入失败，请手动点击加入房间';
-            }
+            $('join-room-btn').click();
           }, 500);
-        } else {
-          console.warn('joinRoomInput 未找到，自动加入跳过');
         }
       }, 1000);
     }
-  } catch(e) {
-    console.warn('URL参数解析失败:', e);
-  }
+  } catch(e) {}
 })();
 
 // ==================== 菜单事件 ====================
@@ -1740,11 +1869,9 @@ surrenderBtn.addEventListener('click',function(){
 });
 gameOverBtn.addEventListener('click',function(){
   if(G.mode.includes('remote')){
-    if(G.isHost){ showRemoteWaiting(); waitingRoomCode.textContent=G.roomCode; waitingText.textContent='对手已断开或游戏结束'; }
-    else { showRemoteLobby(); }
-  } else {
-    showMainMenu();
+    cleanupRemote();
   }
+  showMainMenu();
 });
 rematchBtn.addEventListener('click',function(){
   rematchBtn.disabled=true;
