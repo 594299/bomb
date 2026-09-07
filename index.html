@@ -241,10 +241,21 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
 'use strict';
 
 // ==================== [FIX] 多信令服务器配置 ====================
+// [FIX] 增强 STUN/TURN 服务器配置，提高 NAT 穿透成功率
 const PEER_SERVERS = [
   { id: 'bomb-room', host: '0.peerjs.com', port: 443, path: '/', ssl: 1 },
   { id: 'bomb-room-alt', host: 'peerjs.maker.tech', port: 443, path: '/', ssl: 1 },
   { id: 'bomb-room-fallback', host: 'wss://0.peerjs.com', port: 443, path: '/', ssl: 1 },
+];
+// [FIX] 显式 ICE 服务器配置（STUN + TURN）
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun3.l.google.com:19302' },
+  { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:80?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
 ];
 
 // ==================== 技能定义（36个） ====================
@@ -404,7 +415,8 @@ function createPeer(id, onOpen, onError) {
         port: server.port,
         path: server.path,
         ssl: server.ssl,
-        secure: true
+        secure: true,
+        iceServers: ICE_SERVERS
       });
       G.peer.on('open', function(peerId) {
         console.log('信令服务器连接成功, peerId:', peerId);
@@ -690,6 +702,10 @@ function showSetup(mode){
   aiLevelRow.style.display=mode.includes('ai')?'flex':'none';
 }
 function showRemoteLobby(){ hideAll(); remoteLobby.classList.remove('hidden'); setConnStatus(''); }
+function showRemoteSetup(){
+  hideAll();
+  remoteSetupOverlay.classList.remove('hidden');
+}
 function showRemoteWaiting(){ hideAll(); remoteWaiting.classList.remove('hidden'); }
 function showBattleArea(){
   hideAll();
@@ -780,6 +796,10 @@ function endGame(){
 }
 function initGame(){
   resetGameState();
+  // [FIX] 远程 guest 不直接显示对战区，等待 Host 发送 start 消息
+  if(G.mode.includes('remote')&&!G.isHost){
+    return;
+  }
   showBattleArea();
   if(Privacy.isLocal()){
     getPlayer('p1').name='蓝方'; getPlayer('p1').avatar='🔵';
@@ -1517,8 +1537,9 @@ function setupConnection(conn){
       waitingText.textContent='对手已加入！';
       setTimeout(function(){ showRemoteSetup(); },600);
     } else {
-      showBattleArea();
-      messageDisplay.textContent='已连接，等待Host开始游戏...';
+      // [FIX] Guest 也显示远程设置界面，等待 Host 开始游戏
+      showRemoteSetup();
+      messageDisplay.textContent='已连接，等待Host设置并开始游戏...';
       setKeypadEnabled(false);
     }
   });
@@ -1531,6 +1552,8 @@ function setupConnection(conn){
       G.minVal=data.minVal; G.maxVal=data.maxVal;
       G.isSkillMode=data.isSkillMode;
       G.mode=data.isSkillMode?'remote-skill':'remote-normal';
+      // [FIX] Guest 收到 start 消息后再初始化游戏
+      initGame();
     } else if(data.type==='rematch'&&G.myRole==='guest'){
     }
   });
@@ -1649,16 +1672,24 @@ $('remote-start-btn').addEventListener('click',function(){
     const params = new URLSearchParams(window.location.search);
     const room = params.get('room');
     if (room && room.length === 6) {
+      // [FIX] 延迟更久，确保 PeerJS 库和所有 DOM 元素完全加载
       setTimeout(function() {
-        joinRoomInput.value = room.toUpperCase();
-        showRemoteLobby();
-        lobbyMessage.textContent = '已填入房间码，点击加入...';
-        setTimeout(function() {
-          if (joinRoomInput.value === room.toUpperCase()) {
-            $('join-room-btn').click();
-          }
-        }, 300);
-      }, 500);
+        if (joinRoomInput) {
+          joinRoomInput.value = room.toUpperCase();
+          showRemoteLobby();
+          lobbyMessage.textContent = '已填入房间码，即将自动加入...';
+          // 再次延迟确保 UI 渲染完成
+          setTimeout(function() {
+            if (joinRoomInput.value === room.toUpperCase()) {
+              $('join-room-btn').click();
+            } else {
+              lobbyMessage.textContent = '自动加入失败，请手动点击加入房间';
+            }
+          }, 500);
+        } else {
+          console.warn('joinRoomInput 未找到，自动加入跳过');
+        }
+      }, 1000);
     }
   } catch(e) {
     console.warn('URL参数解析失败:', e);
