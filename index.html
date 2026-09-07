@@ -7,97 +7,73 @@
 <style>
 /* ==================== 全局变量与基础样式 ==================== */
 :root {
-  --neon:#00f0ff;    /* 主色调：霓虹青 */
-  --blue:#4da6ff;    /* 蓝色：我方 */
-  --red:#ff6b6b;     /* 红色：对方 */
+  --neon:#00f0ff;
+  --blue:#4da6ff;
+  --red:#ff6b6b;
 }
-/* 清除默认边距和内边距，禁止用户选择文本 */
 * { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent; }
-/* 固定页面，防止滚动 */
 html, body { height:100%; width:100%; overflow:hidden; position:fixed; inset:0; background:#05000a; color:#fff; font-family:system-ui,sans-serif; }
-/* 适配刘海屏安全区域 */
 body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
-/* 游戏容器：最大宽度500px，居中 */
 #game-container { width:100%; max-width:500px; height:100%; background:linear-gradient(180deg,#0d0d1a,#1a0a20); display:flex; flex-direction:column; margin:0 auto; position:relative; }
-/* 顶部标题栏 */
 #header { padding:10px; background:rgba(0,0,0,0.5); display:flex; justify-content:space-between; align-items:center; z-index:10; }
 #header h1 { font-size:1.1rem; background:linear-gradient(135deg,#ff8800,#ff00e6,#00f0ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-/* 房间信息显示 */
 #room-info { font-size:0.7rem; color:#ccc; background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:12px; }
 #header-right { display:flex; align-items:center; gap:6px; }
-/* 覆盖层：用于菜单、设置等弹窗 */
 .overlay { position:absolute; inset:0; background:rgba(0,0,0,0.95); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; padding:20px; }
 .overlay.hidden { display:none; }
 .overlay-title { font-size:1.6rem; font-weight:900; margin-bottom:20px; text-align:center; }
-/* 按钮样式 */
 .btn { padding:14px 40px; border:2px solid var(--neon); border-radius:50px; background:rgba(0,240,255,0.1); color:var(--neon); font-size:1rem; font-weight:700; cursor:pointer; margin-top:12px; min-width:220px; outline:none; }
 .btn:active { transform:scale(0.95); }
 .btn.secondary { background:rgba(255,136,0,0.1); border-color:#ff8800; color:#ff8800; }
 .btn.small { padding:8px 20px; min-width:auto; font-size:0.8rem; }
-/* 房间码输入框 */
 .room-input { width:200px; padding:12px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:10px; color:#fff; font-size:1.5rem; text-align:center; letter-spacing:8px; outline:none; margin-top:15px; text-transform:uppercase; }
 .room-display { font-size:2rem; font-weight:900; letter-spacing:10px; color:var(--neon); margin:20px 0; }
 .waiting-text { font-size:0.9rem; color:#ccc; animation:pulse 1.5s infinite; }
 @keyframes pulse { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
-/* 设置行 */
 .setting-row { display:flex; align-items:center; gap:8px; margin:6px 0; flex-wrap:wrap; justify-content:center; }
 .setting-row label { font-size:0.8rem; color:#ccc; }
 .setting-row input { width:70px; padding:8px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:6px; color:#fff; font-size:1rem; text-align:center; outline:none; }
-/* AI难度按钮 */
 .ai-level-btn { padding:8px 16px; border-radius:20px; font-size:0.75rem; font-weight:700; cursor:pointer; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); color:#ccc; margin:0 3px; }
 .ai-level-btn.active { background:rgba(0,240,255,0.2); border-color:var(--neon); color:var(--neon); }
-/* 战斗区域 */
 #battle-area { flex:1; display:none; flex-direction:column; justify-content:space-between; padding:4px 8px; }
 .player-area { display:flex; flex-direction:column; align-items:center; gap:1px; }
 .player-area .avatar { font-size:2rem; }
 .player-area .name-tag { font-size:0.6rem; color:#ccc; background:rgba(0,0,0,0.5); padding:1px 8px; border-radius:8px; }
-/* 生命值圆点 */
 .life-dots { display:flex; gap:3px; }
 .life-dots .dot { width:9px; height:9px; border-radius:50%; border:2px solid #555; display:inline-block; }
 .life-dots .dot.filled-blue { background:var(--blue); border-color:var(--blue); }
 .life-dots .dot.filled-red { background:var(--red); border-color:var(--red); }
 .life-dots .dot.lost { background:transparent; border-color:#333; }
-/* 高亮边框 */
 .highlight { border:2px solid transparent; border-radius:12px; padding:3px 12px; transition:all 0.3s; position:relative; }
 .highlight.active { border-color:var(--neon); box-shadow:0 0 12px rgba(0,240,255,0.3); }
-/* 信息区域 */
 #info-area { display:flex; flex-direction:column; align-items:center; gap:3px; padding:2px 0; }
 #range-display { font-size:0.8rem; font-weight:700; color:var(--neon); background:rgba(0,240,255,0.08); padding:3px 14px; border-radius:15px; }
 #turn-indicator { font-size:0.75rem; font-weight:700; background:rgba(255,255,255,0.06); padding:3px 14px; border-radius:12px; }
 #turn-indicator.turn-me { color:var(--blue); border:1px solid var(--blue); }
 #turn-indicator.turn-opponent { color:var(--red); border:1px solid var(--red); }
 #message-display { font-size:0.7rem; color:#bbb; min-height:1rem; text-align:center; max-width:95%; padding:0 5px; }
-/* 对方技能栏 */
 #opponent-skills-bar { display:none; gap:4px; justify-content:center; flex-wrap:wrap; padding:2px 0; }
 #opponent-skills-bar .opp-skill-tag { padding:3px 8px; border:1px solid rgba(255,100,100,0.35); border-radius:8px; background:rgba(255,100,100,0.07); color:#ff9999; font-size:0.6rem; font-weight:700; }
-/* 输入区域 */
 #input-keypad-container { display:flex; flex-direction:column; align-items:center; gap:3px; padding:2px 0; }
 #input-display { font-size:1.2rem; font-weight:900; min-height:1.8rem; letter-spacing:2px; background:rgba(0,0,0,0.4); border:2px solid rgba(0,240,255,0.35); border-radius:8px; padding:2px 16px; min-width:100px; text-align:center; }
 #input-display.empty { border-color:rgba(255,255,255,0.15); color:#555; }
-/* 数字键盘 */
 #keypad { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; width:100%; max-width:220px; }
 .key-btn { aspect-ratio:1.1; border:1.5px solid rgba(255,255,255,0.15); border-radius:8px; background:rgba(255,255,255,0.05); color:#fff; font-size:0.9rem; font-weight:700; cursor:pointer; min-width:44px; min-height:44px; }
 .key-btn:active { transform:scale(0.88); background:rgba(255,255,255,0.18); }
 .key-btn.func { font-size:0.7rem; background:rgba(255,136,0,0.1); color:#ff8800; }
 .key-btn.confirm { font-size:0.75rem; background:rgba(0,255,136,0.12); color:#00ff88; }
 .key-btn:disabled { opacity:0.25; pointer-events:none; }
-/* 爆炸动画 */
 .explosion { position:absolute; font-size:2.5rem; animation:explode 0.7s forwards; pointer-events:none; z-index:100; }
 @keyframes explode { 0%{transform:scale(0.3);opacity:1;} 50%{transform:scale(1.4);} 100%{transform:scale(2);opacity:0;} }
 .shake { animation:shakeAnim 0.5s both; }
 @keyframes shakeAnim { 0%,100%{transform:translate(0,0);} 20%{transform:translate(-8px,6px);} 40%{transform:translate(7px,-5px);} 60%{transform:translate(-5px,-4px);} 80%{transform:translate(5px,4px);} }
-/* 作弊按钮已删除 */
-/* 提示弹窗 */
 #cheat-toast { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.85); padding:10px 20px; border-radius:10px; font-size:0.9rem; font-weight:700; z-index:3000; opacity:0; transition:opacity 0.3s; pointer-events:none; }
 #cheat-toast.show { opacity:1; }
-/* 认输按钮 */
 #surrender-btn { padding:6px 12px; border:1px solid rgba(255,80,80,0.4); border-radius:15px; background:rgba(255,50,50,0.08); color:#ff6666; font-size:0.65rem; font-weight:700; cursor:pointer; margin-top:4px; display:none; }
-/* 技能栏 */
 #skills-bar { display:none; gap:4px; margin-top:4px; flex-wrap:wrap; justify-content:center; }
 .skill-btn { padding:4px 10px; border:1.5px solid rgba(255,255,255,0.3); border-radius:10px; background:rgba(255,255,255,0.05); color:#999; font-size:0.65rem; font-weight:700; cursor:pointer; min-height:32px; }
 .skill-btn.ready { border-color:var(--neon); color:var(--neon); background:rgba(0,240,255,0.08); box-shadow:0 0 8px rgba(0,240,255,0.2); }
 .skill-btn:disabled { opacity:0.3; pointer-events:none; }
-/* 技能选择覆盖层 */
 #skill-select-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.96); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:2000; padding:20px; }
 #skill-select-overlay.active { display:flex; }
 #skill-select-overlay.rotated { transform:rotate(180deg); }
@@ -107,15 +83,11 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
 .skill-select-card .skill-icon { font-size:1.8rem; }
 .skill-select-card .skill-name { font-size:0.75rem; font-weight:700; margin-top:4px; }
 .skill-select-card .skill-desc { font-size:0.55rem; color:#aaa; margin-top:3px; line-height:1.4; }
-/* 游戏结束按钮 */
 #game-over-btn, #rematch-btn { display:none; padding:8px 20px; border-radius:20px; font-size:0.8rem; font-weight:700; cursor:pointer; margin-top:6px; }
 #game-over-btn { border:2px solid var(--neon); background:rgba(0,240,255,0.1); color:var(--neon); }
 #rematch-btn { border:2px solid #ff8800; background:rgba(255,136,0,0.1); color:#ff8800; }
-/* 技能选择倒计时 */
 #skill-timer { font-size:2rem; font-weight:900; color:var(--neon); margin:10px 0; }
-/* 对手区域旋转（本地模式） */
 #opponent-area.rotated { transform:rotate(180deg); }
-/* 隐私遮罩 */
 #privacy-screen { position:absolute; inset:0; background:rgba(0,0,0,0.98); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:2500; padding:20px; cursor:pointer; text-align:center; }
 #privacy-screen.active { display:flex; }
 #privacy-screen.revealed .privacy-handoff { display:none; }
@@ -127,11 +99,9 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
 .privacy-result { font-size:1.2rem; color:var(--neon); font-weight:700; margin:10px 0; line-height:1.5; }
 .privacy-label { font-size:0.8rem; color:#888; }
 #conn-status { font-size:0.65rem; color:#888; margin-top:8px; }
-/* 聊天按钮和角标 */
 #chat-toggle-btn { display:none; background:none; border:1.5px solid rgba(255,255,255,0.2); border-radius:8px; padding:4px 8px; font-size:0.9rem; cursor:pointer; color:#ccc; position:relative; }
 .chat-badge { position:absolute; top:-4px; right:-4px; background:#ff4444; color:#fff; font-size:0.6rem; font-weight:900; border-radius:50%; width:16px; height:16px; display:none; align-items:center; justify-content:center; }
 .chat-badge.show { display:flex; }
-/* 聊天窗口 */
 #chat-overlay { z-index:3100; }
 .chat-container { width:90%; max-width:400px; height:70%; background:#111; border-radius:15px; border:1px solid rgba(255,255,255,0.2); display:flex; flex-direction:column; overflow:hidden; }
 .chat-header { display:flex; justify-content:space-between; align-items:center; padding:10px 15px; background:rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.1); font-weight:700; }
@@ -144,13 +114,16 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
 .chat-input-row { display:flex; padding:8px; border-top:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); }
 #chat-input { flex:1; padding:8px 12px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:15px; color:#fff; font-size:0.85rem; outline:none; }
 #chat-send-btn { margin-left:6px; padding:8px 15px; border:none; border-radius:15px; background:var(--neon); color:#000; font-weight:700; cursor:pointer; }
-/* 聊天消息通知弹窗 */
 #chat-notification { position:absolute; top:60px; right:10px; background:rgba(20,20,35,0.95); border:1px solid rgba(0,240,255,0.4); border-radius:12px; padding:12px 15px; z-index:3200; max-width:250px; display:none; box-shadow:0 4px 20px rgba(0,0,0,0.5); }
 #chat-notification.show { display:block; animation:slideIn 0.3s ease-out; }
 @keyframes slideIn { from { transform:translateX(20px); opacity:0; } to { transform:translateX(0); opacity:1; } }
 .chat-notif-header { display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; color:var(--neon); font-weight:700; }
 .chat-notif-close { background:none; border:none; color:#aaa; cursor:pointer; font-size:0.8rem; }
 .chat-notif-body { font-size:0.8rem; color:#ddd; margin-top:6px; word-break:break-word; }
+/* 名称编辑覆盖层 */
+#name-edit-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.9); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:3300; padding:20px; }
+#name-edit-overlay.active { display:flex; }
+.name-edit-input { width:200px; padding:10px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:10px; color:#fff; font-size:1rem; text-align:center; outline:none; margin:10px 0; }
 </style>
 </head>
 <body>
@@ -158,18 +131,15 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
   <div id="header">
     <h1>💣 数字炸弹</h1>
     <div id="header-right">
-      <!-- 聊天按钮（仅远程模式显示） -->
       <button id="chat-toggle-btn">💬<span id="chat-badge" class="chat-badge">0</span></button>
       <div id="room-info">未连接</div>
     </div>
   </div>
-  <!-- 主菜单 -->
   <div id="main-menu" class="overlay">
     <div class="overlay-title">选择模式</div>
     <button class="btn" id="normal-mode-btn">🎮 普通模式</button>
     <button class="btn secondary" id="skill-mode-btn">⚡ 技能模式</button>
   </div>
-  <!-- 普通模式子菜单 -->
   <div id="normal-submenu" class="overlay hidden">
     <div class="overlay-title">普通模式</div>
     <button class="btn" id="normal-local-btn">📱 本地双人</button>
@@ -177,7 +147,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <button class="btn" id="normal-remote-btn">🌐 远程对战</button>
     <button class="btn secondary" id="normal-back-btn">返回</button>
   </div>
-  <!-- 技能模式子菜单 -->
   <div id="skill-submenu" class="overlay hidden">
     <div class="overlay-title">技能模式</div>
     <button class="btn" id="skill-local-btn">📱 本地双人</button>
@@ -185,7 +154,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <button class="btn" id="skill-remote-btn">🌐 远程对战</button>
     <button class="btn secondary" id="skill-back-btn">返回</button>
   </div>
-  <!-- 游戏设置界面 -->
   <div id="setup-overlay" class="overlay hidden">
     <div class="overlay-title">⚙️ 游戏设置</div>
     <div class="setting-row">
@@ -204,7 +172,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <button class="btn" id="start-game-btn">开始游戏</button>
     <button class="btn secondary" id="back-menu-btn1">返回</button>
   </div>
-  <!-- 远程大厅 -->
   <div id="remote-lobby" class="overlay hidden">
     <div class="overlay-title">远程对战</div>
     <button class="btn" id="create-room-btn">创建房间</button>
@@ -215,7 +182,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <div id="conn-status"></div>
     <button class="btn secondary" id="back-menu-btn2">返回</button>
   </div>
-  <!-- 远程等待界面 -->
   <div id="remote-waiting" class="overlay hidden">
     <div class="overlay-title">房间码</div>
     <div class="room-display" id="waiting-room-code">------</div>
@@ -223,7 +189,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <button class="btn" id="cancel-waiting-btn">取消</button>
     <button class="btn small" id="copy-link-btn" style="display:none;">📋 复制邀请链接</button>
   </div>
-  <!-- 远程设置界面 -->
   <div id="remote-setup-overlay" class="overlay hidden">
     <div class="overlay-title">⚙️ 远程游戏设置</div>
     <div class="setting-row">
@@ -235,9 +200,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     </div>
     <button class="btn" id="remote-start-btn">开始游戏</button>
   </div>
-  <!-- 战斗区域 -->
   <div id="battle-area">
-    <!-- 对手区域 -->
     <div class="player-area" id="opponent-area">
       <div class="highlight" id="opponent-highlight">
         <div class="avatar" id="opponent-avatar">🙂</div>
@@ -245,17 +208,13 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
         <div class="name-tag" id="opponent-name">对手</div>
       </div>
     </div>
-    <!-- 信息区域 -->
     <div id="info-area">
       <div id="range-display">范围：1 - 100</div>
       <div id="turn-indicator">等待...</div>
       <div id="message-display">游戏开始</div>
     </div>
-    <!-- 对方技能栏 -->
     <div id="opponent-skills-bar"></div>
-    <!-- 我方技能栏 -->
     <div id="skills-bar"></div>
-    <!-- 输入区域 -->
     <div id="input-keypad-container">
       <div id="input-display" class="empty">等待输入</div>
       <div id="keypad">
@@ -279,7 +238,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
       <button id="game-over-btn">返回主菜单</button>
       <button id="rematch-btn">🔄 再来一局</button>
     </div>
-    <!-- 我方区域 -->
     <div class="player-area" id="me-area">
       <div class="highlight" id="me-highlight">
         <div class="life-dots" id="me-lives"></div>
@@ -288,13 +246,11 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
       </div>
     </div>
   </div>
-  <!-- 技能选择覆盖层 -->
   <div id="skill-select-overlay">
     <div class="overlay-title" id="skill-select-title">选择技能</div>
     <div id="skill-timer">30</div>
     <div class="skill-select-grid" id="skill-select-grid"></div>
   </div>
-  <!-- 隐私遮罩 -->
   <div id="privacy-screen">
     <div class="privacy-handoff">
       <div class="p-title" id="privacy-title">🔒 请将设备交给对方</div>
@@ -302,7 +258,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     </div>
     <div id="privacy-content"></div>
   </div>
-  <!-- 聊天窗口 -->
   <div id="chat-overlay" class="overlay hidden">
     <div class="chat-container">
       <div class="chat-header">
@@ -316,7 +271,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
       </div>
     </div>
   </div>
-  <!-- 聊天消息通知弹窗 -->
   <div id="chat-notification">
     <div class="chat-notif-header">
       <span>💬 新消息</span>
@@ -324,7 +278,12 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     </div>
     <div class="chat-notif-body" id="chat-notif-body"></div>
   </div>
-  <!-- 通用提示弹窗 -->
+  <div id="name-edit-overlay">
+    <div class="overlay-title">✏️ 编辑名称</div>
+    <input type="text" class="name-edit-input" id="name-edit-input" placeholder="输入新名称" maxlength="10">
+    <button class="btn" id="name-edit-confirm">确认</button>
+    <button class="btn secondary" id="name-edit-cancel">取消</button>
+  </div>
   <div id="cheat-toast"></div>
 </div>
 
@@ -333,13 +292,10 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
 (function(){
 'use strict';
 
-/* ==================== 信令服务器配置 ==================== */
-/* 多服务器自动切换，提高连接成功率 */
 const PEER_SERVERS = [
   { host: '0.peerjs.com', port: 443, path: '/', ssl: 1 },
   { host: 'peerjs.maker.tech', port: 443, path: '/', ssl: 1 },
 ];
-/* ICE服务器：STUN用于NAT穿透，TURN用于中继 */
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
@@ -347,8 +303,6 @@ const ICE_SERVERS = [
   { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
 ];
 
-/* ==================== 技能定义（共29个） ==================== */
-/* 每个技能包含：id、名称、描述、冷却时间 */
 const ALL_SKILLS = [
   { id:'detect',    name:'📡 探测',   desc:'立即得知炸弹是奇数还是偶数。冷却2。', cooldown:2 },
   { id:'peek',      name:'🔍 透视',   desc:'随机查看炸弹的个位或最高位数字。冷却2。', cooldown:2 },
@@ -381,68 +335,29 @@ const ALL_SKILLS = [
   { id:'insight',   name:'🕯️ 洞察',   desc:'选择范围内任意数字，系统告诉你该数字与炸弹的距离。冷却3。', cooldown:3 }
 ];
 
-/* ==================== 玩家对象工厂函数 ==================== */
-/* 创建玩家对象，包含所有状态字段 */
 function makePlayer(id) {
-  return {
-    id:id,                    // 玩家标识：p1或p2
-    name:'',                  // 玩家名称
-    avatar:'',                // 玩家头像
-    hp:5,                     // 当前生命值
-    maxHP:5,                  // 最大生命值
-    shield:false,             // 护盾：抵挡一次炸弹伤害
-    double:false,             // 双倍：下一次踩雷伤害x2
-    triple:false,             // 三倍：下一次踩雷伤害x3，猜错自伤1
-    lifesteal:false,          // 吸血：下一次踩雷攻击时回复1血
-    rebirth:false,            // 重生：死亡时以2血复活
-    speed:false,              // 加速：本回合可连续猜2次
-    skipNext:false,           // 暂停：跳过下回合
-    lock:false,               // 封锁：禁用技能直到爆炸
-    reflect:false,            // 反射：下次炸弹伤害反弹
-    pierce:false,             // 穿透：本回合无视护盾
-    blind:false,              // 致盲：下回合看不到范围
-    trapNumber:null,          // 陷阱：选定的数字
-    skills:[],                // 当前拥有的技能列表
-    cooldowns:{}              // 技能冷却时间表
-  };
+  return { id:id, name:'', avatar:'', hp:5, maxHP:5,
+    shield:false, double:false, triple:false, lifesteal:false, rebirth:false,
+    speed:false, skipNext:false, lock:false, reflect:false, pierce:false,
+    blind:false, trapNumber:null, skills:[], cooldowns:{} };
 }
-
-/* ==================== 全局游戏状态 ==================== */
 const G = {
-  mode:'',                    // 游戏模式：local-normal, ai-normal, remote-normal, local-skill, ai-skill, remote-skill
-  active:false,               // 游戏是否进行中
-  processing:false,           // 是否正在处理操作
-  isSkillMode:false,          // 是否为技能模式
-  aiLevel:1,                  // AI难度：1简单 2中等 3困难
-  minVal:1,                   // 最小值
-  maxVal:100,                 // 最大值
-  low:1,                      // 当前范围下限
-  high:100,                   // 当前范围上限
-  bombNumber:0,               // 炸弹数字
-  currentPlayer:'p1',         // 当前行动玩家
-  playerInput:'',             // 玩家输入的数字字符串
-  myRole:'',                  // 远程模式角色：host或guest
-  isHost:false,               // 是否为Host
-  peer:null,                  // PeerJS实例
-  conn:null,                  // DataConnection连接
-  roomCode:'',                // 房间码
-  pendingSkillSelect:null,    // 等待选择技能的玩家ID
-  pendingSkillOptions:null,   // 等待选择的技能选项列表
-  skillTimer:null,            // 技能选择倒计时定时器
-  skillTimerCount:30,         // 技能选择倒计时秒数
-  hostTimeout:null,           // Host端等待Guest选择的超时定时器
-  hostSkillComplete:null,     // Host端技能选择完成回调
-  aiTimeouts:[],              // AI延迟操作定时器列表
-  players:{ p1:makePlayer('p1'), p2:makePlayer('p2') },  // 玩家对象
-  connRetryCount:0,           // 连接重试次数
-  connRetryTimer:null,        // 连接重试定时器
-  peerServerIndex:0           // 信令服务器索引
+  mode:'', active:false, processing:false, isSkillMode:false,
+  aiLevel:1, minVal:1, maxVal:100, low:1, high:100,
+  bombNumber:0, currentPlayer:'p1', playerInput:'',
+  myRole:'', isHost:false,
+  peer:null, conn:null, roomCode:'',
+  pendingSkillSelect:null, pendingSkillOptions:null,
+  skillTimer:null, skillTimerCount:30, hostTimeout:null,
+  hostSkillComplete:null, aiTimeouts:[],
+  players:{ p1:makePlayer('p1'), p2:makePlayer('p2') },
+  connRetryCount:0, connRetryTimer:null,
+  peerServerIndex:0
 };
-let skillSelectPhase = null;  // 技能选择阶段
-let unreadChatCount = 0;      // 未读聊天消息数
-let pingInterval = null;      // 心跳定时器
+let skillSelectPhase = null;
+let unreadChatCount = 0;
+let pingInterval = null;
 
-/* ==================== DOM元素引用 ==================== */
 const $ = id => document.getElementById(id);
 const mainMenu=$('main-menu'), normalSubmenu=$('normal-submenu'), skillSubmenu=$('skill-submenu');
 const setupOverlay=$('setup-overlay'), remoteLobby=$('remote-lobby'), remoteWaiting=$('remote-waiting');
@@ -469,8 +384,8 @@ const privacyScreen=$('privacy-screen'), privacyTitle=$('privacy-title'), privac
 const chatToggleBtn=$('chat-toggle-btn'), chatOverlay=$('chat-overlay'), chatCloseBtn=$('chat-close-btn');
 const chatMessages=$('chat-messages'), chatInput=$('chat-input'), chatSendBtn=$('chat-send-btn'), chatBadge=$('chat-badge');
 const chatNotification=$('chat-notification'), chatNotifBody=$('chat-notif-body'), chatNotifClose=$('chat-notif-close');
+const nameEditOverlay=$('name-edit-overlay'), nameEditInput=$('name-edit-input');
 
-/* ==================== 工具函数 ==================== */
 function getPlayer(id){ return G.players[id]; }
 function getCurrentPlayer(){ return getPlayer(G.currentPlayer); }
 function getOpponentPlayer(id){ return id==='p1' ? getPlayer('p2') : getPlayer('p1'); }
@@ -480,7 +395,7 @@ function getMyPlayer(){
 }
 function getMyOpponent(){ return getOpponentPlayer(getMyPlayer().id); }
 function isMyTurn(){
-  if(G.mode.includes('local')) return true;  // 本地模式键盘始终可用
+  if(G.mode.includes('local')) return true;
   if(G.mode.includes('ai')) return G.currentPlayer==='p1';
   if(G.mode.includes('remote')) return (G.currentPlayer==='p1'&&G.myRole==='host')||(G.currentPlayer==='p2'&&G.myRole==='guest');
   return false;
@@ -543,7 +458,6 @@ function stopPing(){
   if(pingInterval){ clearInterval(pingInterval); pingInterval=null; }
 }
 
-/* ==================== 聊天通知弹窗 ==================== */
 let notifTimeout = null;
 function showChatNotification(sender, text) {
   chatNotifBody.textContent = sender + ': ' + text;
@@ -558,7 +472,6 @@ chatNotifClose.addEventListener('click', function() {
   if (notifTimeout) clearTimeout(notifTimeout);
 });
 
-/* ==================== PeerJS 多服务器自动切换 ==================== */
 function createPeer(id, onOpen, onError) {
   if (typeof Peer === 'undefined') { onError('PeerJS库未加载'); return; }
   function tryServer(idx) {
@@ -577,7 +490,6 @@ function createPeer(id, onOpen, onError) {
   tryServer(0);
 }
 
-/* ==================== 连接重试机制 ==================== */
 function attemptJoinRoom(code, retryCount) {
   retryCount = retryCount || 0;
   const MAX_RETRIES = 8;
@@ -593,7 +505,6 @@ function attemptJoinRoom(code, retryCount) {
   }, function(errMsg) { setConnStatus('信令服务器连接失败'); lobbyMessage.textContent='❌ 无法连接到信令服务器'; });
 }
 
-/* ==================== 隐私遮罩（本地模式） ==================== */
 const Privacy = {
   _onDone:null, _state:'idle',
   isLocal: function(){ return G.mode.includes('local'); },
@@ -644,12 +555,13 @@ const Privacy = {
 };
 privacyScreen.addEventListener('click', function(e){ Privacy._handleClick(e); });
 
-/* ==================== 私密信息显示 ==================== */
+/* 私密信息显示：本地模式用隐私遮罩，远程模式只显示给自己 */
 function showPrivateInfo(userName, skillName, infoText){
   if(Privacy.isLocal()){
     messageDisplay.textContent=userName+' 使用了 '+skillName;
     Privacy.reveal(getCurrentPlayer().name, skillName+' 的结果', infoText, null);
   } else {
+    /* 远程模式：公共消息只显示技能名，结果通过toast只显示给自己 */
     messageDisplay.textContent=userName+' 使用了 '+skillName;
     showCheatToast(skillName+' 结果：'+infoText);
   }
@@ -661,7 +573,6 @@ function announceOpponentSkill(playerId, skillName){
   messageDisplay.textContent='⚠️ 对方获得了新技能';
 }
 
-/* ==================== 渲染函数 ==================== */
 function renderPlayers(){
   const me=getMyPlayer(), opp=getMyOpponent();
   meName.textContent=me.name; meAvatar.textContent=me.avatar;
@@ -782,7 +693,6 @@ function reduceCooldowns(playerId){
   renderSkills();
 }
 
-/* ==================== 界面切换 ==================== */
 function hideAll(){
   [mainMenu,normalSubmenu,skillSubmenu,setupOverlay,remoteLobby,remoteWaiting,remoteSetupOverlay].forEach(el=>el.classList.add('hidden'));
   battleArea.style.display='none';
@@ -794,6 +704,7 @@ function hideAll(){
   chatToggleBtn.style.display='none';
   chatOverlay.classList.add('hidden');
   skillSelectOverlay.classList.remove('active','rotated');
+  nameEditOverlay.classList.remove('active');
   Privacy.hide();
   if(G.skillTimer){ clearInterval(G.skillTimer); G.skillTimer=null; }
   clearHostTimeout(); clearAiTimeouts();
@@ -824,7 +735,40 @@ function showBattleArea(){
   if(G.mode.includes('remote') && G.conn && G.conn.open) chatToggleBtn.style.display='inline-block';
 }
 
-/* ==================== 游戏流程控制 ==================== */
+/* 名称编辑功能 */
+let nameEditTarget = null;
+function openNameEditor(playerId) {
+  nameEditTarget = playerId;
+  const player = getPlayer(playerId);
+  nameEditInput.value = player.name;
+  nameEditOverlay.classList.add('active');
+}
+function closeNameEditor() {
+  nameEditOverlay.classList.remove('active');
+  nameEditTarget = null;
+}
+$('name-edit-confirm').addEventListener('click', function() {
+  if (nameEditTarget) {
+    const newName = nameEditInput.value.trim();
+    if (newName) {
+      getPlayer(nameEditTarget).name = newName;
+      renderPlayers();
+      syncIfRemote();
+    }
+  }
+  closeNameEditor();
+});
+$('name-edit-cancel').addEventListener('click', closeNameEditor);
+/* 点击名称标签编辑名称 */
+opponentName.addEventListener('click', function() {
+  if (G.mode.includes('local') || (G.mode.includes('remote') && G.isHost)) {
+    openNameEditor(getMyOpponent().id);
+  }
+});
+meName.addEventListener('click', function() {
+  openNameEditor(getMyPlayer().id);
+});
+
 function readSetupInputs(isRemote){
   const minEl=isRemote?remoteMinInput:minInput;
   const maxEl=isRemote?remoteMaxInput:maxInput;
@@ -939,7 +883,6 @@ function initGame(){
   syncIfRemote();
 }
 
-/* ==================== 技能选择流程 ==================== */
 function startRoundSkillSelect(){
   if(!G.isSkillMode||!G.active){ startNewRound(); return; }
   G.processing=true;
@@ -1130,7 +1073,6 @@ function showSkillSelectWithOptions(forPlayerId, optionIds){
   },1000);
 }
 
-/* ==================== 猜测处理 ==================== */
 function processGuess(guess, isSkillAttack, guesserId){
   if(!G.active||G.processing) return;
   const guesser=guesserId?getPlayer(guesserId):getCurrentPlayer();
@@ -1282,7 +1224,6 @@ function switchTurn(){
   }
 }
 
-/* ==================== 技能使用 ==================== */
 function useSkill(skillId, playerId){
   if(!G.active||G.processing) return;
   const user=playerId?getPlayer(playerId):(Privacy.isLocal()?getCurrentPlayer():getMyPlayer());
@@ -1450,7 +1391,6 @@ function useSkill(skillId, playerId){
   syncIfRemote();
 }
 
-/* ==================== AI逻辑 ==================== */
 function aiChooseSkill(ai, human, options){
   const scores=options.map(function(s){
     let sc=Math.random()*10;
@@ -1526,7 +1466,6 @@ function aiGuess(){
   },700);
 }
 
-/* ==================== 键盘输入 ==================== */
 keypadButtons.forEach(function(btn){
   btn.addEventListener('click',function(){
     const val=btn.dataset.value;
@@ -1559,7 +1498,6 @@ keypadButtons.forEach(function(btn){
   });
 });
 
-/* ==================== 聊天功能 ==================== */
 function addChatMessage(sender, text, type) {
   const msg = document.createElement('div');
   msg.className = 'chat-msg ' + type;
@@ -1591,7 +1529,6 @@ chatInput.addEventListener('keydown', function(e) {
   if (e.key === 'Enter') sendChatMessage();
 });
 
-/* ==================== 远程同步 ==================== */
 function syncIfRemote(){
   if(!G.mode.includes('remote')||!G.conn||!G.isHost) return;
   const state={
@@ -1731,7 +1668,6 @@ function handleGuestAction(data){
   }
 }
 
-/* ==================== 创建房间 ==================== */
 $('create-room-btn').addEventListener('click',function(){
   G.roomCode=generateRoomCode();
   G.isHost=true;
@@ -1793,7 +1729,6 @@ $('remote-start-btn').addEventListener('click',function(){
   initGame();
 });
 
-/* ==================== URL自动加入 ==================== */
 (function checkUrlRoom() {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -1813,7 +1748,6 @@ $('remote-start-btn').addEventListener('click',function(){
   } catch(e) {}
 })();
 
-/* ==================== 菜单事件 ==================== */
 $('normal-mode-btn').addEventListener('click',showNormalSubmenu);
 $('skill-mode-btn').addEventListener('click',showSkillSubmenu);
 $('normal-back-btn').addEventListener('click',showMainMenu);
@@ -1873,7 +1807,6 @@ rematchBtn.addEventListener('click',function(){
   }
 });
 
-/* ==================== 初始化 ==================== */
 showMainMenu();
 })();
 </script>
