@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>💣 数字炸弹 · 远程键盘修复版</title>
+<title>💣 数字炸弹 · 最终修复版</title>
 <style>
-/* ==================== 全局样式 ==================== */
 :root { --neon:#00f0ff; --blue:#4da6ff; --red:#ff6b6b; --green:#00ff88; --orange:#ff8800; }
 * { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent; }
 html, body { height:100%; width:100%; overflow:hidden; position:fixed; inset:0; background:#05000a; color:#fff; font-family:system-ui,-apple-system,sans-serif; }
@@ -384,6 +383,7 @@ let skillSelectPhase = null;
 let unreadChatCount = 0;
 let pingInterval = null;
 let numberPickerCallback = null;
+let numberPickerCancelCallback = null;
 let notifTimeout = null;
 let guestActionTimeout = null;
 
@@ -554,9 +554,10 @@ const Privacy = {
 privacyScreen.addEventListener('click', function(e){
   if(e.target.id==='privacy-hide'){
     e.stopPropagation();
-    privacyScreen.classList.remove('revealed');
-    privacyContent.innerHTML='<div class="p-sub" style="color:#666;font-size:0.8rem;">点击屏幕关闭</div>';
-    Privacy._state='secret-done';
+    privacyScreen.classList.remove('active');
+    Privacy._state='idle';
+    const cb=Privacy._onDone; Privacy._onDone=null;
+    if(cb) cb();
     return;
   }
   if(Privacy._state==='confirm'){
@@ -564,7 +565,7 @@ privacyScreen.addEventListener('click', function(e){
     Privacy._state='idle';
     const cb=Privacy._onDone; Privacy._onDone=null;
     if(cb) cb();
-  } else if(Privacy._state==='secret-done'){
+  } else if(Privacy._state==='secret'){
     privacyScreen.classList.remove('active');
     Privacy._state='idle';
     const cb=Privacy._onDone; Privacy._onDone=null;
@@ -573,8 +574,9 @@ privacyScreen.addEventListener('click', function(e){
 });
 
 // ==================== 数字选择弹窗 ====================
-function showNumberPicker(title, min, max, onConfirm){
+function showNumberPicker(title, min, max, onConfirm, onCancel){
   numberPickerCallback = onConfirm;
+  numberPickerCancelCallback = onCancel || null;
   numberSelectTitle.textContent = title;
   numberSelectRange.textContent = `范围：${min} - ${max}`;
   numberSelectInput.value = '';
@@ -589,6 +591,7 @@ function hideNumberPicker(){
   numberSelectOverlay.classList.remove('active');
   numberSelectOverlay.classList.add('hidden');
   numberPickerCallback = null;
+  numberPickerCancelCallback = null;
 }
 
 numberSelectConfirm.addEventListener('click', function(){
@@ -604,7 +607,11 @@ numberSelectConfirm.addEventListener('click', function(){
   if(cb) cb(val);
 });
 
-numberSelectCancel.addEventListener('click', hideNumberPicker);
+numberSelectCancel.addEventListener('click', function(){
+  const cancelCb = numberPickerCancelCallback;
+  hideNumberPicker();
+  if(cancelCb) cancelCb();
+});
 
 numberSelectInput.addEventListener('keydown', function(e){
   if(e.key==='Enter') numberSelectConfirm.click();
@@ -671,6 +678,10 @@ function setupConnection(conn){
       G.minVal=data.minVal; G.maxVal=data.maxVal;
       G.isSkillMode=data.isSkillMode;
       G.mode=data.isSkillMode?'remote-skill':'remote-normal';
+      if(data.hp) {
+        getPlayer('p1').maxHP = data.hp;
+        getPlayer('p2').maxHP = data.hp;
+      }
       initGame();
     } else if(data.type==='rematch'&&G.myRole==='guest'){
       messageDisplay.textContent='Host 发起了重赛';
@@ -713,8 +724,29 @@ function handleGuestAction(data){
     G.playerInput='';
     processGuess(data.guess,false,'p2');
   } else if(data.action==='skill'&&data.playerId==='p2'&&G.currentPlayer==='p2'&&!G.processing){
-    useSkill(data.skillId,'p2');
-    syncIfRemote();
+    // Guest 使用 trap/insight 时，数字已经在 Guest 端选择并通过 data.number 发送
+    if((data.skillId==='trap'||data.skillId==='insight') && data.number !== undefined){
+      const p2 = getPlayer('p2');
+      const skill = getSkillById(data.skillId);
+      if(skill){
+        p2.cooldowns[data.skillId] = skill.cooldown;
+        if(data.skillId === 'trap'){
+          p2.trapNumber = data.number;
+          messageDisplay.textContent = '🪤 Guest设置了陷阱数字：' + data.number;
+        } else {
+          const dist = Math.abs(G.bombNumber - data.number);
+          messageDisplay.textContent = '🕯️ Guest洞察：数字 ' + data.number + ' 与炸弹距离为 ' + dist;
+          if(G.conn) G.conn.send({type:'private', title:'🕯️洞察', text:'数字 '+data.number+' 与炸弹距离为 '+dist});
+        }
+        renderSkills();
+        updateTurnIndicator();
+        G.processing = false;
+        syncIfRemote();
+      }
+    } else {
+      useSkill(data.skillId,'p2');
+      syncIfRemote();
+    }
   } else if(data.action==='skill_select'&&data.playerId==='p2'&&G.pendingSkillSelect==='p2'){
     const skill=getSkillById(data.skillId);
     if(!skill) return;
@@ -726,17 +758,13 @@ function handleGuestAction(data){
     G.pendingSkillSelect=null; G.pendingSkillOptions=null;
     messageDisplay.textContent='Guest 选择了技能';
     renderSkills();
-    // ======== 关键修复开始 ========
-    // 先执行同步，再执行回调
     const cb=G.hostSkillComplete;
     G.hostSkillComplete=null;
     if(cb) {
-      cb(); // 正常流程，执行 startNewRound（解除 G.processing）
+      cb();
     } else {
-      startNewRound(); // 兜底流程：确保游戏一定继续，解锁双方键盘
+      startNewRound();
     }
-    // 注意：startNewRound 内部最后已经执行了 syncIfRemote()，所以这里不需要再单独调用 syncIfRemote()
-    // ======== 关键修复结束 ========
   } else if(data.action==='surrender'){
     messageDisplay.textContent='🏳️ Guest 认输了！';
     getPlayer('p2').hp=0;
@@ -794,13 +822,10 @@ function applySync(state){
     gameOverBtn.style.display='block';
     rematchBtn.style.display='none';
   }
-  // ==================== 关键修复 ====================
-  // Guest 端每次同步后，必须根据当前状态强制刷新键盘是否可用
   if(G.myRole==='guest'){
     const shouldEnable = G.active && !G.processing && isMyTurn();
     setKeypadEnabled(shouldEnable);
   }
-  // =======================================================
 }
 
 // ==================== 聊天系统 ====================
@@ -1006,20 +1031,19 @@ function startRoundSkillSelect(){
       showSkillSelectWithCallback('p1', function(){
         G.pendingSkillOptions = p2Options;
         G.pendingSkillSelect = 'p2';
+        messageDisplay.textContent='⏳ 等待对方选择技能...';
         syncIfRemote();
-        // ======== 关键修复开始 ========
-        // 将回调赋给 G.hostSkillComplete，确保 Guest 选择后能执行 startNewRound
         G.hostSkillComplete = function(){
           G.pendingSkillSelect = null;
           G.pendingSkillOptions = null;
-          startNewRound(); 
+          startNewRound();
         };
         startHostTimeout('p2', G.hostSkillComplete);
-        // ======== 关键修复结束 ========
       });
     } else {
       G.pendingSkillSelect = 'p2';
       setKeypadEnabled(false);
+      messageDisplay.textContent='⏳ 等待你选择技能...';
     }
   } else {
     const first=G.currentPlayer;
@@ -1064,12 +1088,8 @@ function showSkillSelectWithCallback(forPlayerId, onComplete){
       player.cooldowns={};
       skillSelectOverlay.classList.remove('active');
       Privacy.hide();
-      // ==================== 关键修复 ====================
-      // 修复：刷新技能栏UI，否则Host端技能按钮可能残留或状态不对
       renderSkills();
-      // 修复：刷新回合指示器
       updateTurnIndicator();
-      // =======================================================
       if(Privacy.isLocal()){
         Privacy.showSecret(player.name, '你选择了', skill.name+'<br><span style="font-size:0.7rem;color:#aaa;">'+skill.desc+'</span>', function(){
           if(onComplete) onComplete();
@@ -1244,9 +1264,9 @@ function processGuess(guess, isSkillAttack, guesserId){
           defender.hp=2; defender.rebirth=false;
           messageDisplay.textContent='🕊️ '+defender.name+' 重生！以2血复活';
         } else {
-          const targetArea = Privacy.isLocal() ? 'opponent' : (defender.id===getMyPlayer().id?'me':'opponent');
+          const targetArea = Privacy.isLocal() ? (defender.id===G.currentPlayer?'me':'opponent') : (defender.id===getMyPlayer().id?'me':'opponent');
           showExplosion(targetArea);
-          messageDisplay.textContent='💥 踩中炸弹 '+G.bombNumber+'！'+defender.name+' -'+damage+'血';
+          messageDisplay.textContent='💥 炸弹爆炸了！'+defender.name+' -'+damage+'血';
         }
       }
       guesser.pierce=false;
@@ -1306,7 +1326,6 @@ function afterHitSkillPhase(){
   } else if(!G.isSkillMode){
     startNewRound();
   }
-  syncIfRemote();
 }
 
 function switchTurn(){
@@ -1318,12 +1337,12 @@ function switchTurn(){
   current.shield=false;
   current.reflect=false;
   G.playerInput=''; updateInputDisplay();
-  reduceCooldowns(current.id);
 
   function doSwitch(){
     if(opponent.skipNext){
       opponent.skipNext=false;
       opponent.blind=false;
+      reduceCooldowns(opponent.id);
       messageDisplay.textContent='🕐 '+opponent.name+' 被暂停，跳过回合！';
       G.processing=false;
       G.playerInput=''; updateInputDisplay();
@@ -1351,22 +1370,49 @@ function useSkill(skillId, playerId){
   if(!G.active||G.processing) return;
   const user=playerId?getPlayer(playerId):(Privacy.isLocal()?getCurrentPlayer():getMyPlayer());
   if(user.id!==G.currentPlayer) return;
+
+  // Guest 远程分支
   if(G.mode.includes('remote')&&!G.isHost&&!playerId){
     if(G.conn){
-      G.conn.send({type:'action',action:'skill',playerId:user.id,skillId:skillId});
-      G.processing=true;
-      setKeypadEnabled(false);
-      clearGuestActionTimeout();
-      guestActionTimeout = setTimeout(function(){
-        if(G.processing&&G.active){
-          G.processing=false;
+      if(skillId==='trap'||skillId==='insight'){
+        const title = skillId==='trap' ? '设置陷阱数字' : '选择数字查看与炸弹的距离';
+        showNumberPicker(title, G.low, G.high, function(num){
+          G.conn.send({type:'action', action:'skill', playerId:user.id, skillId:skillId, number:num});
+          G.processing=true;
+          setKeypadEnabled(false);
+          messageDisplay.textContent='已发送数字，等待同步...';
+          clearGuestActionTimeout();
+          guestActionTimeout = setTimeout(function(){
+            if(G.processing&&G.active){
+              G.processing=false;
+              setKeypadEnabled(isMyTurn());
+              messageDisplay.textContent='⚠️ 网络延迟，请重试';
+            }
+          }, 5000);
+        }, function(){
+          G.processing = false;
           setKeypadEnabled(isMyTurn());
-          messageDisplay.textContent='⚠️ 网络延迟，请重试';
-        }
-      }, 5000);
+          messageDisplay.textContent = '已取消技能使用';
+          updateTurnIndicator();
+        });
+      } else {
+        G.conn.send({type:'action',action:'skill',playerId:user.id,skillId:skillId});
+        G.processing=true;
+        setKeypadEnabled(false);
+        clearGuestActionTimeout();
+        guestActionTimeout = setTimeout(function(){
+          if(G.processing&&G.active){
+            G.processing=false;
+            setKeypadEnabled(isMyTurn());
+            messageDisplay.textContent='⚠️ 网络延迟，请重试';
+          }
+        }, 5000);
+      }
     }
     return;
   }
+
+  // Host/本地/AI 分支
   const skill=getSkillById(skillId);
   if(!skill) return;
   const cd=user.cooldowns[skill.id]||0;
@@ -1443,6 +1489,17 @@ function useSkill(skillId, playerId){
     case 'blind': opponent.blind=true; messageDisplay.textContent='🙈 '+userName+'致盲！'+opponent.name+'下回合看不到范围'; break;
     case 'swap': { const t=user.hp; user.hp=opponent.hp; opponent.hp=t; renderPlayers(); messageDisplay.textContent='🔄 '+userName+'交换生命！'+user.name+':'+user.hp+' '+opponent.name+':'+opponent.hp; if(getPlayer('p1').hp<=0||getPlayer('p2').hp<=0){ endGame(); return; } break; }
     case 'trap': {
+      // AI 自动处理
+      if(G.mode.includes('ai') && user.id === 'p2'){
+        user.trapNumber = Math.floor(Math.random() * (G.high - G.low + 1)) + G.low;
+        messageDisplay.textContent = '🤖 AI 设置了陷阱数字';
+        G.processing = false;  // 关键修复：重置 processing
+        renderSkills();
+        updateTurnIndicator();
+        syncIfRemote();
+        return;
+      }
+      // 本地/远程 Host 自己使用
       G.processing=true;
       showNumberPicker('设置陷阱数字', G.low, G.high, function(num){
         user.trapNumber = num;
@@ -1451,15 +1508,41 @@ function useSkill(skillId, playerId){
         renderSkills();
         updateTurnIndicator();
         syncIfRemote();
+      }, function(){
+        G.processing = false;
+        delete user.cooldowns[skillId];
+        messageDisplay.textContent = '已取消技能使用';
+        renderSkills();
+        updateTurnIndicator();
+        syncIfRemote();
       });
       return;
     }
     case 'insight': {
+      // AI 自动处理
+      if(G.mode.includes('ai') && user.id === 'p2'){
+        const num = Math.floor(Math.random() * (G.high - G.low + 1)) + G.low;
+        const dist = Math.abs(G.bombNumber - num);
+        messageDisplay.textContent = '🤖 AI 洞察：数字 ' + num + ' 与炸弹距离为 ' + dist;
+        G.processing = false;  // 关键修复：重置 processing
+        renderSkills();
+        updateTurnIndicator();
+        syncIfRemote();
+        return;
+      }
+      // 本地/远程 Host 自己使用
       G.processing=true;
       showNumberPicker('选择数字查看与炸弹的距离', G.low, G.high, function(num){
         const dist = Math.abs(G.bombNumber - num);
         G.processing = false;
         reveal('🕯️洞察','数字 '+num+' 与炸弹距离为 '+dist);
+        renderSkills();
+        updateTurnIndicator();
+        syncIfRemote();
+      }, function(){
+        G.processing = false;
+        delete user.cooldowns[skillId];
+        messageDisplay.textContent = '已取消技能使用';
         renderSkills();
         updateTurnIndicator();
         syncIfRemote();
@@ -1526,8 +1609,15 @@ function aiTurn(){
         );
         if(shouldUse||Math.random()<0.35){
           useSkill(skill.id,'p2');
-          if(G.active&&G.processing&&G.currentPlayer==='p2'){
-            setTimeout(aiGuess, 1000);
+          // suicide 由 processGuess 接管后续流程
+          if(skill.id === 'suicide'){
+            return;
+          }
+          // ==================== 关键修复 ====================
+          // 使用技能后重置 processing，让 aiGuess 可以正常执行
+          G.processing = false;
+          if(G.active && G.currentPlayer==='p2'){
+            setTimeout(aiGuess, 900);
           }
           return;
         }
@@ -1815,9 +1905,7 @@ surrenderBtn.addEventListener('click',function(){
     if(G.conn) G.conn.send({type:'action',action:'surrender',playerId:'p2'});
     messageDisplay.textContent='🏳️ 你认输了';
     G.active=false;
-    setKeypadEnabled(false);
-    surrenderBtn.style.display='none';
-    gameOverBtn.style.display='block';
+    endGame();
     return;
   }
   const me=Privacy.isLocal()?getCurrentPlayer():getMyPlayer();
@@ -1901,7 +1989,7 @@ $('remote-start-btn').addEventListener('click',function(){
   readSetupInputs(true);
   G.mode=G.isSkillMode?'remote-skill':'remote-normal';
   if(G.conn&&G.conn.open){
-    G.conn.send({type:'start',minVal:G.minVal,maxVal:G.maxVal,isSkillMode:G.isSkillMode});
+    G.conn.send({type:'start',minVal:G.minVal,maxVal:G.maxVal,isSkillMode:G.isSkillMode,hp:getPlayer('p1').maxHP});
   }
   initGame();
 });
