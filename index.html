@@ -237,7 +237,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
   </div>
   <div id="skill-select-overlay">
     <div class="overlay-title" id="skill-select-title">选择技能</div>
-    <div id="skill-timer">15</div>
+    <div id="skill-timer">30</div>
     <div class="skill-select-grid" id="skill-select-grid"></div>
   </div>
   <div id="privacy-screen">
@@ -324,7 +324,7 @@ const G = {
   cheatMode:false, myRole:'', isHost:false,
   peer:null, conn:null, roomCode:'',
   pendingSkillSelect:null, pendingSkillOptions:null,
-  skillTimer:null, skillTimerCount:15, hostTimeout:null,
+  skillTimer:null, skillTimerCount:30, hostTimeout:null,
   hostSkillComplete:null, aiTimeouts:[],
   players:{ p1:makePlayer('p1'), p2:makePlayer('p2') },
   connRetryCount:0, connRetryTimer:null,
@@ -332,6 +332,7 @@ const G = {
 };
 let skillSelectPhase = null;
 let unreadChatCount = 0;
+let pingInterval = null;
 
 const $ = id => document.getElementById(id);
 const mainMenu=$('main-menu'), normalSubmenu=$('normal-submenu'), skillSubmenu=$('skill-submenu');
@@ -407,11 +408,11 @@ function deepClone(obj){ return JSON.parse(JSON.stringify(obj)); }
 function cleanupRemote(){
   if(G.peer){ try{G.peer.destroy();}catch(e){} G.peer=null; }
   if(G.conn){ try{G.conn.close();}catch(e){} G.conn=null; }
+  if(pingInterval){ clearInterval(pingInterval); pingInterval=null; }
   G.roomCode=''; G.isHost=false; G.myRole='';
   chatToggleBtn.style.display='none'; chatOverlay.classList.add('hidden'); chatMessages.innerHTML='';
   unreadChatCount=0; updateChatBadge();
 }
-
 function updateChatBadge(){
   if(unreadChatCount > 0){
     chatBadge.textContent = unreadChatCount > 99 ? '99+' : unreadChatCount;
@@ -419,6 +420,17 @@ function updateChatBadge(){
   } else {
     chatBadge.classList.remove('show');
   }
+}
+function startPing(){
+  if(pingInterval) clearInterval(pingInterval);
+  pingInterval = setInterval(function(){
+    if(G.conn && G.conn.open){
+      try { G.conn.send({type:'ping'}); } catch(e) {}
+    }
+  }, 5000);
+}
+function stopPing(){
+  if(pingInterval){ clearInterval(pingInterval); pingInterval=null; }
 }
 
 function createPeer(id, onOpen, onError) {
@@ -449,7 +461,6 @@ function attemptJoinRoom(code, retryCount) {
     try {
       const conn = G.peer.connect('bomb-' + code, { reliable: true });
       setupConnection(conn);
-      conn.on('open', function() { setConnStatus('已连接到Host'); waitingText.textContent='已连接，等待Host开始游戏...'; lobbyMessage.textContent=''; });
       setTimeout(function(){ if(G.conn && !G.conn.open) attemptJoinRoom(code, retryCount+1); }, 3000);
     } catch(e) { setTimeout(function(){ attemptJoinRoom(code, retryCount+1); }, 1500); }
   }, function(errMsg) { setConnStatus('信令服务器连接失败'); lobbyMessage.textContent='❌ 无法连接到信令服务器'; });
@@ -803,33 +814,52 @@ function initGame(){
 
 function startRoundSkillSelect(){
   if(!G.isSkillMode||!G.active){ startNewRound(); return; }
-  const first=G.currentPlayer;
-  const second=getOpponentPlayer(first).id;
   G.processing=true;
   setKeypadEnabled(false);
-  skillSelectPhase=first;
-  triggerSkillSelectForPlayer(first, function(){
-    if(!G.active) return;
-    skillSelectPhase=second;
-    triggerSkillSelectForPlayer(second, function(){
-      skillSelectPhase=null;
-      startNewRound();
+  // 远程模式：双方同时选择
+  if(G.mode.includes('remote')){
+    if(G.isHost){
+      // Host生成两个玩家的选项
+      const p1Options = getRandomSkills(3).map(s=>s.id);
+      const p2Options = getRandomSkills(3).map(s=>s.id);
+      G.pendingSkillOptions = p1Options;
+      G.pendingSkillSelect = 'p1';
+      // 发送给Guest，双方同时选择
+      syncIfRemote();
+      showSkillSelectWithCallback('p1', function(){
+        G.pendingSkillOptions = p2Options;
+        G.pendingSkillSelect = 'p2';
+        syncIfRemote();
+        startHostTimeout('p2', function(){
+          G.pendingSkillSelect = null;
+          G.pendingSkillOptions = null;
+          startNewRound();
+        });
+      });
+    } else {
+      // Guest等待Host发送选项
+      G.pendingSkillSelect = 'p2';
+      setKeypadEnabled(false);
+    }
+  } else {
+    // 本地和AI模式：轮流选择
+    const first=G.currentPlayer;
+    const second=getOpponentPlayer(first).id;
+    skillSelectPhase=first;
+    triggerSkillSelectForPlayer(first, function(){
+      if(!G.active) return;
+      skillSelectPhase=second;
+      triggerSkillSelectForPlayer(second, function(){
+        skillSelectPhase=null;
+        startNewRound();
+      });
     });
-  });
+  }
 }
 function triggerSkillSelectForPlayer(playerId, onComplete){
   if(!G.active){ onComplete(); return; }
   if(G.mode.includes('ai')&&playerId==='p2'){
     aiSelectSkillWithCallback(onComplete);
-  } else if(G.mode.includes('remote')&&G.isHost&&playerId==='p2'){
-    G.pendingSkillSelect='p2';
-    G.pendingSkillOptions=getRandomSkills(3).map(s=>s.id);
-    G.hostSkillComplete=onComplete;
-    syncIfRemote();
-    startHostTimeout('p2', onComplete);
-  } else if(G.mode.includes('remote')&&!G.isHost&&playerId==='p2'){
-    G.processing=true;
-    setKeypadEnabled(false);
   } else {
     showSkillSelectWithCallback(playerId, onComplete);
   }
@@ -837,9 +867,9 @@ function triggerSkillSelectForPlayer(playerId, onComplete){
 function showSkillSelectWithCallback(forPlayerId, onComplete){
   const player=getPlayer(forPlayerId);
   const options=getRandomSkills(3);
-  if(G.mode.includes('remote')&&G.isHost&&forPlayerId==='p1'){
+  if(G.mode.includes('remote')&&G.isHost){
     G.pendingSkillOptions=options.map(s=>s.id);
-    G.pendingSkillSelect='p1';
+    G.pendingSkillSelect=forPlayerId;
   }
   function actuallyShow(){
     skillSelectGrid.innerHTML='';
@@ -876,7 +906,7 @@ function showSkillSelectWithCallback(forPlayerId, onComplete){
     G.pendingSkillSelect=forPlayerId;
     G.processing=true;
     setKeypadEnabled(false);
-    G.skillTimerCount=15;
+    G.skillTimerCount=30;
     skillTimerEl.textContent=G.skillTimerCount;
     if(G.skillTimer) clearInterval(G.skillTimer);
     G.skillTimer=setInterval(function(){
@@ -930,7 +960,7 @@ function startHostTimeout(playerId, onComplete){
       syncIfRemote();
       if(onComplete) onComplete();
     }
-  },20000);
+  },30000);
 }
 function showSkillSelectWithOptions(forPlayerId, optionIds){
   const player=getPlayer(forPlayerId);
@@ -964,7 +994,7 @@ function showSkillSelectWithOptions(forPlayerId, optionIds){
   G.pendingSkillSelect=forPlayerId;
   G.processing=true;
   setKeypadEnabled(false);
-  G.skillTimerCount=15;
+  G.skillTimerCount=30;
   skillTimerEl.textContent=G.skillTimerCount;
   if(G.skillTimer) clearInterval(G.skillTimer);
   G.skillTimer=setInterval(function(){
@@ -1484,6 +1514,9 @@ function applySync(state){
   if(state.pendingSkillSelect==='p2'&&G.myRole==='guest'&&!skillSelectOverlay.classList.contains('active')){
     showSkillSelectWithOptions('p2',state.pendingSkillOptions);
   }
+  if(state.pendingSkillSelect==='p1'&&G.myRole==='host'&&!skillSelectOverlay.classList.contains('active')){
+    showSkillSelectWithOptions('p1',state.pendingSkillOptions);
+  }
   if(!state.pendingSkillSelect&&skillSelectOverlay.classList.contains('active')&&G.myRole==='guest'){
     skillSelectOverlay.classList.remove('active','rotated');
     if(G.skillTimer){ clearInterval(G.skillTimer); G.skillTimer=null; }
@@ -1496,7 +1529,7 @@ function applySync(state){
 }
 function setupConnection(conn){
   G.conn=conn;
-  conn.on('open',function(){
+  function handleOpen(){
     roomInfo.textContent='房间: '+G.roomCode;
     if(G.isHost){
       waitingText.textContent='对手已加入！';
@@ -1507,8 +1540,15 @@ function setupConnection(conn){
       waitingText.textContent='已连接，等待Host开始游戏...';
       setKeypadEnabled(false);
     }
-  });
+    startPing();
+  }
+  if(conn.open){
+    handleOpen();
+  } else {
+    conn.on('open', handleOpen);
+  }
   conn.on('data',function(data){
+    if(data.type==='ping') return;
     if(data.type==='sync'&&G.myRole==='guest'){
       applySync(data.state);
     } else if(data.type==='action'&&G.isHost){
@@ -1533,6 +1573,7 @@ function setupConnection(conn){
     }
   });
   conn.on('close',function(){
+    stopPing();
     roomInfo.textContent='对手已断开';
     setConnStatus('连接已断开');
     chatToggleBtn.style.display='none';
