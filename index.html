@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>💣 数字炸弹 · 远程键盘修复版</title>
 <style>
+/* ==================== 全局样式 ==================== */
 :root { --neon:#00f0ff; --blue:#4da6ff; --red:#ff6b6b; --green:#00ff88; --orange:#ff8800; }
 * { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent; }
 html, body { height:100%; width:100%; overflow:hidden; position:fixed; inset:0; background:#05000a; color:#fff; font-family:system-ui,-apple-system,sans-serif; }
@@ -122,7 +123,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
 </style>
 </head>
 <body>
-<!-- 完整的HTML结构，包含所有div元素 -->
 <div id="game-container">
   <div id="header">
     <h1>💣 数字炸弹</h1>
@@ -726,10 +726,17 @@ function handleGuestAction(data){
     G.pendingSkillSelect=null; G.pendingSkillOptions=null;
     messageDisplay.textContent='Guest 选择了技能';
     renderSkills();
-    syncIfRemote();
+    // ======== 关键修复开始 ========
+    // 先执行同步，再执行回调
     const cb=G.hostSkillComplete;
     G.hostSkillComplete=null;
-    if(cb) cb();
+    if(cb) {
+      cb(); // 正常流程，执行 startNewRound（解除 G.processing）
+    } else {
+      startNewRound(); // 兜底流程：确保游戏一定继续，解锁双方键盘
+    }
+    // 注意：startNewRound 内部最后已经执行了 syncIfRemote()，所以这里不需要再单独调用 syncIfRemote()
+    // ======== 关键修复结束 ========
   } else if(data.action==='surrender'){
     messageDisplay.textContent='🏳️ Guest 认输了！';
     getPlayer('p2').hp=0;
@@ -1000,11 +1007,15 @@ function startRoundSkillSelect(){
         G.pendingSkillOptions = p2Options;
         G.pendingSkillSelect = 'p2';
         syncIfRemote();
-        startHostTimeout('p2', function(){
+        // ======== 关键修复开始 ========
+        // 将回调赋给 G.hostSkillComplete，确保 Guest 选择后能执行 startNewRound
+        G.hostSkillComplete = function(){
           G.pendingSkillSelect = null;
           G.pendingSkillOptions = null;
-          startNewRound();
-        });
+          startNewRound(); 
+        };
+        startHostTimeout('p2', G.hostSkillComplete);
+        // ======== 关键修复结束 ========
       });
     } else {
       G.pendingSkillSelect = 'p2';
