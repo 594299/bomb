@@ -429,6 +429,7 @@ function getMyPlayer(){
 }
 function getMyOpponent(){ return getOpponentPlayer(getMyPlayer().id); }
 function isMyTurn(){
+  if(!G.active || G.processing) return false;
   if(G.mode.includes('local')) return true;
   if(G.mode.includes('ai')) return G.currentPlayer==='p1';
   if(G.mode.includes('remote')) return (G.currentPlayer==='p1'&&G.myRole==='host')||(G.currentPlayer==='p2'&&G.myRole==='guest');
@@ -981,6 +982,9 @@ function initGame(){
   } else if(G.mode.includes('ai')&&G.currentPlayer==='p2'){
     setTimeout(aiTurn, 900);
   }
+  
+  // 关键修复：确保键盘状态正确
+  setKeypadEnabled(G.active && !G.processing && isMyTurn());
   syncIfRemote();
 }
 
@@ -1750,11 +1754,24 @@ function updateTurnIndicator(){
     turnIndicator.textContent=G.mode.includes('ai')?'🤖 AI思考中...':'👆 对方回合...';
     turnIndicator.classList.add('turn-opponent');
   }
-  setKeypadEnabled(isMyTurn() && !G.processing && G.active);
+  
+  // 关键修复：确保键盘状态正确
+  const shouldEnable = G.active && !G.processing && isMyTurn();
+  setKeypadEnabled(shouldEnable);
   renderSkills();
 }
 function setKeypadEnabled(enabled){
-  keypadButtons.forEach(btn=>{ btn.disabled=!enabled; });
+  keypadButtons.forEach(btn=>{ 
+    btn.disabled = !enabled; 
+    // 确保视觉反馈
+    if(!enabled){
+      btn.style.opacity = '0.25';
+      btn.style.pointerEvents = 'none';
+    } else {
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = 'auto';
+    }
+  });
 }
 function showExplosion(target){
   const area=target==='me'?meHighlight:opponentHighlight;
