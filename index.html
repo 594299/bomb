@@ -96,7 +96,9 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
 .privacy-result { font-size:1.2rem; color:var(--neon); font-weight:700; margin:10px 0; line-height:1.5; }
 .privacy-label { font-size:0.8rem; color:#888; }
 #conn-status { font-size:0.65rem; color:#888; margin-top:8px; }
-#chat-toggle-btn { display:none; background:none; border:1.5px solid rgba(255,255,255,0.2); border-radius:8px; padding:4px 8px; font-size:0.9rem; cursor:pointer; color:#ccc; }
+#chat-toggle-btn { display:none; background:none; border:1.5px solid rgba(255,255,255,0.2); border-radius:8px; padding:4px 8px; font-size:0.9rem; cursor:pointer; color:#ccc; position:relative; }
+.chat-badge { position:absolute; top:-4px; right:-4px; background:#ff4444; color:#fff; font-size:0.6rem; font-weight:900; border-radius:50%; width:16px; height:16px; display:none; align-items:center; justify-content:center; }
+.chat-badge.show { display:flex; }
 #chat-overlay { z-index:3100; }
 .chat-container { width:90%; max-width:400px; height:70%; background:#111; border-radius:15px; border:1px solid rgba(255,255,255,0.2); display:flex; flex-direction:column; overflow:hidden; }
 .chat-header { display:flex; justify-content:space-between; align-items:center; padding:10px 15px; background:rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.1); font-weight:700; }
@@ -116,7 +118,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
   <div id="header">
     <h1>💣 数字炸弹</h1>
     <div id="header-right">
-      <button id="chat-toggle-btn">💬</button>
+      <button id="chat-toggle-btn">💬<span id="chat-badge" class="chat-badge">0</span></button>
       <button id="remote-cheat-btn">⚡</button>
       <div id="room-info">未连接</div>
     </div>
@@ -329,6 +331,7 @@ const G = {
   peerServerIndex:0
 };
 let skillSelectPhase = null;
+let unreadChatCount = 0;
 
 const $ = id => document.getElementById(id);
 const mainMenu=$('main-menu'), normalSubmenu=$('normal-submenu'), skillSubmenu=$('skill-submenu');
@@ -355,7 +358,7 @@ const skillSelectOverlay=$('skill-select-overlay'), skillSelectGrid=$('skill-sel
 const skillSelectTitle=$('skill-select-title'), skillTimerEl=$('skill-timer');
 const privacyScreen=$('privacy-screen'), privacyTitle=$('privacy-title'), privacyContent=$('privacy-content');
 const chatToggleBtn=$('chat-toggle-btn'), chatOverlay=$('chat-overlay'), chatCloseBtn=$('chat-close-btn');
-const chatMessages=$('chat-messages'), chatInput=$('chat-input'), chatSendBtn=$('chat-send-btn');
+const chatMessages=$('chat-messages'), chatInput=$('chat-input'), chatSendBtn=$('chat-send-btn'), chatBadge=$('chat-badge');
 
 function getPlayer(id){ return G.players[id]; }
 function getCurrentPlayer(){ return getPlayer(G.currentPlayer); }
@@ -406,6 +409,16 @@ function cleanupRemote(){
   if(G.conn){ try{G.conn.close();}catch(e){} G.conn=null; }
   G.roomCode=''; G.isHost=false; G.myRole='';
   chatToggleBtn.style.display='none'; chatOverlay.classList.add('hidden'); chatMessages.innerHTML='';
+  unreadChatCount=0; updateChatBadge();
+}
+
+function updateChatBadge(){
+  if(unreadChatCount > 0){
+    chatBadge.textContent = unreadChatCount > 99 ? '99+' : unreadChatCount;
+    chatBadge.classList.add('show');
+  } else {
+    chatBadge.classList.remove('show');
+  }
 }
 
 function createPeer(id, onOpen, onError) {
@@ -985,10 +998,8 @@ function processGuess(guess, isSkillAttack, guesserId){
       isHit=true;
     }
   }
-  // 陷阱检查
   if(!isHit && defender.trapNumber !== null && guess === defender.trapNumber){
     isHit = true;
-    messageDisplay.textContent='🪤 '+defender.name+' 的陷阱被触发！';
   }
   let guesserName;
   if(Privacy.isLocal()) guesserName=guesser.name;
@@ -1038,7 +1049,6 @@ function processGuess(guess, isSkillAttack, guesserId){
     } else {
       if(guess<G.bombNumber){ G.low=guess+1; messageDisplay.textContent='📈 炸弹比 '+guess+' 大'; }
       else { G.high=guess-1; messageDisplay.textContent='📉 炸弹比 '+guess+' 小'; }
-      // 检查陷阱数字是否被跳过
       if(defender.trapNumber !== null && (defender.trapNumber < G.low || defender.trapNumber > G.high)){
         defender.shield = true;
         messageDisplay.textContent += ' 🪤 陷阱数字被跳过，'+defender.name+' 获得护盾！';
@@ -1424,7 +1434,11 @@ function sendChatMessage() {
 }
 chatToggleBtn.addEventListener('click', function() {
   chatOverlay.classList.toggle('hidden');
-  if (!chatOverlay.classList.contains('hidden')) chatInput.focus();
+  if (!chatOverlay.classList.contains('hidden')) {
+    unreadChatCount = 0;
+    updateChatBadge();
+    chatInput.focus();
+  }
 });
 chatCloseBtn.addEventListener('click', function() {
   chatOverlay.classList.add('hidden');
@@ -1512,7 +1526,8 @@ function setupConnection(conn){
         const senderName = data.senderName || '对方';
         addChatMessage(senderName, data.text, 'opponent');
         if(chatOverlay.classList.contains('hidden')){
-          showCheatToast('💬 新消息');
+          unreadChatCount++;
+          updateChatBadge();
         }
       }
     }
