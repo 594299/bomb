@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>💣 数字炸弹 · 最终修复版</title>
+    <style>
+        :root { --bg:#0a0a14; --neon:#00f0ff; --blue:#4da6ff; --red:#ff6b6b; --glass:rgba(255,255,255,0.06); --glass-border:rgba(255,255,255,0.15); }
+        * { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
+        html, body { height:100%; width:100%; overflow:hidden; position:fixed; inset:0; touch-action:manipulation; background:#05000a; color:#fff; font-family:system-ui, sans-serif; }
+        body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+        #game-container { width:100%; max-width:500px; height:100%; background:linear-gradient(180deg,#0d0d1a,#1a0a20); display:flex; flex-direction:column; margin:0 auto; }
+        #header { padding:10px; background:rgba(0,0,0,0.5); display:flex; justify-content:space-between; align-items:center; z-index:10; }
+        #header h1 { font-size:1.1rem; background:linear-gradient(135deg,#ff8800,#ff00e6,#00f0ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        #room-info { font-size:0.7rem; color:#ccc; background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:12px; cursor:pointer; }
+        #header-right { display:flex; align-items:center; gap:6px; }
+        .overlay { position:absolute; inset:0; background:rgba(0,0,0,0.95); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; padding:20px; }
+        .overlay.hidden { display:none; }
+        .overlay-title { font-size:1.8rem; font-weight:900; margin-bottom:20px; text-align:center; }
+        .btn { padding:14px 40px; border:2px solid var(--neon); border-radius:50px; background:rgba(0,240,255,0.1); color:var(--neon); font-size:1rem; font-weight:700; cursor:pointer; margin-top:12px; min-width:220px; text-align:center; outline:none; transition:all 0.2s; }
+        .btn:active { transform:scale(0.95); }
+        .btn.secondary { background:rgba(255,136,0,0.1); border-color:#ff8800; color:#ff8800; }
+        .btn.small { padding:8px 20px; min-width:auto; font-size:0.8rem; margin:3px; }
+        .room-input { width:200px; padding:12px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:10px; color:#fff; font-size:1.5rem; text-align:center; letter-spacing:8px; outline:none; margin-top:15px; text-transform:uppercase; }
+        .room-display { font-size:2rem; font-weight:900; letter-spacing:10px; color:var(--neon); margin:20px 0; }
+        .waiting-text { font-size:0.9rem; color:#ccc; animation:pulse 1.5s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
+        .setting-row { display:flex; align-items:center; gap:8px; margin:6px 0; flex-wrap:wrap; justify-content:center; }
+        .setting-row label { font-size:0.8rem; color:#ccc; }
+        .setting-row input { width:70px; padding:8px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:6px; color:#fff; font-size:1rem; text-align:center; outline:none; }
+        .ai-level-btn { padding:8px 16px; border-radius:20px; font-size:0.75rem; font-weight:700; cursor:pointer; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); color:#ccc; margin:0 3px; }
+        .ai-level-btn.active { background:rgba(0,240,255,0.2); border-color:var(--neon); color:var(--neon); }
+        #battle-area { flex:1; display:none; flex-direction:column; justify-content:space-between; padding:4px 8px; gap:2px; }
+        .player-area { display:flex; flex-direction:column; align-items:center; gap:1px; }
+        .player-area .avatar { font-size:2rem; }
+        .player-area .name-tag { font-size:0.6rem; color:#ccc; background:rgba(0,0,0,0.5); padding:1px 8px; border-radius:8px; }
+        .life-dots { display:flex; gap:3px; }
+        .life-dots .dot { width:9px; height:9px; border-radius:50%; border:2px solid #555; display:inline-block; }
+        .life-dots .dot.filled-blue { background:var(--blue); border-color:var(--blue); }
+        .life-dots .dot.filled-red { background:var(--red); border-color:var(--red); }
+        .life-dots .dot.lost { background:transparent; border-color:#333; }
+        .highlight { border:2px solid transparent; border-radius:12px; padding:3px 12px; transition:all 0.3s; }
+        .highlight.active { border-color:var(--neon); box-shadow:0 0 12px rgba(0,240,255,0.3); }
+        #info-area { display:flex; flex-direction:column; align-items:center; gap:3px; padding:2px 0; }
+        #range-display { font-size:0.8rem; font-weight:700; color:var(--neon); background:rgba(0,240,255,0.08); padding:3px 14px; border-radius:15px; }
+        #turn-indicator { font-size:0.75rem; font-weight:700; background:rgba(255,255,255,0.06); padding:3px 14px; border-radius:12px; }
+        #turn-indicator.turn-me { color:var(--blue); border:1px solid var(--blue); }
+        #turn-indicator.turn-opponent { color:var(--red); border:1px solid var(--red); }
+        #message-display { font-size:0.7rem; color:#bbb; min-height:1rem; text-align:center; max-width:90%; }
+        #input-keypad-container { display:flex; flex-direction:column; align-items:center; gap:3px; padding:2px 0; }
+        #input-display { font-size:1.2rem; font-weight:900; min-height:1.8rem; letter-spacing:2px; color:#fff; background:rgba(0,0,0,0.4); border:2px solid rgba(0,240,255,0.35); border-radius:8px; padding:2px 16px; min-width:100px; text-align:center; }
+        #input-display.empty { border-color:rgba(255,255,255,0.15); color:#555; }
+        #keypad { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; width:100%; max-width:220px; }
+        .key-btn { aspect-ratio:1.1; border:1.5px solid var(--glass-border); border-radius:8px; background:rgba(255,255,255,0.05); color:#fff; font-size:0.9rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; min-width:44px; min-height:44px; }
+        .key-btn:active { transform:scale(0.88); background:rgba(255,255,255,0.18); }
+        .key-btn.func { font-size:0.7rem; background:rgba(255,136,0,0.1); color:#ff8800; }
+        .key-btn.confirm { font-size:0.75rem; background:rgba(0,255,136,0.12); color:#00ff88; }
+        .key-btn:disabled { opacity:0.25; pointer-events:none; }
+        .explosion { position:absolute; font-size:2.5rem; animation:explode 0.7s ease-out forwards; pointer-events:none; z-index:100; }
+        @keyframes explode { 0%{transform:scale(0.3);opacity:1;} 50%{transform:scale(1.4);opacity:0.8;} 100%{transform:scale(2);opacity:0;} }
+        .shake { animation:shakeAnim 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shakeAnim { 0%,100%{transform:translate(0,0);} 20%{transform:translate(-8px,6px);} 40%{transform:translate(7px,-5px);} 60%{transform:translate(-5px,-4px);} 80%{transform:translate(5px,4px);} }
+        #remote-cheat-btn { padding:4px 8px; border:1.5px solid rgba(255,255,255,0.2); border-radius:8px; background:rgba(0,0,0,0.4); color:#666; font-size:0.75rem; font-weight:700; cursor:pointer; outline:none; transition:all 0.2s; margin-right:8px; display:none; }
+        #remote-cheat-btn.active { color:#00ff88; border-color:#00ff88; background:rgba(0,255,136,0.1); }
+        #cheat-toast { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.8); padding:10px 20px; border-radius:10px; font-size:0.9rem; font-weight:700; z-index:2000; opacity:0; transition:opacity 0.3s; pointer-events:none; }
+        #cheat-toast.show { opacity:1; }
+        #surrender-btn { padding:6px 12px; border:1px solid rgba(255,80,80,0.4); border-radius:15px; background:rgba(255,50,50,0.08); color:#ff6666; font-size:0.65rem; font-weight:700; cursor:pointer; margin-top:4px; outline:none; transition:all 0.2s; display:none; }
+        #skills-bar { display:none; gap:4px; margin-top:4px; flex-wrap:wrap; justify-content:center; }
+        .skill-btn { padding:4px 10px; border:1.5px solid rgba(255,255,255,0.3); border-radius:10px; background:rgba(255,255,255,0.05); color:#999; font-size:0.65rem; font-weight:700; cursor:pointer; transition:all 0.2s; outline:none; min-height:32px; }
+        .skill-btn:active { transform:scale(0.92); }
+        .skill-btn.ready { border-color:var(--neon); color:var(--neon); background:rgba(0,240,255,0.08); box-shadow:0 0 8px rgba(0,240,255,0.2); }
+        .skill-btn:disabled { opacity:0.3; pointer-events:none; }
+        #skill-select-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.95); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:2000; padding:20px; }
+        #skill-select-overlay.active { display:flex; }
+        #skill-select-overlay.rotated { transform: rotate(180deg); }
+        .skill-select-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-width:320px; }
+        .skill-select-card { padding:12px 8px; border:2px solid rgba(255,255,255,0.2); border-radius:12px; cursor:pointer; text-align:center; transition:all 0.2s; background:rgba(255,255,255,0.03); }
+        .skill-select-card:active { transform:scale(0.95); }
+        .skill-select-card .skill-icon { font-size:1.8rem; }
+        .skill-select-card .skill-name { font-size:0.75rem; font-weight:700; margin-top:4px; }
+        .skill-select-card .skill-desc { font-size:0.55rem; color:#aaa; margin-top:3px; line-height:1.3; }
+        #game-over-btn { display:none; padding:8px 20px; border:2px solid var(--neon); border-radius:20px; background:rgba(0,240,255,0.1); color:var(--neon); font-size:0.8rem; font-weight:700; cursor:pointer; margin-top:8px; }
+        #rematch-btn { display:none; padding:8px 20px; border:2px solid #ff8800; border-radius:20px; background:rgba(255,136,0,0.1); color:#ff8800; font-size:0.8rem; font-weight:700; cursor:pointer; margin-top:4px; }
+        #skill-timer { font-size:2rem; font-weight:900; color:var(--neon); margin:10px 0; }
+        #opponent-area.rotated { transform: rotate(180deg); }
+    </style>
+</head>
+<body>
+<div id="game-container">
+    <div id="header">
+        <h1>💣 数字炸弹</h1>
+        <div id="header-right">
+            <button id="remote-cheat-btn" title="作弊开关">⚡</button>
+            <div id="room-info">未连接</div>
+        </div>
+    </div>
+
+    <div id="main-menu" class="overlay">
+        <div class="overlay-title">选择模式</div>
+        <button class="btn" id="normal-mode-btn">🎮 普通模式</button>
+        <button class="btn secondary" id="skill-mode-btn">⚡ 技能模式</button>
+    </div>
+
+    <div id="normal-submenu" class="overlay hidden">
+        <div class="overlay-title">普通模式</div>
+        <button class="btn" id="normal-local-btn">📱 本地双人</button>
+        <button class="btn" id="normal-ai-btn">🤖 AI对战</button>
+        <button class="btn" id="normal-remote-btn">🌐 远程对战</button>
+        <button class="btn secondary" id="normal-back-btn">返回</button>
+    </div>
+
+    <div id="skill-submenu" class="overlay hidden">
+        <div class="overlay-title">技能模式</div>
+        <button class="btn" id="skill-local-btn">📱 本地双人</button>
+        <button class="btn" id="skill-ai-btn">🤖 AI对战</button>
+        <button class="btn" id="skill-remote-btn">🌐 远程对战</button>
+        <button class="btn secondary" id="skill-back-btn">返回</button>
+    </div>
+
+    <div id="setup-overlay" class="overlay hidden">
+        <div class="overlay-title">⚙️ 游戏设置</div>
+        <div class="setting-row">
+            <label>最小值：</label>
+            <input type="number" id="min-input" value="1" min="1" step="1">
+            <label>最大值：</label>
+            <input type="number" id="max-input" value="100" min="2" step="1">
+        </div>
+        <div class="setting-row">
+            <label>生命值（1-15）：</label>
+            <input type="number" id="hp-input" value="5" min="1" max="15" step="1">
+        </div>
+        <div class="setting-row" id="ai-level-row" style="display:none;">
+            <label>AI难度：</label>
+            <button class="ai-level-btn active" data-level="1">简单</button>
+            <button class="ai-level-btn" data-level="2">中等</button>
+            <button class="ai-level-btn" data-level="3">困难</button>
+        </div>
+        <button class="btn" id="start-game-btn">开始游戏</button>
+        <button class="btn secondary" id="back-menu-btn1">返回</button>
+    </div>
+
+    <div id="remote-lobby" class="overlay hidden">
+        <div class="overlay-title">远程对战</div>
+        <button class="btn" id="create-room-btn">创建房间</button>
+        <div style="margin:15px 0;color:#666;">— 或 —</div>
+        <input type="text" class="room-input" id="join-room-input" placeholder="输入房间码" maxlength="6">
+        <button class="btn" id="join-room-btn">加入房间</button>
+        <div id="lobby-message" style="margin-top:15px;color:#ff6666;font-size:0.8rem;"></div>
+        <button class="btn secondary" id="back-menu-btn2">返回</button>
+    </div>
+
+    <div id="remote-waiting" class="overlay hidden">
+        <div class="overlay-title">房间码</div>
+        <div class="room-display" id="waiting-room-code">------</div>
+        <div class="waiting-text" id="waiting-text">等待对手加入...</div>
+        <button class="btn" id="cancel-waiting-btn">取消</button>
+        <div id="invite-link-display" style="font-size:0.7rem;color:#ccc;margin-top:10px;word-break:break-all;"></div>
+        <button class="btn small" id="copy-link-btn" style="display:none;margin-top:10px;">复制邀请链接</button>
+    </div>
+
+    <div id="remote-setup-overlay" class="overlay hidden">
+        <div class="overlay-title">⚙️ 远程游戏设置</div>
+        <div class="setting-row">
+            <label>最小值：</label>
+            <input type="number" id="remote-min-input" value="1" min="1" step="1">
+            <label>最大值：</label>
+            <input type="number" id="remote-max-input" value="100" min="2" step="1">
+        </div>
+        <div class="setting-row">
+            <label>生命值（1-15）：</label>
+            <input type="number" id="remote-hp-input" value="5" min="1" max="15" step="1">
+        </div>
+        <button class="btn" id="remote-start-btn">开始游戏</button>
+    </div>
+
+    <div id="battle-area">
+        <div class="player-area" id="opponent-area">
+            <div class="highlight" id="opponent-highlight">
+                <div class="avatar" id="opponent-avatar">🙂</div>
+                <div class="life-dots" id="opponent-lives"></div>
+                <div class="name-tag" id="opponent-name">对手</div>
+            </div>
+        </div>
+
+        <div id="info-area">
+            <div id="range-display">范围：1 - 100</div>
+            <div id="turn-indicator">等待...</div>
+            <div id="message-display">游戏开始</div>
+        </div>
+
+        <div id="skills-bar"></div>
+
+        <div id="input-keypad-container">
+            <div id="input-display" class="empty">等待输入</div>
+            <div id="keypad">
+                <button class="key-btn" data-value="9">9</button>
+                <button class="key-btn" data-value="8">8</button>
+                <button class="key-btn" data-value="7">7</button>
+                <button class="key-btn func" data-action="back">⌫</button>
+                <button class="key-btn" data-value="6">6</button>
+                <button class="key-btn" data-value="5">5</button>
+                <button class="key-btn" data-value="4">4</button>
+                <button class="key-btn func" data-action="clear">C</button>
+                <button class="key-btn" data-value="3">3</button>
+                <button class="key-btn" data-value="2">2</button>
+                <button class="key-btn" data-value="1">1</button>
+                <button class="key-btn confirm" data-action="confirm" id="confirm-btn">确定</button>
+                <button class="key-btn" data-value="0">0</button>
+                <button class="key-btn" data-value="00">00</button>
+                <button class="key-btn" data-value="000">000</button>
+                <button class="key-btn func" data-action="cheat" id="local-cheat-btn" style="font-size:0.7rem;">🔓</button>
+            </div>
+            <button id="surrender-btn">🏳️ 认输</button>
+            <button id="game-over-btn">返回主菜单</button>
+            <button id="rematch-btn">🔄 再来一局</button>
+        </div>
+
+        <div class="player-area" id="me-area">
+            <div class="highlight" id="me-highlight">
+                <div class="life-dots" id="me-lives"></div>
+                <div class="avatar" id="me-avatar">🙂</div>
+                <div class="name-tag" id="me-name">我</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="skill-select-overlay">
+        <div class="overlay-title" id="skill-select-title">选择技能</div>
+        <div id="skill-timer">15</div>
+        <div class="skill-select-grid" id="skill-select-grid"></div>
+    </div>
+
+    <div id="cheat-toast"></div>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<script>
+(function() {
+    // ==================== 技能定义 ====================
+    const ALL_SKILLS = [
+        { id: 'detect', name: '📡 探测', desc: '查看炸弹是奇数还是偶数', cooldown: 2 },
+        { id: 'peek', name: '🔍 透视', desc: '查看炸弹的个位或十位', cooldown: 3 },
+        { id: 'digitsum', name: '🧮 数字和', desc: '查看炸弹各位数字之和', cooldown: 3 },
+        { id: 'prime', name: '🔢 质数探测', desc: '查看炸弹是否为质数', cooldown: 2 },
+        { id: 'fuzzy', name: '🎯 模糊探测', desc: '显示炸弹在某个10%范围内', cooldown: 4 },
+        { id: 'binary', name: '✂️ 二分', desc: '缩小范围至现在的1/2', cooldown: 3 },
+        { id: 'move', name: '🚚 移动', desc: '炸弹在当前范围内移动5个数字', cooldown: 3 },
+        { id: 'speed', name: '⚡ 加速', desc: '本回合连续猜2次', cooldown: 4 },
+        { id: 'suicide', name: '💣 自爆', desc: '直接踩中炸弹攻击对手', cooldown: 6 },
+        { id: 'double', name: '⚡ 双倍', desc: '本回合踩中炸弹造成2点伤害', cooldown: 4 },
+        { id: 'triple', name: '💥 三倍', desc: '本回合踩中炸弹造成3点伤害，否则自己受1点伤害', cooldown: 5 },
+        { id: 'gamble', name: '🎲 赌博', desc: '50%攻击对方，50%自己受伤', cooldown: 4 },
+        { id: 'shield', name: '🛡️ 护盾', desc: '本回合抵挡一次炸弹伤害', cooldown: 5 },
+        { id: 'heal', name: '💊 治疗', desc: '恢复自己1点生命', cooldown: 6 },
+        { id: 'bigheal', name: '💖 大治疗', desc: '恢复自己2点生命', cooldown: 6 },
+        { id: 'swap', name: '🔄 交换', desc: '与对方交换当前生命值', cooldown: 6 },
+        { id: 'pause', name: '🕐 暂停', desc: '对方跳过下一回合', cooldown: 5 },
+        { id: 'lock', name: '🚫 封锁', desc: '对方无法使用技能直到炸弹爆炸', cooldown: 5 },
+        { id: 'lifesteal', name: '🌙 吸血', desc: '踩中炸弹攻击对方并回复1点血', cooldown: 5 },
+        { id: 'rebirth', name: '🕊️ 重生', desc: '死亡时以2点生命复活', cooldown: 8 },
+        { id: 'shuffle', name: '🔀 洗牌', desc: '炸弹在当前范围内重新随机', cooldown: 5 }
+    ];
+
+    // ==================== 游戏状态 ====================
+    const G = {
+        mode: '', active: false, processing: false, isSkillMode: false,
+        aiLevel: 1, minVal: 1, maxVal: 100, low: 1, high: 100,
+        bombNumber: 0, currentPlayer: 'p1', playerInput: '',
+        cheatMode: false, myRole: '', isHost: false,
+        peer: null, conn: null, roomCode: '',
+        pendingSkillSelect: null, pendingSkillOptions: null,
+        skillTimer: null, skillTimerCount: 15,
+        hostTimeout: null,
+        players: {
+            p1: { id: 'p1', name: '', avatar: '', hp: 5, maxHP: 5, shield: false, double: false, triple: false, lifesteal: false, rebirth: false, speed: false, skipNext: false, lock: false, skills: [], cooldowns: {} },
+            p2: { id: 'p2', name: '', avatar: '', hp: 5, maxHP: 5, shield: false, double: false, triple: false, lifesteal: false, rebirth: false, speed: false, skipNext: false, lock: false, skills: [], cooldowns: {} }
+        }
+    };
+
+    // ==================== DOM元素 ====================
+    const mainMenu = document.getElementById('main-menu');
+    const normalSubmenu = document.getElementById('normal-submenu');
+    const skillSubmenu = document.getElementById('skill-submenu');
+    const setupOverlay = document.getElementById('setup-overlay');
+    const remoteLobby = document.getElementById('remote-lobby');
+    const remoteWaiting = document.getElementById('remote-waiting');
+    const remoteSetupOverlay = document.getElementById('remote-setup-overlay');
+    const battleArea = document.getElementById('battle-area');
+    const roomInfo = document.getElementById('room-info');
+    const minInput = document.getElementById('min-input');
+    const maxInput = document.getElementById('max-input');
+    const hpInput = document.getElementById('hp-input');
+    const remoteMinInput = document.getElementById('remote-min-input');
+    const remoteMaxInput = document.getElementById('remote-max-input');
+    const remoteHpInput = document.getElementById('remote-hp-input');
+    const aiLevelRow = document.getElementById('ai-level-row');
+    const aiLevelBtns = document.querySelectorAll('.ai-level-btn');
+    const opponentArea = document.getElementById('opponent-area');
+    const opponentHighlight = document.getElementById('opponent-highlight');
+    const meHighlight = document.getElementById('me-highlight');
+    const opponentLivesEl = document.getElementById('opponent-lives');
+    const meLivesEl = document.getElementById('me-lives');
+    const opponentAvatar = document.getElementById('opponent-avatar');
+    const opponentName = document.getElementById('opponent-name');
+    const meAvatar = document.getElementById('me-avatar');
+    const meName = document.getElementById('me-name');
+    const rangeDisplay = document.getElementById('range-display');
+    const turnIndicator = document.getElementById('turn-indicator');
+    const inputDisplay = document.getElementById('input-display');
+    const messageDisplay = document.getElementById('message-display');
+    const keypadButtons = document.querySelectorAll('.key-btn');
+    const createRoomBtn = document.getElementById('create-room-btn');
+    const joinRoomBtn = document.getElementById('join-room-btn');
+    const joinRoomInput = document.getElementById('join-room-input');
+    const lobbyMessage = document.getElementById('lobby-message');
+    const waitingRoomCode = document.getElementById('waiting-room-code');
+    const waitingText = document.getElementById('waiting-text');
+    const cancelWaitingBtn = document.getElementById('cancel-waiting-btn');
+    const inviteLinkDisplay = document.getElementById('invite-link-display');
+    const copyLinkBtn = document.getElementById('copy-link-btn');
+    const startGameBtn = document.getElementById('start-game-btn');
+    const remoteStartBtn = document.getElementById('remote-start-btn');
+    const remoteCheatBtn = document.getElementById('remote-cheat-btn');
+    const localCheatBtn = document.getElementById('local-cheat-btn');
+    const cheatToast = document.getElementById('cheat-toast');
+    const surrenderBtn = document.getElementById('surrender-btn');
+    const gameOverBtn = document.getElementById('game-over-btn');
+    const rematchBtn = document.getElementById('rematch-btn');
+    const skillsBar = document.getElementById('skills-bar');
+    const skillSelectOverlay = document.getElementById('skill-select-overlay');
+    const skillSelectGrid = document.getElementById('skill-select-grid');
+    const skillSelectTitle = document.getElementById('skill-select-title');
+    const skillTimerEl = document.getElementById('skill-timer');
+
+    // ==================== 工具函数 ====================
+    function getPlayer(id) { return G.players[id]; }
+    function getCurrentPlayer() { return getPlayer(G.currentPlayer); }
+    function getOpponentPlayer(playerId) { return playerId === 'p1' ? getPlayer('p2') : getPlayer('p1'); }
+    function getMyPlayer() {
+        if (G.mode.includes('local')) return getPlayer('p1'); // 固定p1为“我”
+        if (G.mode.includes('ai')) return getPlayer('p1');
+        if (G.mode.includes('remote')) return G.myRole === 'host' ? getPlayer('p1') : getPlayer('p2');
+        return getPlayer('p1');
+    }
+    function getMyOpponent() { return getOpponentPlayer(getMyPlayer().id); }
+    function isMyTurn() {
+        if (G.mode.includes('local')) return true; // 本地双人键盘始终可用，实际由玩家轮流操作
+        if (G.mode.includes('ai')) return G.currentPlayer === 'p1';
+        if (G.mode.includes('remote')) {
+            return (G.currentPlayer === 'p1' && G.myRole === 'host') || (G.currentPlayer === 'p2' && G.myRole === 'guest');
+        }
+        return false;
+    }
+    function generateRoomCode() {
+        return Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+    function showCheatToast(msg) {
+        cheatToast.textContent = msg;
+        cheatToast.classList.add('show');
+        setTimeout(() => cheatToast.classList.remove('show'), 800);
+    }
+    function getRandomSkills(count) {
+        const result = [];
+        for (let i = 0; i < count; i++) {
+            result.push(ALL_SKILLS[Math.floor(Math.random() * ALL_SKILLS.length)]);
+        }
+        return result;
+    }
+    function getSkillById(id) {
+        return ALL_SKILLS.find(s => s.id === id);
+    }
+    function isPrime(n) {
+        if (n < 2) return false;
+        for (let i = 2; i * i <= n; i++) if (n % i === 0) return false;
+        return true;
+    }
+    function clearHostTimeout() {
+        if (G.hostTimeout) { clearTimeout(G.hostTimeout); G.hostTimeout = null; }
+    }
+
+    // ==================== 渲染函数 ====================
+    function renderPlayers() {
+        const me = getMyPlayer();
+        const opp = getMyOpponent();
+        meName.textContent = me.name;
+        meAvatar.textContent = me.avatar;
+        renderLives(meLivesEl, me.hp, me.id === 'p1' ? 'blue' : 'red');
+        opponentName.textContent = opp.name;
+        opponentAvatar.textContent = opp.avatar;
+        renderLives(opponentLivesEl, opp.hp, opp.id === 'p1' ? 'blue' : 'red');
+        const current = getCurrentPlayer();
+        if (current.id === me.id) {
+            meHighlight.classList.add('active');
+            opponentHighlight.classList.remove('active');
+        } else {
+            meHighlight.classList.remove('active');
+            opponentHighlight.classList.add('active');
+        }
+    }
+    function renderLives(container, hp, color) {
+        container.innerHTML = '';
+        const maxHP = G.players.p1.maxHP;
+        for (let i = 0; i < maxHP; i++) {
+            const dot = document.createElement('span');
+            dot.className = 'dot';
+            if (i < hp) dot.classList.add('filled-' + color);
+            else dot.classList.add('lost');
+            container.appendChild(dot);
+        }
+    }
+    function updateRange() { rangeDisplay.textContent = '范围：' + G.low + ' - ' + G.high; }
+    function updateInputDisplay() {
+        if (G.playerInput === '') { inputDisplay.textContent = '等待输入'; inputDisplay.classList.add('empty'); }
+        else { inputDisplay.textContent = G.playerInput; inputDisplay.classList.remove('empty'); }
+    }
+    function updateTurnIndicator() {
+        turnIndicator.classList.remove('turn-me', 'turn-opponent');
+        const current = getCurrentPlayer();
+        const me = getMyPlayer();
+        if (current.id === me.id) {
+            turnIndicator.textContent = '👇 我的回合';
+            turnIndicator.classList.add('turn-me');
+        } else {
+            turnIndicator.textContent = G.mode.includes('ai') ? '🤖 AI思考中...' : '👆 对方回合...';
+            turnIndicator.classList.add('turn-opponent');
+        }
+        setKeypadEnabled(isMyTurn() && !G.processing);
+    }
+    function setKeypadEnabled(enabled) {
+        keypadButtons.forEach(btn => {
+            if (btn.dataset.action === 'cheat') return;
+            btn.disabled = !enabled;
+        });
+    }
+    function showExplosion(target) {
+        const area = target === 'me' ? meHighlight : opponentHighlight;
+        area.classList.add('shake');
+        setTimeout(() => area.classList.remove('shake'), 500);
+        const ex = document.createElement('div');
+        ex.className = 'explosion';
+        ex.textContent = '💥';
+        ex.style.left = '50%';
+        ex.style.top = '50%';
+        ex.style.transform = 'translate(-50%,-50%)';
+        area.style.position = 'relative';
+        area.appendChild(ex);
+        setTimeout(() => ex.remove(), 700);
+    }
+    function renderSkills() {
+        skillsBar.innerHTML = '';
+        const me = getMyPlayer();
+        if (!me.skills) me.skills = [];
+        me.skills.forEach(skill => {
+            const btn = document.createElement('button');
+            btn.className = 'skill-btn';
+            btn.dataset.skillId = skill.id;
+            const cd = me.cooldowns[skill.id] || 0;
+            if (cd > 0) {
+                btn.textContent = skill.name + ' (' + cd + ')';
+                btn.disabled = true;
+            } else {
+                btn.textContent = skill.name;
+                btn.disabled = false;
+            }
+            btn.addEventListener('click', () => useSkill(skill.id));
+            skillsBar.appendChild(btn);
+        });
+    }
+    function reduceCooldowns(playerId) {
+        const p = getPlayer(playerId);
+        Object.keys(p.cooldowns).forEach(key => {
+            if (p.cooldowns[key] > 0) p.cooldowns[key]--;
+        });
+        if (p.id === getMyPlayer().id) renderSkills();
+    }
+
+    // ==================== 界面切换 ====================
+    function hideAll() {
+        [mainMenu, normalSubmenu, skillSubmenu, setupOverlay, remoteLobby, remoteWaiting, remoteSetupOverlay].forEach(el => el.classList.add('hidden'));
+        battleArea.style.display = 'none';
+        skillsBar.style.display = 'none';
+        surrenderBtn.style.display = 'none';
+        gameOverBtn.style.display = 'none';
+        rematchBtn.style.display = 'none';
+        rematchBtn.disabled = false;
+        remoteCheatBtn.style.display = 'none';
+        localCheatBtn.style.display = 'none';
+        skillSelectOverlay.classList.remove('active');
+        skillSelectOverlay.classList.remove('rotated');
+        if (G.skillTimer) { clearInterval(G.skillTimer); G.skillTimer = null; }
+        clearHostTimeout();
+        G.pendingSkillSelect = null;
+        G.pendingSkillOptions = null;
+    }
+    function showMainMenu() { hideAll(); mainMenu.classList.remove('hidden'); roomInfo.textContent = '未连接'; }
+    function showNormalSubmenu() { hideAll(); normalSubmenu.classList.remove('hidden'); }
+    function showSkillSubmenu() { hideAll(); skillSubmenu.classList.remove('hidden'); }
+    function showSetup(mode) {
+        hideAll();
+        G.mode = mode;
+        G.isSkillMode = mode.includes('skill');
+        setupOverlay.classList.remove('hidden');
+        aiLevelRow.style.display = mode.includes('ai') ? 'flex' : 'none';
+    }
+    function showRemoteLobby() { hideAll(); remoteLobby.classList.remove('hidden'); }
+    function showRemoteWaiting() { hideAll(); remoteWaiting.classList.remove('hidden'); }
+    function showRemoteSetup() { hideAll(); remoteSetupOverlay.classList.remove('hidden'); }
+    function showBattleArea() {
+        hideAll();
+        battleArea.style.display = 'flex';
+        if (G.isSkillMode) {
+            skillsBar.style.display = 'flex';
+            renderSkills();
+        }
+        surrenderBtn.style.display = 'block';
+        if (G.mode.includes('remote') && G.isHost) {
+            remoteCheatBtn.style.display = 'inline-block';
+        }
+        if (G.mode.includes('local') || G.mode.includes('ai')) {
+            localCheatBtn.style.display = 'flex';
+        }
+        // 本地模式对手区域旋转
+        if (G.mode.includes('local')) {
+            opponentArea.classList.add('rotated');
+        } else {
+            opponentArea.classList.remove('rotated');
+        }
+    }
+
+    // ==================== 游戏流程 ====================
+    function resetGameState() {
+        G.active = true;
+        G.processing = false;
+        G.low = G.minVal;
+        G.high = G.maxVal;
+        G.bombNumber = Math.floor(Math.random() * (G.maxVal - G.minVal + 1)) + G.minVal;
+        G.playerInput = '';
+        G.currentPlayer = Math.random() < 0.5 ? 'p1' : 'p2';
+        G.pendingSkillSelect = null;
+        G.pendingSkillOptions = null;
+        clearHostTimeout();
+        ['p1', 'p2'].forEach(id => {
+            const p = G.players[id];
+            p.hp = p.maxHP;
+            p.shield = false; p.double = false; p.triple = false;
+            p.lifesteal = false; p.rebirth = false; p.speed = false;
+            p.skipNext = false; p.lock = false;
+            p.skills = []; p.cooldowns = {};
+        });
+    }
+    function startNewRound() {
+        G.low = G.minVal;
+        G.high = G.maxVal;
+        G.bombNumber = Math.floor(Math.random() * (G.maxVal - G.minVal + 1)) + G.minVal;
+        G.playerInput = '';
+        updateRange();
+        updateInputDisplay();
+        messageDisplay.textContent = '💥 炸弹重置！新的一轮！';
+        G.processing = false;
+        renderSkills();
+        updateTurnIndicator();
+        syncIfRemote();
+    }
+    function endGame() {
+        G.active = false;
+        G.processing = false;
+        G.pendingSkillSelect = null;
+        G.pendingSkillOptions = null;
+        skillSelectOverlay.classList.remove('active');
+        skillSelectOverlay.classList.remove('rotated');
+        if (G.skillTimer) { clearInterval(G.skillTimer); G.skillTimer = null; }
+        clearHostTimeout();
+        const me = getMyPlayer();
+        const opp = getMyOpponent();
+        if (me.hp <= 0 && opp.hp <= 0) messageDisplay.textContent = '🤝 平局！';
+        else if (me.hp <= 0) messageDisplay.textContent = '😵 我输了...';
+        else messageDisplay.textContent = '🎉 我赢了！';
+        setKeypadEnabled(false);
+        surrenderBtn.style.display = 'none';
+        gameOverBtn.style.display = 'block';
+        rematchBtn.style.display = 'block';
+        syncIfRemote();
+    }
+    function initGame() {
+        resetGameState();
+        showBattleArea();
+        renderPlayers();
+        updateRange();
+        updateInputDisplay();
+        messageDisplay.textContent = '游戏开始！';
+        if (G.mode.includes('local')) {
+            getPlayer('p1').name = '蓝方'; getPlayer('p1').avatar = '🔵';
+            getPlayer('p2').name = '红方'; getPlayer('p2').avatar = '🔴';
+            roomInfo.textContent = '📱 本地双人';
+        } else if (G.mode.includes('ai')) {
+            getPlayer('p1').name = '我'; getPlayer('p1').avatar = '🙂';
+            getPlayer('p2').name = 'AI机器人'; getPlayer('p2').avatar = '🤖';
+            roomInfo.textContent = '🤖 AI对战 (' + ['简单','中等','困难'][G.aiLevel-1] + ')';
+        } else if (G.mode.includes('remote')) {
+            getPlayer('p1').name = 'Host'; getPlayer('p1').avatar = '🙂';
+            getPlayer('p2').name = 'Guest'; getPlayer('p2').avatar = '🙂';
+            roomInfo.textContent = '房间: ' + G.roomCode;
+        }
+        renderPlayers();
+        updateTurnIndicator();
+        if (G.isSkillMode) {
+            const firstPlayer = G.currentPlayer;
+            if (G.mode.includes('ai') && firstPlayer === 'p2') {
+                aiSelectSkill();
+            } else if (G.mode.includes('remote') && G.isHost && firstPlayer === 'p2') {
+                G.pendingSkillSelect = 'p2';
+                G.pendingSkillOptions = getRandomSkills(3).map(s => s.id);
+                syncIfRemote();
+                startHostTimeout('p2');
+            } else if (G.mode.includes('remote') && !G.isHost && firstPlayer === 'p2') {
+                G.pendingSkillSelect = 'p2';
+                setKeypadEnabled(false);
+            } else {
+                showSkillSelect(firstPlayer);
+            }
+        }
+        if (G.mode.includes('ai') && G.currentPlayer === 'p2' && !G.isSkillMode) {
+            setTimeout(() => aiTurn(), 800);
+        }
+        syncIfRemote();
+    }
+
+    function startHostTimeout(playerId) {
+        clearHostTimeout();
+        G.hostTimeout = setTimeout(() => {
+            if (G.active && G.pendingSkillSelect === playerId && G.isHost) {
+                const player = getPlayer(playerId);
+                const randomSkill = getRandomSkills(1)[0];
+                player.skills = [randomSkill];
+                player.cooldowns = {};
+                skillSelectOverlay.classList.remove('active');
+                skillSelectOverlay.classList.remove('rotated');
+                if (G.skillTimer) { clearInterval(G.skillTimer); G.skillTimer = null; }
+                G.pendingSkillSelect = null;
+                G.pendingSkillOptions = null;
+                messageDisplay.textContent = player.name + ' 超时，自动选择技能：' + randomSkill.name;
+                startNewRound();
+            }
+        }, 20000);
+    }
+
+    // ==================== 猜测处理 ====================
+    function processGuess(guess, isSkillAttack, guesserId) {
+        if (!G.active || G.processing) return;
+        const guesser = guesserId ? getPlayer(guesserId) : getCurrentPlayer();
+        const defender = getOpponentPlayer(guesser.id);
+        if (!isSkillAttack) {
+            if (isNaN(guess) || guess < G.low || guess > G.high) {
+                messageDisplay.textContent = '⚠️ 请输入 ' + G.low + '~' + G.high + ' 之间';
+                G.playerInput = '';
+                updateInputDisplay();
+                return;
+            }
+        }
+        let isHit = (guess === G.bombNumber) || isSkillAttack;
+        if (G.cheatMode && !isSkillAttack && (G.high - G.low + 1) <= 10) {
+            const me = getMyPlayer();
+            if (guesser.id === me.id) isHit = true;
+        }
+        const guesserName = guesser.id === getMyPlayer().id ? '我' : (G.mode.includes('ai') && guesser.id === 'p2' ? 'AI' : '对方');
+        if (isSkillAttack) messageDisplay.textContent = guesserName + ' 使用了自爆！';
+        else messageDisplay.textContent = guesserName + ' 猜了 ' + guess;
+        G.processing = true;
+        setKeypadEnabled(false);
+        setTimeout(() => {
+            if (isHit) {
+                let damage = 1;
+                if (guesser.double) { damage = 2; guesser.double = false; }
+                if (guesser.triple) { damage = 3; guesser.triple = false; }
+                if (defender.shield) {
+                    defender.shield = false;
+                    messageDisplay.textContent = '🛡️ 护盾抵挡了伤害！';
+                } else {
+                    defender.hp -= damage;
+                    if (guesser.lifesteal) {
+                        guesser.hp = Math.min(guesser.maxHP, guesser.hp + 1);
+                        guesser.lifesteal = false;
+                    }
+                    if (defender.rebirth && defender.hp <= 0) {
+                        defender.hp = 2;
+                        defender.rebirth = false;
+                        messageDisplay.textContent = '🕊️ 重生触发！以2点生命复活';
+                    } else {
+                        const targetArea = defender.id === getMyPlayer().id ? 'me' : 'opponent';
+                        showExplosion(targetArea);
+                        messageDisplay.textContent = '💥 ' + guesserName + '踩中炸弹！' + defender.name + ' -' + damage + '血';
+                    }
+                }
+                renderPlayers();
+                if (getPlayer('p1').lock || getPlayer('p2').lock) {
+                    getPlayer('p1').lock = false;
+                    getPlayer('p2').lock = false;
+                }
+                if (getPlayer('p1').hp <= 0 || getPlayer('p2').hp <= 0) {
+                    endGame();
+                    return;
+                }
+                if (G.isSkillMode) {
+                    if (G.mode.includes('ai') && guesser.id === 'p2') {
+                        aiSelectSkill();
+                    } else if (G.mode.includes('remote') && G.isHost && guesser.id === 'p2') {
+                        G.pendingSkillSelect = 'p2';
+                        G.pendingSkillOptions = getRandomSkills(3).map(s => s.id);
+                        syncIfRemote();
+                        startHostTimeout('p2');
+                    } else if (G.mode.includes('remote') && !G.isHost && guesser.id === 'p2') {
+                        G.pendingSkillSelect = 'p2';
+                        setKeypadEnabled(false);
+                    } else {
+                        showSkillSelect(guesser.id);
+                    }
+                } else {
+                    startNewRound();
+                }
+                syncIfRemote();
+            } else {
+                if (guess < G.bombNumber) { G.low = guess + 1; messageDisplay.textContent = '📈 炸弹比 ' + guess + ' 大'; }
+                else { G.high = guess - 1; messageDisplay.textContent = '📉 炸弹比 ' + guess + ' 小'; }
+                updateRange();
+                G.playerInput = '';
+                updateInputDisplay();
+                if (guesser.triple) {
+                    guesser.triple = false;
+                    guesser.hp -= 1;
+                    messageDisplay.textContent += ' 💥 三倍失败，自己-1血';
+                    renderPlayers();
+                    if (guesser.hp <= 0) { endGame(); return; }
+                }
+                if (guesser.speed) {
+                    guesser.speed = false;
+                    messageDisplay.textContent += '（可再猜一次）';
+                    G.processing = false;
+                    setKeypadEnabled(isMyTurn());
+                    syncIfRemote();
+                    return;
+                }
+                switchTurn();
+            }
+        }, 500);
+    }
+
+    function switchTurn() {
+        const current = getCurrentPlayer();
+        const opponent = getOpponentPlayer(current.id);
+        G.playerInput = '';
+        updateInputDisplay();
+        reduceCooldowns(current.id);
+        if (opponent.skipNext) {
+            opponent.skipNext = false;
+            messageDisplay.textContent += ' 🕐 对方被暂停，跳过回合';
+            G.processing = false;
+            updateTurnIndicator();
+            syncIfRemote();
+            return;
+        }
+        G.currentPlayer = opponent.id;
+        G.processing = false;
+        updateTurnIndicator();
+        if (G.mode.includes('ai') && G.currentPlayer === 'p2') {
+            setTimeout(() => aiTurn(), 800);
+        }
+        syncIfRemote();
+    }
+
+    // ==================== 技能选择 ====================
+    function showSkillSelect(forPlayerId) {
+        const player = getPlayer(forPlayerId);
+        const options = getRandomSkills(3);
+        if (G.mode.includes('remote') && G.isHost) {
+            G.pendingSkillOptions = options.map(s => s.id);
+        }
+        skillSelectGrid.innerHTML = '';
+        skillSelectTitle.textContent = player.name + ' 选择技能';
+        options.forEach(skill => {
+            const card = document.createElement('div');
+            card.className = 'skill-select-card';
+            card.innerHTML = '<div class="skill-icon">' + skill.name.split(' ')[0] + '</div><div class="skill-name">' + skill.name + '</div><div class="skill-desc">' + skill.desc + '</div>';
+            card.addEventListener('click', () => {
+                if (G.skillTimer) { clearInterval(G.skillTimer); G.skillTimer = null; }
+                clearHostTimeout();
+                if (G.mode.includes('remote') && !G.isHost && forPlayerId === getMyPlayer().id) {
+                    if (G.conn) G.conn.send({ type: 'action', action: 'skill_select', playerId: getMyPlayer().id, skillId: skill.id });
+                    player.skills = [skill];
+                    player.cooldowns = {};
+                    skillSelectOverlay.classList.remove('active');
+                    skillSelectOverlay.classList.remove('rotated');
+                    G.pendingSkillSelect = null;
+                    G.pendingSkillOptions = null;
+                    renderSkills();
+                    G.processing = true;
+                    setKeypadEnabled(false);
+                } else {
+                    player.skills = [skill];
+                    player.cooldowns = {};
+                    skillSelectOverlay.classList.remove('active');
+                    skillSelectOverlay.classList.remove('rotated');
+                    G.pendingSkillSelect = null;
+                    G.pendingSkillOptions = null;
+                    renderSkills();
+                    startNewRound();
+                }
+            });
+            skillSelectGrid.appendChild(card);
+        });
+        // 旋转处理
+        if (G.mode.includes('local') && forPlayerId === 'p2') {
+            skillSelectOverlay.classList.add('rotated');
+        } else {
+            skillSelectOverlay.classList.remove('rotated');
+        }
+        skillSelectOverlay.classList.add('active');
+        G.pendingSkillSelect = forPlayerId;
+        G.processing = true;
+        setKeypadEnabled(false);
+        G.skillTimerCount = 15;
+        skillTimerEl.textContent = G.skillTimerCount;
+        if (G.skillTimer) clearInterval(G.skillTimer);
+        G.skillTimer = setInterval(() => {
+            G.skillTimerCount--;
+            skillTimerEl.textContent = G.skillTimerCount;
+            if (G.skillTimerCount <= 0) {
+                clearInterval(G.skillTimer);
+                G.skillTimer = null;
+                clearHostTimeout();
+                const randomSkill = options[Math.floor(Math.random() * options.length)];
+                if (G.mode.includes('remote') && !G.isHost && forPlayerId === getMyPlayer().id) {
+                    if (G.conn) G.conn.send({ type: 'action', action: 'skill_select', playerId: getMyPlayer().id, skillId: randomSkill.id });
+                    player.skills = [randomSkill];
+                    player.cooldowns = {};
+                    skillSelectOverlay.classList.remove('active');
+                    skillSelectOverlay.classList.remove('rotated');
+                    G.pendingSkillSelect = null;
+                    G.pendingSkillOptions = null;
+                    renderSkills();
+                    G.processing = true;
+                    setKeypadEnabled(false);
+                } else {
+                    player.skills = [randomSkill];
+                    player.cooldowns = {};
+                    skillSelectOverlay.classList.remove('active');
+                    skillSelectOverlay.classList.remove('rotated');
+                    G.pendingSkillSelect = null;
+                    G.pendingSkillOptions = null;
+                    renderSkills();
+                    startNewRound();
+                }
+            }
+        }, 1000);
+    }
+
+    function aiSelectSkill() {
+        const options = getRandomSkills(3);
+        const skill = options[Math.floor(Math.random() * options.length)];
+        getPlayer('p2').skills = [skill];
+        getPlayer('p2').cooldowns = {};
+        setTimeout(() => {
+            skillSelectOverlay.classList.remove('active');
+            skillSelectOverlay.classList.remove('rotated');
+            G.pendingSkillSelect = null;
+            G.pendingSkillOptions = null;
+            startNewRound();
+            if (G.currentPlayer === 'p2' && G.active) {
+                setTimeout(() => aiTurn(), 500);
+            }
+        }, 600);
+    }
+
+    // ==================== 技能使用 ====================
+    function useSkill(skillId, playerId) {
+        const user = playerId ? getPlayer(playerId) : getMyPlayer();
+        if (!G.active) return;
+        if (user.id !== G.currentPlayer || G.processing) return;
+        if (G.mode.includes('remote') && !G.isHost && !playerId) {
+            if (G.conn) G.conn.send({ type: 'action', action: 'skill', playerId: user.id, skillId: skillId });
+            return;
+        }
+        const skill = getSkillById(skillId);
+        if (!skill) return;
+        const cd = user.cooldowns[skill.id] || 0;
+        if (cd > 0) return;
+        const opponent = getOpponentPlayer(user.id);
+        if (opponent.lock) {
+            messageDisplay.textContent = '🚫 技能被封禁中...';
+            return;
+        }
+        user.cooldowns[skillId] = skill.cooldown;
+        const userName = user.id === getMyPlayer().id ? '我' : (G.mode.includes('ai') ? 'AI' : '对方');
+        switch(skillId) {
+            case 'detect':
+                messageDisplay.textContent = '📡 ' + userName + '探测：炸弹是' + (G.bombNumber % 2 === 0 ? '偶数' : '奇数');
+                break;
+            case 'peek': {
+                const digit = Math.random() < 0.5 ? '个位' : '十位';
+                const val = digit === '个位' ? G.bombNumber % 10 : Math.floor(G.bombNumber / 10);
+                messageDisplay.textContent = '🔍 ' + userName + '透视：炸弹' + digit + '是' + val;
+                break;
+            }
+            case 'digitsum': {
+                const sum = String(G.bombNumber).split('').reduce((a, b) => a + parseInt(b), 0);
+                messageDisplay.textContent = '🧮 ' + userName + '计算：数字之和为' + sum;
+                break;
+            }
+            case 'prime':
+                messageDisplay.textContent = '🔢 ' + userName + '探测：炸弹' + (isPrime(G.bombNumber) ? '是' : '不是') + '质数';
+                break;
+            case 'fuzzy': {
+                const rangeSize = G.high - G.low + 1;
+                const subSize = Math.max(1, Math.ceil(rangeSize * 0.1));
+                let start = Math.max(G.low, G.bombNumber - Math.floor(Math.random() * subSize));
+                start = Math.min(start, G.bombNumber);
+                start = Math.max(G.low, Math.min(G.high - subSize + 1, start));
+                const end = Math.min(G.high, start + subSize - 1);
+                messageDisplay.textContent = '🎯 ' + userName + '探测：炸弹在 ' + start + '~' + end + ' 之间';
+                break;
+            }
+            case 'binary': {
+                if (G.low >= G.high) {
+                    messageDisplay.textContent = '⚠️ 范围已无法再缩小，无法使用二分';
+                    delete user.cooldowns[skillId];
+                    renderSkills();
+                    return;
+                }
+                const mid = Math.floor((G.low + G.high) / 2);
+                if (G.bombNumber <= mid) G.high = mid;
+                else G.low = mid + 1;
+                updateRange();
+                messageDisplay.textContent = '✂️ ' + userName + '二分：范围缩小至 ' + G.low + '~' + G.high;
+                break;
+            }
+            case 'move': {
+                const dir = Math.random() < 0.5 ? 1 : -1;
+                let newBomb = G.bombNumber + dir * 5;
+                newBomb = Math.max(G.low, Math.min(G.high, newBomb));
+                G.bombNumber = newBomb;
+                messageDisplay.textContent = '🚚 ' + userName + '移动：炸弹已调整位置';
+                break;
+            }
+            case 'speed':
+                user.speed = true;
+                messageDisplay.textContent = '⚡ ' + userName + '加速：本回合可连续猜2次';
+                break;
+            case 'suicide':
+                processGuess(G.bombNumber, true, user.id);
+                return;
+            case 'double':
+                user.double = true;
+                messageDisplay.textContent = '⚡ ' + userName + '双倍：伤害x2已激活';
+                break;
+            case 'triple':
+                user.triple = true;
+                messageDisplay.textContent = '💥 ' + userName + '三倍：伤害x3已激活（猜错自伤）';
+                break;
+            case 'gamble': {
+                if (Math.random() < 0.5) {
+                    opponent.hp = Math.max(0, opponent.hp - 1);
+                    messageDisplay.textContent = '🎲 ' + userName + '赌博成功！对方-1血';
+                } else {
+                    user.hp = Math.max(0, user.hp - 1);
+                    messageDisplay.textContent = '🎲 ' + userName + '赌博失败！自己-1血';
+                }
+                renderPlayers();
+                if (getPlayer('p1').hp <= 0 || getPlayer('p2').hp <= 0) { endGame(); return; }
+                break;
+            }
+            case 'shield':
+                user.shield = true;
+                messageDisplay.textContent = '🛡️ ' + userName + '护盾：已激活';
+                break;
+            case 'heal':
+                user.hp = Math.min(user.maxHP, user.hp + 1);
+                renderPlayers();
+                messageDisplay.textContent = '💊 ' + userName + '治疗：+1生命';
+                break;
+            case 'bigheal':
+                user.hp = Math.min(user.maxHP, user.hp + 2);
+                renderPlayers();
+                messageDisplay.textContent = '💖 ' + userName + '大治疗：+2生命';
+                break;
+            case 'swap': {
+                const tmp = user.hp;
+                user.hp = opponent.hp;
+                opponent.hp = tmp;
+                renderPlayers();
+                messageDisplay.textContent = '🔄 ' + userName + '交换：生命值已互换';
+                break;
+            }
+            case 'pause':
+                opponent.skipNext = true;
+                messageDisplay.textContent = '🕐 ' + userName + '暂停：对方下回合跳过';
+                break;
+            case 'lock':
+                opponent.lock = true;
+                messageDisplay.textContent = '🚫 ' + userName + '封锁：对方技能已封禁';
+                break;
+            case 'lifesteal':
+                user.lifesteal = true;
+                messageDisplay.textContent = '🌙 ' + userName + '吸血：已激活';
+                break;
+            case 'rebirth':
+                user.rebirth = true;
+                messageDisplay.textContent = '🕊️ ' + userName + '重生：已激活';
+                break;
+            case 'shuffle':
+                G.bombNumber = Math.floor(Math.random() * (G.high - G.low + 1)) + G.low;
+                messageDisplay.textContent = '🔀 ' + userName + '洗牌：炸弹已重新随机';
+                break;
+        }
+        renderSkills();
+        syncIfRemote();
+    }
+
+    // ==================== AI逻辑 ====================
+    function aiTurn() {
+        if (!G.active || G.currentPlayer !== 'p2') return;
+        if (G.isSkillMode && getPlayer('p2').skills.length > 0 && Math.random() < 0.35) {
+            const available = getPlayer('p2').skills.filter(s => (getPlayer('p2').cooldowns[s.id] || 0) === 0);
+            const priority = ['shield','speed','binary','detect','fuzzy','heal','bigheal','rebirth','lifesteal','double'];
+            let skill = null;
+            for (let i = 0; i < priority.length; i++) {
+                const found = available.find(s => s.id === priority[i]);
+                if (found) { skill = found; break; }
+            }
+            if (!skill && available.length > 0) skill = available[Math.floor(Math.random() * available.length)];
+            if (skill) {
+                useSkill(skill.id, 'p2');
+                setTimeout(() => { if (!G.processing) aiGuess(); }, 500);
+                return;
+            }
+        }
+        setTimeout(() => aiGuess(), 600);
+    }
+
+    function aiGuess() {
+        if (!G.active || G.currentPlayer !== 'p2') return;
+        let guess;
+        const low = G.low, high = G.high, aiLevel = G.aiLevel;
+        if (low === high) guess = low;
+        else if (aiLevel === 1) {
+            const possible = [];
+            for (let i = low; i <= high; i++) possible.push(i);
+            guess = possible[Math.floor(Math.random() * possible.length)];
+        } else if (aiLevel === 2) {
+            guess = Math.random() < 0.3 ? Math.floor(Math.random() * (high - low + 1)) + low : Math.floor((low + high) / 2);
+        } else {
+            guess = Math.floor((low + high) / 2);
+        }
+        processGuess(guess, false, 'p2');
+    }
+
+    // ==================== 远程同步 ====================
+    function syncIfRemote() {
+        if (!G.mode.includes('remote') || !G.isHost || !G.conn) return;
+        const p1 = G.players.p1;
+        const p2 = G.players.p2;
+        G.conn.send({
+            type: 'sync',
+            state: {
+                p1HP: p1.hp, p2HP: p2.hp,
+                p1MaxHP: p1.maxHP, p2MaxHP: p2.maxHP,
+                p1Shield: p1.shield, p2Shield: p2.shield,
+                p1Double: p1.double, p2Double: p2.double,
+                p1Triple: p1.triple, p2Triple: p2.triple,
+                p1Lifesteal: p1.lifesteal, p2Lifesteal: p2.lifesteal,
+                p1Rebirth: p1.rebirth, p2Rebirth: p2.rebirth,
+                p1Speed: p1.speed, p2Speed: p2.speed,
+                p1Skip: p1.skipNext, p2Skip: p2.skipNext,
+                p1Lock: p1.lock, p2Lock: p2.lock,
+                p1Skills: p1.skills, p2Skills: p2.skills,
+                p1Cooldowns: p1.cooldowns, p2Cooldowns: p2.cooldowns,
+                low: G.low, high: G.high,
+                currentPlayer: G.currentPlayer,
+                message: messageDisplay.textContent,
+                gameActive: G.active,
+                isProcessing: G.processing,
+                playerInput: G.playerInput,
+                mode: G.mode,
+                isSkillMode: G.isSkillMode,
+                pendingSkillSelect: G.pendingSkillSelect,
+                pendingSkillOptions: G.pendingSkillOptions
+            }
+        });
+    }
+
+    function applySync(state) {
+        G.players.p1.hp = state.p1HP;
+        G.players.p2.hp = state.p2HP;
+        G.players.p1.maxHP = state.p1MaxHP;
+        G.players.p2.maxHP = state.p2MaxHP;
+        G.players.p1.shield = state.p1Shield;
+        G.players.p2.shield = state.p2Shield;
+        G.players.p1.double = state.p1Double;
+        G.players.p2.double = state.p2Double;
+        G.players.p1.triple = state.p1Triple;
+        G.players.p2.triple = state.p2Triple;
+        G.players.p1.lifesteal = state.p1Lifesteal;
+        G.players.p2.lifesteal = state.p2Lifesteal;
+        G.players.p1.rebirth = state.p1Rebirth;
+        G.players.p2.rebirth = state.p2Rebirth;
+        G.players.p1.speed = state.p1Speed;
+        G.players.p2.speed = state.p2Speed;
+        G.players.p1.skipNext = state.p1Skip;
+        G.players.p2.skipNext = state.p2Skip;
+        G.players.p1.lock = state.p1Lock;
+        G.players.p2.lock = state.p2Lock;
+        G.players.p1.skills = state.p1Skills || [];
+        G.players.p2.skills = state.p2Skills || [];
+        G.players.p1.cooldowns = state.p1Cooldowns || {};
+        G.players.p2.cooldowns = state.p2Cooldowns || {};
+        G.low = state.low;
+        G.high = state.high;
+        G.currentPlayer = state.currentPlayer;
+        G.active = state.gameActive;
+        G.processing = state.isProcessing;
+        G.playerInput = state.playerInput || '';
+        G.isSkillMode = state.isSkillMode;
+        G.pendingSkillSelect = state.pendingSkillSelect;
+        G.pendingSkillOptions = state.pendingSkillOptions;
+        messageDisplay.textContent = state.message;
+        updateRange();
+        updateInputDisplay();
+        renderPlayers();
+        updateTurnIndicator();
+        if (G.isSkillMode) {
+            skillsBar.style.display = 'flex';
+            renderSkills();
+        }
+        if (state.gameActive === true && battleArea.style.display === 'none') {
+            showBattleArea();
+        }
+        if (state.pendingSkillSelect) {
+            const pendingPlayer = getPlayer(state.pendingSkillSelect);
+            if (pendingPlayer.id === getMyPlayer().id && !skillSelectOverlay.classList.contains('active')) {
+                showSkillSelectWithOptions(state.pendingSkillSelect, state.pendingSkillOptions);
+            }
+        } else if (skillSelectOverlay.classList.contains('active') && !G.pendingSkillSelect) {
+            skillSelectOverlay.classList.remove('active');
+            skillSelectOverlay.classList.remove('rotated');
+            if (G.skillTimer) { clearInterval(G.skillTimer); G.skillTimer = null; }
+        }
+        if (!G.active) {
+            surrenderBtn.style.display = 'none';
+            gameOverBtn.style.display = 'block';
+            rematchBtn.style.display = 'block';
+        }
+    }
+
+    function showSkillSelectWithOptions(forPlayerId, optionIds) {
+        const player = getPlayer(forPlayerId);
+        let options;
+        if (optionIds && optionIds.length > 0) {
+            options = optionIds.map(id => getSkillById(id)).filter(s => s);
+        } else {
+            options = getRandomSkills(3);
+        }
+        skillSelectGrid.innerHTML = '';
+        skillSelectTitle.textContent = player.name + ' 选择技能';
+        options.forEach(skill => {
+            const card = document.createElement('div');
+            card.className = 'skill-select-card';
+            card.innerHTML = '<div class="skill-icon">' + skill.name.split(' ')[0] + '</div><div class="skill-name">' + skill.name + '</div><div class="skill-desc">' + skill.desc + '</div>';
+            card.addEventListener('click', () => {
+                if (G.skillTimer) { clearInterval(G.skillTimer); G.skillTimer = null; }
+                if (G.mode.includes('remote') && !G.isHost && forPlayerId === getMyPlayer().id) {
+                    if (G.conn) G.conn.send({ type: 'action', action: 'skill_select', playerId: getMyPlayer().id, skillId: skill.id });
+                    player.skills = [skill];
+                    player.cooldowns = {};
+                    skillSelectOverlay.classList.remove('active');
+                    skillSelectOverlay.classList.remove('rotated');
+                    G.pendingSkillSelect = null;
+                    G.pendingSkillOptions = null;
+                    renderSkills();
+                    G.processing = true;
+                    setKeypadEnabled(false);
+                }
+            });
+            skillSelectGrid.appendChild(card);
+        });
+        skillSelectOverlay.classList.add('active');
+        G.pendingSkillSelect = forPlayerId;
+        G.processing = true;
+        setKeypadEnabled(false);
+        G.skillTimerCount = 15;
+        skillTimerEl.textContent = G.skillTimerCount;
+        if (G.skillTimer) clearInterval(G.skillTimer);
+        G.skillTimer = setInterval(() => {
+            G.skillTimerCount--;
+            skillTimerEl.textContent = G.skillTimerCount;
+            if (G.skillTimerCount <= 0) {
+                clearInterval(G.skillTimer);
+                G.skillTimer = null;
+                const randomSkill = options[Math.floor(Math.random() * options.length)];
+                if (G.conn) G.conn.send({ type: 'action', action: 'skill_select', playerId: getMyPlayer().id, skillId: randomSkill.id });
+                player.skills = [randomSkill];
+                player.cooldowns = {};
+                skillSelectOverlay.classList.remove('active');
+                skillSelectOverlay.classList.remove('rotated');
+                G.pendingSkillSelect = null;
+                G.pendingSkillOptions = null;
+                renderSkills();
+                G.processing = true;
+                setKeypadEnabled(false);
+            }
+        }, 1000);
+    }
+
+    function handleRemoteMessage(data) {
+        if (!data || !data.type) return;
+        switch(data.type) {
+            case 'sync':
+                applySync(data.state);
+                break;
+            case 'action':
+                if (G.isHost && G.active) {
+                    if (data.action === 'guess' && data.playerId === G.currentPlayer) {
+                        processGuess(data.value, false, data.playerId);
+                    } else if (data.action === 'skill' && data.playerId === G.currentPlayer) {
+                        useSkill(data.skillId, data.playerId);
+                    } else if (data.action === 'skill_select' && data.playerId === G.currentPlayer) {
+                        if (G.pendingSkillOptions && G.pendingSkillOptions.includes(data.skillId)) {
+                            clearHostTimeout();
+                            getPlayer(data.playerId).skills = [getSkillById(data.skillId)];
+                            getPlayer(data.playerId).cooldowns = {};
+                            skillSelectOverlay.classList.remove('active');
+                            skillSelectOverlay.classList.remove('rotated');
+                            if (G.skillTimer) { clearInterval(G.skillTimer); G.skillTimer = null; }
+                            G.pendingSkillSelect = null;
+                            G.pendingSkillOptions = null;
+                            startNewRound();
+                        }
+                    } else if (data.action === 'surrender') {
+                        const p = getPlayer(data.playerId);
+                        if (p) { p.hp = 0; renderPlayers(); endGame(); }
+                    }
+                }
+                break;
+            case 'guest_ready':
+                if (G.isHost) {
+                    waitingText.textContent = '对手已加入';
+                    showRemoteSetup();
+                }
+                break;
+            case 'rematch_request':
+                if (G.isHost) {
+                    startRemoteGame();
+                    G.conn.send({ type: 'rematch' });
+                }
+                break;
+            case 'rematch':
+                if (!G.isHost) {
+                    messageDisplay.textContent = 'Host已重新开始...';
+                    rematchBtn.disabled = false;
+                }
+                break;
+        }
+    }
+
+    // ==================== 远程连接 ====================
+    function cleanupRemote() {
+        if (G.peer) { G.peer.destroy(); G.peer = null; }
+        if (G.conn) { G.conn.close(); G.conn = null; }
+        G.roomCode = '';
+        G.isHost = false;
+        G.myRole = '';
+    }
+    function startRemoteGame() {
+        G.minVal = parseInt(remoteMinInput.value) || 1;
+        G.maxVal = parseInt(remoteMaxInput.value) || 100;
+        const hp = parseInt(remoteHpInput.value) || 5;
+        if (G.minVal >= G.maxVal) { alert('最小值必须小于最大值！'); return; }
+        if (hp < 1 || hp > 15) { alert('生命值需在1-15之间！'); return; }
+        G.players.p1.maxHP = hp;
+        G.players.p2.maxHP = hp;
+        initGame();
+    }
+
+    createRoomBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (typeof Peer === 'undefined') { lobbyMessage.textContent = 'PeerJS库加载失败'; return; }
+        G.isHost = true;
+        G.myRole = 'host';
+        const code = generateRoomCode();
+        G.peer = new Peer(code);
+        G.peer.on('open', (id) => {
+            G.roomCode = id.toUpperCase();
+            waitingRoomCode.textContent = G.roomCode;
+            showRemoteWaiting();
+            inviteLinkDisplay.textContent = location.origin + location.pathname + '?room=' + G.roomCode;
+            copyLinkBtn.style.display = 'block';
+        });
+        G.peer.on('connection', (incomingConn) => {
+            G.conn = incomingConn;
+            G.conn.on('open', () => {});
+            G.conn.on('data', handleRemoteMessage);
+            G.conn.on('close', () => { if (G.active) { alert('对方已断开'); cleanupRemote(); showMainMenu(); } });
+        });
+        G.peer.on('error', (err) => { console.error(err); lobbyMessage.textContent = '连接错误: ' + err.type; cleanupRemote(); showRemoteLobby(); });
+    });
+
+    joinRoomBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const code = joinRoomInput.value.trim().toUpperCase();
+        if (code.length !== 6) { lobbyMessage.textContent = '请输入6位房间码'; return; }
+        if (typeof Peer === 'undefined') { lobbyMessage.textContent = 'PeerJS库加载失败'; return; }
+        G.isHost = false;
+        G.myRole = 'guest';
+        G.peer = new Peer('guest-' + Math.random().toString(36).substring(2, 10));
+        G.peer.on('open', () => {
+            G.conn = G.peer.connect(code, { reliable: true });
+            G.conn.on('open', () => {
+                waitingRoomCode.textContent = code;
+                showRemoteWaiting();
+                G.conn.send({ type: 'guest_ready' });
+            });
+            G.conn.on('data', handleRemoteMessage);
+            G.conn.on('close', () => { if (G.active) { alert('对方已断开'); cleanupRemote(); showMainMenu(); } });
+        });
+        G.peer.on('error', (err) => { console.error(err); lobbyMessage.textContent = '连接失败: ' + err.type; cleanupRemote(); showRemoteLobby(); });
+    });
+
+    cancelWaitingBtn.addEventListener('click', () => { cleanupRemote(); showMainMenu(); });
+    copyLinkBtn.addEventListener('click', () => {
+        if (inviteLinkDisplay.textContent) navigator.clipboard.writeText(inviteLinkDisplay.textContent).then(() => alert('链接已复制'));
+    });
+    remoteStartBtn.addEventListener('click', () => {
+        G.minVal = parseInt(remoteMinInput.value) || 1;
+        G.maxVal = parseInt(remoteMaxInput.value) || 100;
+        const hp = parseInt(remoteHpInput.value) || 5;
+        if (G.minVal >= G.maxVal) { alert('最小值必须小于最大值！'); return; }
+        if (hp < 1 || hp > 15) { alert('生命值需在1-15之间！'); return; }
+        G.players.p1.maxHP = hp;
+        G.players.p2.maxHP = hp;
+        initGame();
+    });
+
+    // ==================== 菜单事件 ====================
+    document.getElementById('normal-mode-btn').addEventListener('click', showNormalSubmenu);
+    document.getElementById('skill-mode-btn').addEventListener('click', showSkillSubmenu);
+    document.getElementById('normal-back-btn').addEventListener('click', showMainMenu);
+    document.getElementById('skill-back-btn').addEventListener('click', showMainMenu);
+    document.getElementById('normal-local-btn').addEventListener('click', () => showSetup('normal-local'));
+    document.getElementById('normal-ai-btn').addEventListener('click', () => showSetup('normal-ai'));
+    document.getElementById('normal-remote-btn').addEventListener('click', () => { G.mode = 'normal-remote'; G.isSkillMode = false; showRemoteLobby(); });
+    document.getElementById('skill-local-btn').addEventListener('click', () => showSetup('skill-local'));
+    document.getElementById('skill-ai-btn').addEventListener('click', () => showSetup('skill-ai'));
+    document.getElementById('skill-remote-btn').addEventListener('click', () => { G.mode = 'skill-remote'; G.isSkillMode = true; showRemoteLobby(); });
+    document.getElementById('back-menu-btn1').addEventListener('click', showMainMenu);
+    document.getElementById('back-menu-btn2').addEventListener('click', showMainMenu);
+
+    aiLevelBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            aiLevelBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            G.aiLevel = parseInt(btn.dataset.level);
+        });
+    });
+
+    startGameBtn.addEventListener('click', () => {
+        G.minVal = parseInt(minInput.value) || 1;
+        G.maxVal = parseInt(maxInput.value) || 100;
+        const hp = parseInt(hpInput.value) || 5;
+        if (G.minVal >= G.maxVal) { alert('最小值必须小于最大值！'); return; }
+        if (hp < 1 || hp > 15) { alert('生命值需在1-15之间！'); return; }
+        G.players.p1.maxHP = hp;
+        G.players.p2.maxHP = hp;
+        initGame();
+    });
+
+    // ==================== 键盘事件 ====================
+    keypadButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!G.active || G.processing) return;
+            const action = btn.dataset.action;
+            const value = btn.dataset.value;
+            if (action === 'clear') {
+                G.playerInput = '';
+                updateInputDisplay();
+            } else if (action === 'back') {
+                G.playerInput = G.playerInput.slice(0, -1);
+                updateInputDisplay();
+            } else if (action === 'cheat') {
+                if (G.mode.includes('local') || G.mode.includes('ai')) {
+                    G.cheatMode = !G.cheatMode;
+                    showCheatToast(G.cheatMode ? '🔓 作弊已开启' : '🔒 作弊已关闭');
+                    localCheatBtn.textContent = G.cheatMode ? '🔓' : '🔒';
+                }
+            } else if (action === 'confirm') {
+                const guess = parseInt(G.playerInput);
+                if (isNaN(guess)) return;
+                if (G.mode.includes('remote')) {
+                    if (isMyTurn()) {
+                        const myId = getMyPlayer().id;
+                        if (G.isHost) {
+                            processGuess(guess, false, myId);
+                        } else {
+                            if (G.conn) G.conn.send({ type: 'action', action: 'guess', playerId: myId, value: guess });
+                            G.processing = true;
+                            setKeypadEnabled(false);
+                        }
+                    }
+                } else {
+                    processGuess(guess);
+                }
+            } else if (value !== undefined) {
+                if (G.playerInput.length < String(G.maxVal).length) {
+                    G.playerInput += value;
+                    updateInputDisplay();
+                }
+            }
+        });
+    });
+
+    // ==================== 作弊按钮 ====================
+    remoteCheatBtn.addEventListener('click', () => {
+        G.cheatMode = !G.cheatMode;
+        remoteCheatBtn.classList.toggle('active', G.cheatMode);
+        showCheatToast(G.cheatMode ? '🔓 作弊已开启' : '🔒 作弊已关闭');
+    });
+
+    // ==================== 认输 ====================
+    surrenderBtn.addEventListener('click', () => {
+        if (!G.active) return;
+        if (G.mode.includes('remote') && !G.isHost) {
+            if (G.conn) G.conn.send({ type: 'action', action: 'surrender', playerId: getMyPlayer().id });
+            return;
+        }
+        const me = getMyPlayer();
+        me.hp = 0;
+        renderPlayers();
+        endGame();
+    });
+
+    // ==================== 再来一局 ====================
+    rematchBtn.addEventListener('click', () => {
+        if (G.mode.includes('remote')) {
+            if (G.isHost) {
+                startRemoteGame();
+                if (G.conn) G.conn.send({ type: 'rematch' });
+            } else {
+                messageDisplay.textContent = '已发送重开请求...';
+                rematchBtn.disabled = true;
+                if (G.conn) G.conn.send({ type: 'rematch_request' });
+            }
+        } else {
+            initGame();
+        }
+    });
+
+    gameOverBtn.addEventListener('click', () => {
+        cleanupRemote();
+        showMainMenu();
+    });
+
+    // ==================== 房间信息点击复制 ====================
+    roomInfo.addEventListener('click', () => {
+        if (G.roomCode) navigator.clipboard.writeText(G.roomCode).then(() => alert('房间码已复制'));
+    });
+
+    // ==================== URL自动加入 ====================
+    window.addEventListener('load', () => {
+        const params = new URLSearchParams(window.location.search);
+        const room = params.get('room');
+        if (room) {
+            showRemoteLobby();
+            joinRoomInput.value = room.toUpperCase();
+            setTimeout(() => joinRoomBtn.click(), 100);
+        }
+    });
+
+    // ==================== 初始化 ====================
+    showMainMenu();
+})();
+</script>
+</body>
+</html>
