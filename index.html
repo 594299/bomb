@@ -122,6 +122,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
 </style>
 </head>
 <body>
+<!-- 完整的HTML结构，包含所有div元素 -->
 <div id="game-container">
   <div id="header">
     <h1>💣 数字炸弹</h1>
@@ -786,11 +787,13 @@ function applySync(state){
     gameOverBtn.style.display='block';
     rematchBtn.style.display='none';
   }
-  // 关键修复：Guest 端每次同步后强制刷新键盘状态
+  // ==================== 关键修复 ====================
+  // Guest 端每次同步后，必须根据当前状态强制刷新键盘是否可用
   if(G.myRole==='guest'){
     const shouldEnable = G.active && !G.processing && isMyTurn();
     setKeypadEnabled(shouldEnable);
   }
+  // =======================================================
 }
 
 // ==================== 聊天系统 ====================
@@ -1050,7 +1053,12 @@ function showSkillSelectWithCallback(forPlayerId, onComplete){
       player.cooldowns={};
       skillSelectOverlay.classList.remove('active');
       Privacy.hide();
+      // ==================== 关键修复 ====================
+      // 修复：刷新技能栏UI，否则Host端技能按钮可能残留或状态不对
       renderSkills();
+      // 修复：刷新回合指示器
+      updateTurnIndicator();
+      // =======================================================
       if(Privacy.isLocal()){
         Privacy.showSecret(player.name, '你选择了', skill.name+'<br><span style="font-size:0.7rem;color:#aaa;">'+skill.desc+'</span>', function(){
           if(onComplete) onComplete();
@@ -1650,13 +1658,8 @@ function updateTurnIndicator(){
     turnIndicator.textContent=G.mode.includes('ai')?'🤖 AI思考中...':'👆 对方回合...';
     turnIndicator.classList.add('turn-opponent');
   }
-  // 关键修复：轮到我就强制解锁键盘
-  if(G.active && cur.id===me.id && !Privacy.isLocal() && !G.processing) {
-    setKeypadEnabled(true);
-  } else {
-    const shouldEnable = G.active && !G.processing && isMyTurn();
-    setKeypadEnabled(shouldEnable);
-  }
+  const shouldEnable = G.active && !G.processing && isMyTurn();
+  setKeypadEnabled(shouldEnable);
   renderSkills();
 }
 function setKeypadEnabled(enabled){
