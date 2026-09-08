@@ -663,7 +663,8 @@ function setupConnection(conn){
     roomInfo.textContent='房间: '+G.roomCode;
     if(G.isHost){
       waitingText.textContent='对手已加入！';
-      setTimeout(function(){ showRemoteSetup(); },600);
+      // 立即显示远程设置界面，避免延迟导致准备状态被覆盖
+      showRemoteSetup();
     } else {
       showRemoteSetup();
       remoteStartBtn.style.display = 'none';
@@ -681,6 +682,10 @@ function setupConnection(conn){
       return;
     }
     if(data.type==='sync'&&G.myRole==='guest'){ applySync(data.state); }
+    // 准备消息优先处理，不依赖 G.active
+    else if(data.type==='action' && data.action==='ready' && G.isHost){
+      handleGuestAction(data);
+    }
     else if(data.type==='action'&&G.isHost){ handleGuestAction(data); }
     else if(data.type==='start'&&G.myRole==='guest'){
       G.minVal=data.minVal; G.maxVal=data.maxVal;
