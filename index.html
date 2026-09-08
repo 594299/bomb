@@ -5,12 +5,312 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>💣 数字炸弹 · 本地键盘修复版</title>
 <style>
-/* ... 样式完全不变 ... */
+:root { --neon:#00f0ff; --blue:#4da6ff; --red:#ff6b6b; --green:#00ff88; --orange:#ff8800; }
+* { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent; }
+html, body { height:100%; width:100%; overflow:hidden; position:fixed; inset:0; background:#05000a; color:#fff; font-family:system-ui,-apple-system,sans-serif; }
+body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
+#game-container { width:100%; max-width:500px; height:100%; background:linear-gradient(180deg,#0d0d1a,#1a0a20); display:flex; flex-direction:column; margin:0 auto; position:relative; }
+#header { padding:10px; background:rgba(0,0,0,0.5); display:flex; justify-content:space-between; align-items:center; z-index:10; }
+#header h1 { font-size:1.1rem; background:linear-gradient(135deg,#ff8800,#ff00e6,#00f0ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+#room-info { font-size:0.7rem; color:#ccc; background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:12px; }
+#header-right { display:flex; align-items:center; gap:6px; }
+#fullscreen-btn { background:none; border:1.5px solid rgba(255,255,255,0.2); border-radius:8px; padding:4px 8px; font-size:0.9rem; cursor:pointer; color:#ccc; line-height:1; }
+#fullscreen-btn:active { transform:scale(0.9); }
+.overlay { position:absolute; inset:0; background:rgba(0,0,0,0.95); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; padding:20px; }
+.overlay.hidden { display:none; }
+.overlay-title { font-size:1.6rem; font-weight:900; margin-bottom:20px; text-align:center; }
+.btn { padding:14px 40px; border:2px solid var(--neon); border-radius:50px; background:rgba(0,240,255,0.1); color:var(--neon); font-size:1rem; font-weight:700; cursor:pointer; margin-top:12px; min-width:220px; outline:none; }
+.btn:active { transform:scale(0.95); }
+.btn.secondary { background:rgba(255,136,0,0.1); border-color:var(--orange); color:var(--orange); }
+.btn.small { padding:8px 20px; min-width:auto; font-size:0.8rem; }
+.btn:disabled { opacity:0.4; pointer-events:none; }
+.room-input { width:200px; padding:12px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:10px; color:#fff; font-size:1.5rem; text-align:center; letter-spacing:8px; outline:none; margin-top:15px; text-transform:uppercase; }
+.room-display { font-size:2rem; font-weight:900; letter-spacing:10px; color:var(--neon); margin:20px 0; }
+.waiting-text { font-size:0.9rem; color:#ccc; animation:pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
+.setting-row { display:flex; align-items:center; gap:8px; margin:6px 0; flex-wrap:wrap; justify-content:center; }
+.setting-row label { font-size:0.8rem; color:#ccc; }
+.setting-row input { width:70px; padding:8px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:6px; color:#fff; font-size:1rem; text-align:center; outline:none; }
+.ai-level-btn { padding:8px 16px; border-radius:20px; font-size:0.75rem; font-weight:700; cursor:pointer; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); color:#ccc; margin:0 3px; }
+.ai-level-btn.active { background:rgba(0,240,255,0.2); border-color:var(--neon); color:var(--neon); }
+#battle-area { flex:1; display:none; flex-direction:column; justify-content:space-between; padding:4px 8px; }
+.player-area { display:flex; flex-direction:column; align-items:center; gap:1px; }
+.player-area .avatar { font-size:2rem; }
+.player-area .name-tag { font-size:0.6rem; color:#ccc; background:rgba(0,0,0,0.5); padding:1px 8px; border-radius:8px; cursor:pointer; }
+.life-dots { display:flex; gap:3px; }
+.life-dots .dot { width:9px; height:9px; border-radius:50%; border:2px solid #555; display:inline-block; }
+.life-dots .dot.filled-blue { background:var(--blue); border-color:var(--blue); }
+.life-dots .dot.filled-red { background:var(--red); border-color:var(--red); }
+.life-dots .dot.lost { background:transparent; border-color:#333; }
+.highlight { border:2px solid transparent; border-radius:12px; padding:3px 12px; transition:all 0.3s; position:relative; }
+.highlight.active { border-color:var(--neon); box-shadow:0 0 12px rgba(0,240,255,0.3); }
+#info-area { display:flex; flex-direction:column; align-items:center; gap:3px; padding:2px 0; }
+#range-display { font-size:0.8rem; font-weight:700; color:var(--neon); background:rgba(0,240,255,0.08); padding:3px 14px; border-radius:15px; }
+#turn-indicator { font-size:0.75rem; font-weight:700; background:rgba(255,255,255,0.06); padding:3px 14px; border-radius:12px; }
+#turn-indicator.turn-me { color:var(--blue); border:1px solid var(--blue); }
+#turn-indicator.turn-opponent { color:var(--red); border:1px solid var(--red); }
+#message-display { font-size:0.7rem; color:#bbb; min-height:1rem; text-align:center; max-width:95%; padding:0 5px; }
+#opponent-skills-bar { display:none; gap:4px; justify-content:center; flex-wrap:wrap; padding:2px 0; }
+#opponent-skills-bar .opp-skill-tag { padding:3px 8px; border:1px solid rgba(255,100,100,0.35); border-radius:8px; background:rgba(255,100,100,0.07); color:#ff9999; font-size:0.6rem; font-weight:700; display:flex; align-items:center; gap:4px; }
+#input-keypad-container { display:flex; flex-direction:column; align-items:center; gap:3px; padding:2px 0; }
+#input-display { font-size:1.2rem; font-weight:900; min-height:1.8rem; letter-spacing:2px; background:rgba(0,0,0,0.4); border:2px solid rgba(0,240,255,0.35); border-radius:8px; padding:2px 16px; min-width:100px; text-align:center; }
+#input-display.empty { border-color:rgba(255,255,255,0.15); color:#555; }
+#keypad { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; width:100%; max-width:220px; }
+.key-btn { aspect-ratio:1.1; border:1.5px solid rgba(255,255,255,0.15); border-radius:8px; background:rgba(255,255,255,0.05); color:#fff; font-size:0.9rem; font-weight:700; cursor:pointer; min-width:44px; min-height:44px; }
+.key-btn:active { transform:scale(0.88); background:rgba(255,255,255,0.18); }
+.key-btn.func { font-size:0.7rem; background:rgba(255,136,0,0.1); color:var(--orange); }
+.key-btn.confirm { font-size:0.75rem; background:rgba(0,255,136,0.12); color:var(--green); }
+.key-btn:disabled { opacity:0.25; pointer-events:none; }
+.explosion { position:absolute; font-size:2.5rem; animation:explode 0.7s forwards; pointer-events:none; z-index:100; }
+@keyframes explode { 0%{transform:scale(0.3);opacity:1;} 50%{transform:scale(1.4);} 100%{transform:scale(2);opacity:0;} }
+.shake { animation:shakeAnim 0.5s both; }
+@keyframes shakeAnim { 0%,100%{transform:translate(0,0);} 20%{transform:translate(-8px,6px);} 40%{transform:translate(7px,-5px);} 60%{transform:translate(-5px,-4px);} 80%{transform:translate(5px,4px);} }
+#cheat-toast { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); border:1px solid rgba(0,240,255,0.3); padding:12px 24px; border-radius:10px; font-size:0.9rem; font-weight:700; z-index:3000; opacity:0; transition:opacity 0.3s; pointer-events:none; color:var(--neon); text-align:center; max-width:80%; }
+#cheat-toast.show { opacity:1; }
+#surrender-btn { padding:6px 12px; border:1px solid rgba(255,80,80,0.4); border-radius:15px; background:rgba(255,50,50,0.08); color:#ff6666; font-size:0.65rem; font-weight:700; cursor:pointer; margin-top:4px; display:none; }
+#skills-bar { display:none; gap:4px; margin-top:4px; flex-wrap:wrap; justify-content:center; }
+.skill-btn-wrap { display:flex; align-items:center; gap:2px; }
+.skill-btn { padding:4px 10px; border:1.5px solid rgba(255,255,255,0.3); border-radius:10px; background:rgba(255,255,255,0.05); color:#999; font-size:0.65rem; font-weight:700; cursor:pointer; min-height:32px; }
+.skill-btn.ready { border-color:var(--neon); color:var(--neon); background:rgba(0,240,255,0.08); box-shadow:0 0 8px rgba(0,240,255,0.2); }
+.skill-btn:disabled { opacity:0.3; pointer-events:none; }
+.skill-help-btn { width:20px; height:20px; border-radius:50%; border:1px solid rgba(255,255,255,0.4); background:rgba(255,255,255,0.1); color:#ccc; font-size:0.6rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.skill-help-btn:active { transform:scale(0.8); }
+.opp-skill-tag .skill-help-btn { width:16px; height:16px; font-size:0.5rem; }
+#skill-select-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.96); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:2000; padding:20px; }
+#skill-select-overlay.active { display:flex; }
+.skill-select-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-width:340px; }
+.skill-select-card { padding:12px 6px; border:2px solid rgba(255,255,255,0.2); border-radius:12px; cursor:pointer; text-align:center; background:rgba(255,255,255,0.03); transition:all 0.2s; }
+.skill-select-card:hover { border-color:rgba(0,240,255,0.5); background:rgba(0,240,255,0.05); }
+.skill-select-card:active { transform:scale(0.95); }
+.skill-select-card .skill-icon { font-size:1.8rem; }
+.skill-select-card .skill-name { font-size:0.75rem; font-weight:700; margin-top:4px; }
+.skill-select-card .skill-desc { font-size:0.55rem; color:#aaa; margin-top:3px; line-height:1.4; }
+#game-over-btn, #rematch-btn { display:none; padding:8px 20px; border-radius:20px; font-size:0.8rem; font-weight:700; cursor:pointer; margin-top:6px; }
+#game-over-btn { border:2px solid var(--neon); background:rgba(0,240,255,0.1); color:var(--neon); }
+#rematch-btn { border:2px solid var(--orange); background:rgba(255,136,0,0.1); color:var(--orange); }
+#skill-timer { font-size:2rem; font-weight:900; color:var(--neon); margin:10px 0; }
+#privacy-screen { position:absolute; inset:0; background:rgba(0,0,0,0.98); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:2500; padding:20px; cursor:pointer; text-align:center; }
+#privacy-screen.active { display:flex; }
+.privacy-handoff .p-title { font-size:1.5rem; font-weight:900; color:var(--neon); }
+.privacy-handoff .p-sub { font-size:0.85rem; color:#999; margin-top:12px; animation:pulse 1.5s infinite; }
+#privacy-content { display:none; }
+#privacy-screen.revealed #privacy-content { display:block; }
+.privacy-hide-btn { padding:10px 24px; border:1px solid rgba(255,255,255,0.3); border-radius:20px; background:rgba(255,255,255,0.05); color:#aaa; font-size:0.8rem; cursor:pointer; margin-top:16px; }
+.privacy-result { font-size:1.2rem; color:var(--neon); font-weight:700; margin:10px 0; line-height:1.5; }
+.privacy-label { font-size:0.8rem; color:#888; }
+#conn-status { font-size:0.65rem; color:#888; margin-top:8px; }
+#chat-toggle-btn { display:none; background:none; border:1.5px solid rgba(255,255,255,0.2); border-radius:8px; padding:4px 8px; font-size:0.9rem; cursor:pointer; color:#ccc; position:relative; }
+.chat-badge { position:absolute; top:-4px; right:-4px; background:#ff4444; color:#fff; font-size:0.6rem; font-weight:900; border-radius:50%; width:16px; height:16px; display:none; align-items:center; justify-content:center; }
+.chat-badge.show { display:flex; }
+#chat-overlay { z-index:3100; }
+.chat-container { width:90%; max-width:400px; height:70%; background:#111; border-radius:15px; border:1px solid rgba(255,255,255,0.2); display:flex; flex-direction:column; overflow:hidden; }
+.chat-header { display:flex; justify-content:space-between; align-items:center; padding:10px 15px; background:rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.1); font-weight:700; }
+.chat-close-btn { background:none; border:none; color:#aaa; font-size:1.2rem; cursor:pointer; }
+.chat-messages { flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:6px; }
+.chat-msg { max-width:80%; padding:6px 10px; border-radius:10px; font-size:0.8rem; word-break:break-word; }
+.chat-msg.mine { align-self:flex-end; background:rgba(0,240,255,0.15); border:1px solid rgba(0,240,255,0.3); color:#e0faff; }
+.chat-msg.opponent { align-self:flex-start; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#ddd; }
+.chat-msg.system { align-self:center; background:none; border:none; color:#888; font-size:0.7rem; }
+.chat-input-row { display:flex; padding:8px; border-top:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); }
+#chat-input { flex:1; padding:8px 12px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:15px; color:#fff; font-size:0.85rem; outline:none; }
+#chat-send-btn { margin-left:6px; padding:8px 15px; border:none; border-radius:15px; background:var(--neon); color:#000; font-weight:700; cursor:pointer; }
+#chat-notification { position:absolute; top:60px; right:10px; background:rgba(20,20,35,0.95); border:1px solid rgba(0,240,255,0.4); border-radius:12px; padding:12px 15px; z-index:3200; max-width:250px; display:none; box-shadow:0 4px 20px rgba(0,0,0,0.5); }
+#chat-notification.show { display:block; animation:slideIn 0.3s ease-out; }
+@keyframes slideIn { from { transform:translateX(20px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+.chat-notif-header { display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; color:var(--neon); font-weight:700; }
+.chat-notif-close { background:none; border:none; color:#aaa; cursor:pointer; font-size:0.8rem; }
+.chat-notif-body { font-size:0.8rem; color:#ddd; margin-top:6px; word-break:break-word; }
+#name-edit-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.9); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:3300; padding:20px; }
+#name-edit-overlay.active { display:flex; }
+.name-edit-input { width:200px; padding:10px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:10px; color:#fff; font-size:1rem; text-align:center; outline:none; margin:10px 0; }
+#number-select-overlay { z-index:3400; }
+#number-select-input { width:180px; margin:15px 0; font-size:1.3rem; letter-spacing:2px; }
+#remote-ready-status { font-size:0.7rem; color:#ccc; margin-top:5px; }
 </style>
 </head>
 <body>
 <div id="game-container">
-  <!-- ... HTML结构完全不变 ... -->
+  <div id="header">
+    <h1>💣 数字炸弹</h1>
+    <div id="header-right">
+      <button id="fullscreen-btn" title="全屏">⛶</button>
+      <button id="chat-toggle-btn">💬<span id="chat-badge" class="chat-badge">0</span></button>
+      <div id="room-info">未连接</div>
+    </div>
+  </div>
+
+  <div id="main-menu" class="overlay">
+    <div class="overlay-title">选择模式</div>
+    <button class="btn" id="normal-mode-btn">🎮 普通模式</button>
+    <button class="btn secondary" id="skill-mode-btn">⚡ 技能模式</button>
+  </div>
+  <div id="normal-submenu" class="overlay hidden">
+    <div class="overlay-title">普通模式</div>
+    <button class="btn" id="normal-local-btn">📱 本地双人</button>
+    <button class="btn" id="normal-ai-btn">🤖 AI对战</button>
+    <button class="btn" id="normal-remote-btn">🌐 远程对战</button>
+    <button class="btn secondary" id="normal-back-btn">返回</button>
+  </div>
+  <div id="skill-submenu" class="overlay hidden">
+    <div class="overlay-title">技能模式</div>
+    <button class="btn" id="skill-local-btn">📱 本地双人</button>
+    <button class="btn" id="skill-ai-btn">🤖 AI对战</button>
+    <button class="btn" id="skill-remote-btn">🌐 远程对战</button>
+    <button class="btn secondary" id="skill-back-btn">返回</button>
+  </div>
+  <div id="setup-overlay" class="overlay hidden">
+    <div class="overlay-title">⚙️ 游戏设置</div>
+    <div class="setting-row">
+      <label>最小值：</label><input type="number" id="min-input" value="1" min="1">
+      <label>最大值：</label><input type="number" id="max-input" value="100" min="2">
+    </div>
+    <div class="setting-row">
+      <label>生命值（1-15）：</label><input type="number" id="hp-input" value="5" min="1" max="15">
+    </div>
+    <div class="setting-row" id="ai-level-row" style="display:none;">
+      <label>AI难度：</label>
+      <button class="ai-level-btn active" data-level="1">简单</button>
+      <button class="ai-level-btn" data-level="2">中等</button>
+      <button class="ai-level-btn" data-level="3">困难</button>
+    </div>
+    <div class="setting-row" id="skill-count-row" style="display:none;">
+      <label>技能数量（1-3）：</label><input type="number" id="skill-count-input" value="1" min="1" max="3">
+    </div>
+    <button class="btn" id="start-game-btn">开始游戏</button>
+    <button class="btn secondary" id="back-menu-btn1">返回</button>
+  </div>
+  <div id="remote-lobby" class="overlay hidden">
+    <div class="overlay-title">远程对战</div>
+    <button class="btn" id="create-room-btn">创建房间</button>
+    <div style="margin:15px 0;color:#666;">— 或 —</div>
+    <input type="text" class="room-input" id="join-room-input" placeholder="房间码" maxlength="6">
+    <button class="btn" id="join-room-btn">加入房间</button>
+    <div id="lobby-message" style="margin-top:15px;color:#ff6666;font-size:0.8rem;"></div>
+    <div id="conn-status"></div>
+    <button class="btn secondary" id="back-menu-btn2">返回</button>
+  </div>
+  <div id="remote-waiting" class="overlay hidden">
+    <div class="overlay-title">房间码</div>
+    <div class="room-display" id="waiting-room-code">------</div>
+    <div class="waiting-text" id="waiting-text">等待对手加入...</div>
+    <button class="btn" id="cancel-waiting-btn">取消</button>
+    <button class="btn small" id="copy-link-btn" style="display:none;">📋 复制邀请链接</button>
+  </div>
+  <div id="remote-setup-overlay" class="overlay hidden">
+    <div class="overlay-title">⚙️ 远程游戏设置</div>
+    <div class="setting-row">
+      <label>最小值：</label><input type="number" id="remote-min-input" value="1" min="1">
+      <label>最大值：</label><input type="number" id="remote-max-input" value="100" min="2">
+    </div>
+    <div class="setting-row">
+      <label>生命值（1-15）：</label><input type="number" id="remote-hp-input" value="5" min="1" max="15">
+    </div>
+    <div class="setting-row" id="remote-skill-count-row">
+      <label>技能数量（1-3）：</label><input type="number" id="remote-skill-count-input" value="1" min="1" max="3">
+    </div>
+    <div class="setting-row">
+      <label>你的名称：</label><input type="text" id="remote-name-input" placeholder="输入名称" maxlength="10">
+    </div>
+    <button class="btn small" id="remote-ready-btn">✅ 准备</button>
+    <div id="remote-ready-status"></div>
+    <button class="btn" id="remote-start-btn" disabled>开始游戏</button>
+  </div>
+
+  <div id="battle-area">
+    <div class="player-area" id="opponent-area">
+      <div class="highlight" id="opponent-highlight">
+        <div class="avatar" id="opponent-avatar">🙂</div>
+        <div class="life-dots" id="opponent-lives"></div>
+        <div class="name-tag" id="opponent-name">对手</div>
+      </div>
+    </div>
+    <div id="info-area">
+      <div id="range-display">范围：1 - 100</div>
+      <div id="turn-indicator">等待...</div>
+      <div id="message-display">游戏开始</div>
+    </div>
+    <div id="opponent-skills-bar"></div>
+    <div id="skills-bar"></div>
+    <div id="input-keypad-container">
+      <div id="input-display" class="empty">等待输入</div>
+      <div id="keypad">
+        <button class="key-btn" data-value="9">9</button>
+        <button class="key-btn" data-value="8">8</button>
+        <button class="key-btn" data-value="7">7</button>
+        <button class="key-btn func" data-action="back">⌫</button>
+        <button class="key-btn" data-value="6">6</button>
+        <button class="key-btn" data-value="5">5</button>
+        <button class="key-btn" data-value="4">4</button>
+        <button class="key-btn func" data-action="clear">C</button>
+        <button class="key-btn" data-value="3">3</button>
+        <button class="key-btn" data-value="2">2</button>
+        <button class="key-btn" data-value="1">1</button>
+        <button class="key-btn confirm" data-action="confirm">确定</button>
+        <button class="key-btn" data-value="0">0</button>
+        <button class="key-btn" data-value="00">00</button>
+        <button class="key-btn" data-value="000">000</button>
+      </div>
+      <button id="surrender-btn">🏳️ 认输</button>
+      <button id="game-over-btn">返回主菜单</button>
+      <button id="rematch-btn">🔄 再来一局</button>
+    </div>
+    <div class="player-area" id="me-area">
+      <div class="highlight" id="me-highlight">
+        <div class="life-dots" id="me-lives"></div>
+        <div class="avatar" id="me-avatar">🙂</div>
+        <div class="name-tag" id="me-name">我</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="skill-select-overlay">
+    <div class="overlay-title" id="skill-select-title">选择技能</div>
+    <div id="skill-timer">30</div>
+    <div class="skill-select-grid" id="skill-select-grid"></div>
+  </div>
+  <div id="privacy-screen">
+    <div class="privacy-handoff" id="privacy-handoff">
+      <div class="p-title" id="privacy-title">🔒 请将设备交给对方</div>
+      <div class="p-sub" id="privacy-sub">点击屏幕任意处确认已换手</div>
+    </div>
+    <div id="privacy-content"></div>
+  </div>
+  <div id="chat-overlay" class="overlay hidden">
+    <div class="chat-container">
+      <div class="chat-header">
+        <span>💬 聊天</span>
+        <button class="chat-close-btn" id="chat-close-btn">✕</button>
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="输入消息..." maxlength="200">
+        <button id="chat-send-btn">发送</button>
+      </div>
+    </div>
+  </div>
+  <div id="chat-notification">
+    <div class="chat-notif-header">
+      <span>💬 新消息</span>
+      <button class="chat-notif-close" id="chat-notif-close">✕</button>
+    </div>
+    <div class="chat-notif-body" id="chat-notif-body"></div>
+  </div>
+  <div id="name-edit-overlay">
+    <div class="overlay-title">✏️ 编辑名称</div>
+    <input type="text" class="name-edit-input" id="name-edit-input" placeholder="输入新名称" maxlength="10">
+    <button class="btn" id="name-edit-confirm">确认</button>
+    <button class="btn secondary" id="name-edit-cancel">取消</button>
+  </div>
+  <div id="number-select-overlay" class="overlay hidden">
+    <div class="overlay-title" id="number-select-title">选择数字</div>
+    <div style="color:#888;font-size:0.85rem;margin-bottom:5px;" id="number-select-range">范围：1 - 100</div>
+    <input type="number" class="room-input" id="number-select-input" placeholder="输入数字">
+    <div style="display:flex;gap:10px;margin-top:10px;">
+      <button class="btn" id="number-select-confirm" style="min-width:100px;margin-top:0;">确认</button>
+      <button class="btn secondary" id="number-select-cancel" style="min-width:100px;margin-top:0;">取消</button>
+    </div>
+  </div>
+  <div id="cheat-toast"></div>
 </div>
 
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -760,7 +1060,6 @@ function initGame(){
   } else if(G.mode.includes('ai')&&G.currentPlayer==='p2'){
     setTimeout(aiTurn, 900);
   }
-  // 本地模式强制启用键盘一次
   if(Privacy.isLocal()){
     setKeypadEnabled(true);
   }
