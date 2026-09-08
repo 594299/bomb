@@ -492,6 +492,8 @@ function cleanupRemote(){
   if(G.peer){ try{G.peer.destroy();}catch(e){} G.peer=null; }
   if(G.conn){ try{G.conn.close();}catch(e){} G.conn=null; }
   G.roomCode=''; G.isHost=false; G.myRole='';
+  G.remoteReady.host = false;
+  G.remoteReady.guest = false;
   chatToggleBtn.style.display='none'; chatOverlay.classList.add('hidden'); chatMessages.innerHTML='';
   unreadChatCount=0; updateChatBadge();
 }
@@ -674,6 +676,10 @@ function setupConnection(conn){
 
   conn.on('data',function(data){
     if(data.type==='ping') return;
+    if(data.type==='request_sync' && G.isHost){
+      syncIfRemote();
+      return;
+    }
     if(data.type==='sync'&&G.myRole==='guest'){ applySync(data.state); }
     else if(data.type==='action'&&G.isHost){ handleGuestAction(data); }
     else if(data.type==='start'&&G.myRole==='guest'){
@@ -706,7 +712,17 @@ function setupConnection(conn){
     chatToggleBtn.style.display='none';
     showCheatToast('⚠️ 对手已断开连接');
     if(G.active){ endGame(); }
-    G.conn=null;
+    // 清理远程资源，但避免在 close 事件中直接 destroy peer 导致异常
+    const wasConn = G.conn;
+    G.conn = null;
+    if(wasConn){
+        setTimeout(() => {
+            if(G.peer && !G.conn) {
+                try { G.peer.destroy(); } catch(e) {}
+                G.peer = null;
+            }
+        }, 100);
+    }
   });
   conn.on('error',function(err){ lobbyMessage.textContent='连接错误: '+err; });
 }
@@ -770,6 +786,7 @@ function handleGuestAction(data){
     renderPlayers();
     remoteStartBtn.disabled = false;
     remoteReadyStatus.textContent = '✅ 对方已准备，可以开始游戏';
+    syncIfRemote();
   }
 }
 
@@ -963,6 +980,7 @@ function endGame(){
 function initGame(){
   resetGameState();
   if(G.mode.includes('remote')&&!G.isHost){
+    // 执行完整初始化，等待 Host 的 sync 会覆盖具体数值
     showBattleArea();
     getPlayer('p1').name='Host'; getPlayer('p1').avatar='🙂';
     getPlayer('p2').name='我'; getPlayer('p2').avatar='🙂';
@@ -970,6 +988,8 @@ function initGame(){
     renderPlayers(); updateRange(); updateInputDisplay();
     messageDisplay.textContent='等待Host同步游戏状态...';
     setKeypadEnabled(false);
+    // 主动请求一次 sync
+    if(G.conn) G.conn.send({type:'request_sync'});
     return;
   }
   showBattleArea();
@@ -1007,6 +1027,8 @@ function startRoundSkillSelect(){
       showSkillSelectWithCallback('p1', skillCount, function(){
         G.pendingSkillSelect = 'p2';
         G.pendingSkillCount = skillCount;
+        G.pendingRoundOptions = null;
+        G.pendingSkillOptions = null;
         messageDisplay.textContent='⏳ 等待对方选择技能...';
         syncIfRemote();
         G.hostSkillComplete = function(){
@@ -1177,6 +1199,7 @@ function startHostTimeout(playerId, onComplete){
       G.pendingSkillSelect = null;
       G.pendingSkillCount = null;
       G.pendingRoundOptions = null;
+      G.pendingSkillOptions = null;
       G.hostSkillComplete = null;
       messageDisplay.textContent = player.name + ' 超时，自动选择了技能';
       renderSkills();
@@ -1464,6 +1487,15 @@ function useSkill(skillId, playerId){
   if(user.skillUsedThisTurn){ messageDisplay.textContent='⚠️ 本回合已使用过技能'; return; }
 
   if(G.mode.includes('remote')&&!G.isHost&&!playerId){
+    // 本地检查（提升体验）
+    const skill = getSkillById(skillId);
+    if(!skill) return;
+    if(user.id !== G.currentPlayer) return;
+    if(user.skillUsedThisTurn) { messageDisplay.textContent='⚠️ 本回合已使用过技能'; return; }
+    const cd = user.cooldowns[skillId] || 0;
+    if(cd > 0) { messageDisplay.textContent='⚠️ 技能冷却中'; return; }
+    if(user.lock) { messageDisplay.textContent='🚫 技能被封锁'; return; }
+
     if(G.conn){
       if(skillId==='trap'||skillId==='insight'){
         const title = skillId==='trap' ? '设置陷阱数字' : '选择数字查看与炸弹的距离';
@@ -1989,7 +2021,13 @@ function showSetup(mode){
   aiLevelRow.style.display=mode.includes('ai')?'flex':'none';
   $('skill-count-row').style.display = G.isSkillMode ? 'flex' : 'none';
 }
-function showRemoteLobby(){ hideAll(); remoteLobby.classList.remove('hidden'); setConnStatus(''); }
+function showRemoteLobby(){ 
+  hideAll(); 
+  G.remoteReady.host = false;
+  G.remoteReady.guest = false;
+  remoteLobby.classList.remove('hidden'); 
+  setConnStatus(''); 
+}
 function showRemoteSetup(){ 
   hideAll(); 
   remoteSetupOverlay.classList.remove('hidden'); 
@@ -1998,11 +2036,18 @@ function showRemoteSetup(){
     remoteSettingsContainer.style.display = 'block';
     remoteReadyBtn.style.display = 'none';
     remoteStartBtn.style.display = 'block';
-    remoteStartBtn.disabled = true;
-    remoteReadyStatus.textContent = '等待对方准备...';
+    // 根据 Guest 是否已准备来设置按钮状态
+    if (G.remoteReady.guest) {
+      remoteStartBtn.disabled = false;
+      remoteReadyStatus.textContent = '✅ 对方已准备，可以开始游戏';
+    } else {
+      remoteStartBtn.disabled = true;
+      remoteReadyStatus.textContent = '等待对方准备...';
+    }
   } else {
     remoteSettingsContainer.style.display = 'none';
     remoteReadyBtn.style.display = 'block';
+    remoteReadyBtn.disabled = false;
     remoteStartBtn.style.display = 'none';
     remoteReadyStatus.textContent = '请输入名称并点击准备';
   }
@@ -2138,16 +2183,16 @@ remoteReadyBtn.addEventListener('click',function(){
   const name = remoteNameInput.value.trim();
   if(!name){ showCheatToast('请输入名称'); return; }
   getMyPlayer().name = name;
-  if(G.isHost){
-    // Host不需要准备
-  } else {
+  if(!G.isHost){
     G.remoteReady.guest = true;
     remoteReadyStatus.textContent = '✅ 已准备，等待房主开始...';
+    remoteReadyBtn.disabled = true;
     if(G.conn) G.conn.send({type:'action', action:'ready', name:name});
   }
 });
 
 remoteStartBtn.addEventListener('click',function(){
+  if(!G.remoteReady.guest){ showCheatToast('对方尚未准备'); return; }
   readSetupInputs(true);
   if(G.isSkillMode){
     G.skillCount = parseInt(remoteSkillCountInput.value) || 1;
