@@ -728,6 +728,17 @@ function setupConnection(conn){
 }
 
 function handleGuestAction(data){
+  // 优先处理准备消息，因为游戏未开始时 G.active 为 false
+  if(data.action==='ready'){
+    G.remoteReady.guest = true;
+    getPlayer('p2').name = data.name || 'Guest';
+    renderPlayers();
+    remoteStartBtn.disabled = false;
+    remoteReadyStatus.textContent = '✅ 对方已准备，可以开始游戏';
+    syncIfRemote();
+    return;
+  }
+  
   if(!G.active) return;
   clearGuestActionTimeout();
   if(data.action==='guess'&&data.playerId==='p2'&&G.currentPlayer==='p2'&&!G.processing){
@@ -778,14 +789,6 @@ function handleGuestAction(data){
     getPlayer('p2').hp=0;
     renderPlayers();
     endGame();
-    syncIfRemote();
-  }
-  else if(data.action==='ready'){
-    G.remoteReady.guest = true;
-    getPlayer('p2').name = data.name || 'Guest';
-    renderPlayers();
-    remoteStartBtn.disabled = false;
-    remoteReadyStatus.textContent = '✅ 对方已准备，可以开始游戏';
     syncIfRemote();
   }
 }
