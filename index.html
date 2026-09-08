@@ -340,63 +340,63 @@ const ICE_SERVERS = [
     { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
 ];
 
-// ========== 技能定义（38个独立机制） ==========
+// ========== 技能定义（38个独立机制，详细描述版） ==========
 const ALL_SKILLS = [
-    { id:'detect', name:'📡 探测', desc:'显示炸弹奇偶', cooldown:1 },
-    { id:'peek', name:'🔍 透视', desc:'显示炸弹个位数字', cooldown:1 },
-    { id:'thermometer', name:'🌡️ 温度计', desc:'1-10等级显示距离', cooldown:1 },
-    { id:'verifier', name:'🎯 验证器', desc:'猜一数字只知中否', cooldown:1 },
-    { id:'binary', name:'✂️ 二分', desc:'范围按中点缩小一半', cooldown:1 },
-    { id:'rewind', name:'⏪ 回退', desc:'范围恢复上次猜测前', cooldown:2 },
-    { id:'shuffle', name:'🔀 洗牌', desc:'范围内随机重置炸弹', cooldown:2 },
-    { id:'move', name:'🚚 移动', desc:'炸弹随机±5移动', cooldown:1 },
-    { id:'dormant', name:'💤 休眠', desc:'猜中不爆，下次伤+2', cooldown:3 },
-    { id:'web', name:'🕸️ 蛛网', desc:'周围±3共7数皆爆', cooldown:3 },
-    { id:'double', name:'⚡ 双倍', desc:'对手踩中受2伤', cooldown:2 },
-    { id:'pierce', name:'🗡️ 穿透', desc:'本回合无视护盾', cooldown:2 },
-    { id:'lifesteal', name:'🌙 吸血', desc:'对手踩中你回1血', cooldown:2 },
-    { id:'anger', name:'💢 愤怒', desc:'每失2血伤+1', cooldown:2 },
-    { id:'shield', name:'🛡️ 护盾', desc:'抵挡下一次伤害', cooldown:2 },
-    { id:'reflect', name:'🪞 反射', desc:'反弹受到的伤害', cooldown:3 },
-    { id:'heal', name:'💊 治疗', desc:'回复1点生命', cooldown:2 },
-    { id:'rebirth', name:'🕊️ 重生', desc:'死亡以2血复活一次', cooldown:-1 },
-    { id:'speed', name:'🏃 加速', desc:'本回合可猜两次', cooldown:2 },
-    { id:'blind', name:'🙈 致盲', desc:'对手看不到范围', cooldown:2 },
-    { id:'lock', name:'🚫 封锁', desc:'随机禁对手一个技能', cooldown:3 },
-    { id:'pause', name:'🕐 暂停', desc:'对手跳过下次行动', cooldown:3 },
-    { id:'slow', name:'🐌 缓速', desc:'对手猜错不缩范围', cooldown:2 },
-    { id:'allin', name:'🔥 孤注一掷', desc:'猜中3倍伤，错自伤1', cooldown:3 },
-    { id:'bet', name:'🎯 押注', desc:'押对手猜错，对回1血错伤1', cooldown:2 },
-    { id:'fog', name:'🌫️ 迷雾', desc:'下次大小反馈相反', cooldown:2 },
-    { id:'disguise', name:'🎭 伪装', desc:'炸弹伪装成另一数字', cooldown:2 },
-    { id:'lie', name:'🤥 说谎', desc:'下条信息可能为假', cooldown:2 },
-    { id:'copy', name:'📋 复制', desc:'复制对手一个技能', cooldown:4 },
-    { id:'trap', name:'🪤 陷阱', desc:'选数，对手猜中即爆', cooldown:3 },
-    { id:'scout', name:'📡 侦察', desc:'查看对手所有技能', cooldown:2 },
-    { id:'chain', name:'🔗 连锁', desc:'用技能后可再用一次', cooldown:3 },
-    { id:'empower', name:'🌟 赋能', desc:'下一个技能效果翻倍', cooldown:2 },
-    { id:'freeze', name:'🧊 冰封数字', desc:'炸弹数字暂时无法猜中', cooldown:3 },
-    { id:'bomblet', name:'💣 子母弹', desc:'下次爆炸额外2伤', cooldown:3 },
-    { id:'blackhole', name:'🕳️ 黑洞', desc:'选数，范围向其靠拢1', cooldown:2 },
-    { id:'tide', name:'🌊 潮汐', desc:'本回合扩5，下回合缩5', cooldown:2 },
-    { id:'timerewind', name:'🕰️ 时间回溯', desc:'双方生命回到回合开始', cooldown:3 }
+    { id:'detect', name:'📡 探测', desc:'显示炸弹是奇数还是偶数。可排除一半数字，适合开局使用。', cooldown:2 },
+    { id:'peek', name:'🔍 透视', desc:'显示炸弹的个位数字。提供精确线索，但信息量有限。', cooldown:2 },
+    { id:'thermometer', name:'🌡️ 温度计', desc:'以1-10的等级显示你离炸弹有多近（10=很近，1=很远）。适合校准直觉。', cooldown:2 },
+    { id:'verifier', name:'🎯 验证器', desc:'选择一个数字，只告诉你“中了”还是“没中”，不给大小提示。可用于确认关键数字。', cooldown:2 },
+    { id:'binary', name:'✂️ 二分', desc:'将范围按中点一分为二，保留炸弹所在的一半。最强范围压缩技能，但也要注意对手同样受益。', cooldown:3 },
+    { id:'rewind', name:'⏪ 回退', desc:'将范围恢复到你上一次猜测前的状态。可撤销错误缩小，或应对对手的范围操控。', cooldown:2 },
+    { id:'shuffle', name:'🔀 洗牌', desc:'在当前范围内完全随机重置炸弹位置。打乱对手推理，但自己也失去线索。', cooldown:3 },
+    { id:'move', name:'🚚 移动', desc:'炸弹随机向上或向下移动5个数字（不超过边界）。可扰乱对手，但方向不可控。', cooldown:2 },
+    { id:'dormant', name:'💤 休眠', desc:'炸弹进入休眠：对手下次猜中不会爆炸，但之后你的炸弹伤害+2。适合残局设伏。', cooldown:4 },
+    { id:'web', name:'🕸️ 蛛网', desc:'炸弹周围±3的数字变成雷区：对方踩中会受到1点波及伤害。让对手不敢靠近。', cooldown:3 },
+    { id:'double', name:'⚡ 双倍', desc:'对手下次踩中你的炸弹时受到2点伤害。简单直接的伤害强化。', cooldown:3 },
+    { id:'pierce', name:'🗡️ 穿透', desc:'本回合内你的炸弹伤害无视对手的护盾。克制护盾流。', cooldown:3 },
+    { id:'lifesteal', name:'🌙 吸血', desc:'你踩中对方炸弹时回复1点生命。以战养战，适合持续作战。', cooldown:3 },
+    { id:'anger', name:'💢 愤怒', desc:'你每损失2点生命，炸弹伤害+1。残局翻盘神器，但需要控制血量。', cooldown:3 },
+    { id:'shield', name:'🛡️ 护盾', desc:'抵挡下一次炸弹伤害。可靠防御，但无法抵挡穿透。', cooldown:3 },
+    { id:'reflect', name:'🪞 反射', desc:'将下一次受到的炸弹伤害反弹给攻击者。高风险高回报，可让对手自食其果。', cooldown:4 },
+    { id:'heal', name:'💊 治疗', desc:'立即回复1点生命。简单稳定，适合持续作战。', cooldown:3 },
+    { id:'rebirth', name:'🕊️ 重生', desc:'死亡时以2点生命复活一次（触发后技能消失）。保命底牌。', cooldown:-1 },
+    { id:'speed', name:'🏃 加速', desc:'本回合内你可以连续猜两次。抢节奏，快速压缩范围。', cooldown:3 },
+    { id:'blind', name:'🙈 致盲', desc:'对手下一回合看不到范围显示。让他瞎猜，配合陷阱效果更佳。', cooldown:3 },
+    { id:'lock', name:'🚫 封锁', desc:'随机禁掉对手一个技能，直到炸弹爆炸。克制技能依赖型对手。', cooldown:3 },
+    { id:'pause', name:'🕐 暂停', desc:'对手跳过下一次行动回合。拖延时间，打断对手节奏。', cooldown:4 },
+    { id:'slow', name:'🐌 缓速', desc:'对手下次猜错时范围不会缩小。降低对手信息获取速度。', cooldown:3 },
+    { id:'allin', name:'🔥 孤注一掷', desc:'你下一次猜中炸弹时伤害变为3倍，但若猜错自己受到1点伤害。高风险高回报。', cooldown:4 },
+    { id:'bet', name:'🎯 押注', desc:'押对手下次猜错：若他猜错你回1血，若他猜中你扣1血。心理战技能。', cooldown:3 },
+    { id:'fog', name:'🌫️ 迷雾', desc:'对手下一回合看不到范围，且“大了/小了”反馈完全相反。双重误导。', cooldown:3 },
+    { id:'disguise', name:'🎭 伪装', desc:'炸弹暂时伪装成另一个数字，对手猜中伪装不会爆炸，但会揭露真实位置。', cooldown:3 },
+    { id:'lie', name:'🤥 说谎', desc:'你下一次获得的“大了/小了”反馈可能为假（对方无法分辨）。制造不确定性。', cooldown:2 },
+    { id:'copy', name:'📋 复制', desc:'随机复制对手的一个技能并立即使用。以彼之道还施彼身。', cooldown:5 },
+    { id:'trap', name:'🪤 陷阱', desc:'选择一个数字设为陷阱，对手猜中该数字直接爆炸（对对手造成伤害）。守株待兔。', cooldown:4 },
+    { id:'scout', name:'📡 侦察', desc:'查看对手当前拥有的所有技能及其冷却状态。知己知彼。', cooldown:2 },
+    { id:'chain', name:'🔗 连锁', desc:'使用本技能后，本回合内可以免费再使用另一个技能。一回合多技能组合。', cooldown:4 },
+    { id:'empower', name:'🌟 赋能', desc:'你下一个使用的技能效果翻倍。强化关键技能，打出爆发。', cooldown:3 },
+    { id:'freeze', name:'🧊 冰封数字', desc:'炸弹数字暂时无法被猜中（持续1回合）。让对手白猜一次。', cooldown:4 },
+    { id:'bomblet', name:'💣 子母弹', desc:'你下次炸弹爆炸时额外造成2点伤害。增强爆发。', cooldown:4 },
+    { id:'blackhole', name:'🕳️ 黑洞', desc:'选择一个数字，范围两端各向该数字靠拢1。小幅压缩范围。', cooldown:2 },
+    { id:'tide', name:'🌊 潮汐', desc:'本回合范围扩大5，下回合自动缩小5。周期性改变范围。', cooldown:3 },
+    { id:'timerewind', name:'🕰️ 时间回溯', desc:'双方生命值回复到本回合开始时的状态。可撤销本回合的伤害。', cooldown:4 }
 ];
 
-// ========== 玩家对象工厂 ==========
+// ========== 玩家对象工厂（已清理废弃字段） ==========
 function makePlayer(id) {
     return { id:id, name:'', avatar:'', hp:5, maxHP:5,
         shield:false, reflect:false, rebirth:false, lifesteal:false,
         double:false, pierce:false, anger:false, speed:false,
         skipNext:false, blind:false, lock:false, lockedSkill:null,
-        slow:false, allin:false, coin:false, bet:false,
-        bluffNumber:null, fog:false, disguise:false, disguiseNumber:null,
-        lie:false, illusion:false, fakeLow:null, fakeHigh:null,
-        chain:false, empower:false, frozen:false, heat:false, bomblet:false,
+        slow:false, allin:false, bet:false,
+        fog:false, disguise:false, disguiseNumber:null,
+        lie:false,
+        chain:false, empower:false, frozen:false, bomblet:false,
         skills:[], cooldowns:{}, skillUsedThisTurn:false,
-        trappedNumber:null, dormant:false, web:false, magnetic:false,
-        anchored:false, dormantBonus:false, doubleDamage:null,
+        trappedNumber:null, dormant:false, web:false,
+        dormantBonus:false, doubleDamage:null,
         allinMultiplier:null, bombletDamage:null, lifestealAmount:1,
-        speedDisabled:false, secondLockedSkill:null };
+        secondLockedSkill:null };
 }
 
 // ========== 全局状态 ==========
@@ -619,6 +619,7 @@ function showNumberPicker(title, min, max, onConfirm, onCancel){
     numberSelectInput.value = '';
     numberSelectInput.min = min;
     numberSelectInput.max = max;
+    numberSelectInput.type = Privacy.isLocal() ? 'password' : 'number';
     numberSelectOverlay.classList.remove('hidden');
     numberSelectOverlay.classList.add('active');
     setTimeout(()=>numberSelectInput.focus(), 100);
@@ -793,7 +794,7 @@ function handleGuestAction(data){
     else if(data.action==='skill'&&data.playerId==='p2'&&G.currentPlayer==='p2'&&!G.processing){
         const skillId = data.skillId;
         const number = data.number;
-        if(['verifier','trap','bluff','blackhole'].includes(skillId) && number !== undefined){
+        if(['verifier','trap','blackhole'].includes(skillId) && number !== undefined){
             const p2 = getPlayer('p2');
             const skill = getSkillById(skillId);
             if(skill){
@@ -806,7 +807,6 @@ function handleGuestAction(data){
                     messageDisplay.textContent = '🎯 对方验证...';
                     if(G.conn) G.conn.send({type:'private', title:'🎯验证器', text:msg});
                 }
-                else if(skillId === 'bluff'){ p2.bluffNumber = number; messageDisplay.textContent = '🃏 对方虚张声势！'; }
                 else if(skillId === 'blackhole'){ 
                     const newLow = Math.max(G.low, number - 1);
                     const newHigh = Math.min(G.high, number + 1);
@@ -859,7 +859,7 @@ function syncIfRemote(){
     if(!G.mode.includes('remote')||!G.conn||!G.isHost) return;
     const p1Clone = deepClone(G.players.p1);
     const p2Clone = deepClone(G.players.p2);
-    const sensitiveFields = ['trappedNumber','bluffNumber','disguiseNumber','disguise','fakeLow','fakeHigh','lockedSkill','secondLockedSkill'];
+    const sensitiveFields = ['trappedNumber','disguiseNumber','disguise','fakeLow','fakeHigh','lockedSkill','secondLockedSkill'];
     sensitiveFields.forEach(f => {
         p1Clone[f] = null;
     });
@@ -922,6 +922,7 @@ function applySync(state){
     if(!state.pendingSkillSelect && skillSelectOverlay.classList.contains('active')){
         skillSelectOverlay.classList.remove('active');
         clearSkillTimer();
+        G.skillSelectShown=false;
     }
     if(!G.active){
         surrenderBtn.style.display='none';
@@ -1022,15 +1023,15 @@ function resetGameState(){
         p.shield=false; p.reflect=false; p.rebirth=false; p.lifesteal=false;
         p.double=false; p.pierce=false; p.anger=false; p.speed=false;
         p.skipNext=false; p.blind=false; p.lock=false; p.lockedSkill=null;
-        p.slow=false; p.allin=false; p.coin=false; p.bet=false;
-        p.bluffNumber=null; p.fog=false; p.disguise=false; p.disguiseNumber=null;
-        p.lie=false; p.illusion=false; p.fakeLow=null; p.fakeHigh=null;
-        p.chain=false; p.empower=false; p.frozen=false; p.heat=false; p.bomblet=false;
+        p.slow=false; p.allin=false; p.bet=false;
+        p.fog=false; p.disguise=false; p.disguiseNumber=null;
+        p.lie=false;
+        p.chain=false; p.empower=false; p.frozen=false; p.bomblet=false;
         p.skills=[]; p.cooldowns={}; p.skillUsedThisTurn=false;
-        p.trappedNumber=null; p.dormant=false; p.web=false; p.magnetic=false;
-        p.anchored=false; p.dormantBonus=false; p.doubleDamage=null;
+        p.trappedNumber=null; p.dormant=false; p.web=false;
+        p.dormantBonus=false; p.doubleDamage=null;
         p.allinMultiplier=null; p.bombletDamage=null; p.lifestealAmount=1;
-        p.speedDisabled=false; p.secondLockedSkill=null;
+        p.secondLockedSkill=null;
     });
 }
 
@@ -1042,6 +1043,12 @@ function startNewRound(){
     G.tideShrinkNext=false;
     G.roundStartHP = { p1: G.players.p1.hp, p2: G.players.p2.hp };
     G.skillSelectShown = false;
+    ['p1','p2'].forEach(function(id){
+        const p=G.players[id];
+        p.speed=false; p.blind=false; p.bet=false; p.fog=false; p.lie=false; p.slow=false; p.pierce=false; p.frozen=false;
+        p.skillUsedThisTurn=false;
+        p.trappedNumber=null; p.web=false; p.dormant=false; p.disguise=false; p.disguiseNumber=null;
+    });
     reduceCooldowns('p1');
     reduceCooldowns('p2');
     updateRange(); updateInputDisplay();
@@ -1418,10 +1425,11 @@ function processGuess(guess, isSkillAttack, guesserId){
     const defender=getOpponentPlayer(guesser.id);
     if(!isSkillAttack){
         if(isNaN(guess)||guess<G.low||guess>G.high){
-            if(guesser.blind) messageDisplay.textContent='⚠️ 输入无效，请重新输入';
+            if(guesser.blind || guesser.fog) messageDisplay.textContent='⚠️ 输入无效，请重新输入';
             else messageDisplay.textContent='⚠️ 请输入 '+G.low+'~'+G.high+' 之间的数字';
             G.playerInput=''; updateInputDisplay();
-            if(!(G.mode.includes('ai')&&guesser.id==='p2')) setKeypadEnabled(isMyTurn()&&!G.processing);
+            if(G.mode.includes('ai')&&guesser.id==='p2'){ setTimeout(aiGuess, 800); }
+            else { setKeypadEnabled(isMyTurn()&&!G.processing); syncIfRemote(); }
             return;
         }
     }
@@ -1432,9 +1440,10 @@ function processGuess(guess, isSkillAttack, guesserId){
         isHit = true;
         selfInflicted = true;
     }
+    let isSplash = false;
     if(!isHit && defender.web){
         const dist = Math.abs(guess - G.bombNumber);
-        if(dist <= 3 && dist > 0) isHit = true;
+        if(dist <= 3 && dist > 0){ isHit = true; isSplash = true; }
     }
 
     // 休眠触发
@@ -1500,6 +1509,31 @@ function processGuess(guess, isSkillAttack, guesserId){
     setTimeout(function(){
         if(!G.active) return;
         if(isHit){
+            if(isSplash){
+                defender.web=false;
+                getPlayer('p1').lock=false; getPlayer('p1').lockedSkill=null; getPlayer('p1').secondLockedSkill=null;
+                getPlayer('p2').lock=false; getPlayer('p2').lockedSkill=null; getPlayer('p2').secondLockedSkill=null;
+                let splashMsg='🕸️ '+guesserName+' 踩中蛛网雷区，被爆炸波及！';
+                if(guesser.shield){
+                    guesser.shield=false;
+                    splashMsg+='（🛡️护盾抵挡了波及伤害）';
+                } else {
+                    guesser.hp-=1;
+                    splashMsg+=' -1血';
+                    if(guesser.rebirth && guesser.hp<=0){
+                        guesser.hp=2; guesser.rebirth=false;
+                        guesser.skills = guesser.skills.filter(s => s.id !== 'rebirth');
+                        splashMsg+=' 🕊️ 重生！以2血复活';
+                    }
+                }
+                messageDisplay.textContent=splashMsg;
+                G.playerInput=''; updateInputDisplay();
+                renderPlayers();
+                guesser.pierce=false;
+                if(getPlayer('p1').hp<=0||getPlayer('p2').hp<=0){ endGame(); return; }
+                setTimeout(function(){ afterHitSkillPhase(); }, 600);
+                return;
+            }
             let damage=1;
             if(!selfInflicted){
                 if(guesser.doubleDamage) { damage *= guesser.doubleDamage; guesser.doubleDamage=null; }
@@ -1609,20 +1643,20 @@ function processGuess(guess, isSkillAttack, guesserId){
             }, 600);
         } else {
             let feedbackCorrect = true;
-            if(defender.fog){
-                defender.fog=false;
+            if(guesser.fog){
+                guesser.fog=false;
                 feedbackCorrect = false;
             }
-            if(defender.lie){
-                defender.lie=false;
+            if(guesser.lie){
+                guesser.lie=false;
                 if(Math.random()<0.5) feedbackCorrect = !feedbackCorrect;
             }
             let highLow = guess < G.bombNumber ? '大' : '小';
             if(!feedbackCorrect) highLow = highLow === '大' ? '小' : '大';
             if(guess<G.bombNumber){ if(feedbackCorrect){ G.low=guess+1; } else { G.high=guess-1; } }
             else { if(feedbackCorrect){ G.high=guess-1; } else { G.low=guess+1; } }
-            if(defender.slow){
-                defender.slow=false;
+            if(guesser.slow){
+                guesser.slow=false;
                 G.low = G.prevLow;
                 G.high = G.prevHigh;
                 messageDisplay.textContent='🐌 缓速！范围未缩小';
@@ -1658,11 +1692,6 @@ function processGuess(guess, isSkillAttack, guesserId){
                 messageDisplay.textContent += ' 🎯 押注成功！'+defender.name+' +1血';
                 renderPlayers();
             }
-            // 硬币反面效果（已删除coin技能，但保留字段以防万一）
-            if(guesser.speedDisabled){
-                guesser.speedDisabled=false;
-                guesser.speed=false;
-            }
             if(guesser.speed){
                 guesser.speed=false;
                 messageDisplay.textContent+='（🏃加速：可再猜一次）';
@@ -1683,8 +1712,7 @@ function processGuess(guess, isSkillAttack, guesserId){
 }
 
 function afterHitSkillPhase(){
-    if(G.isSkillMode&&!(G.mode.includes('remote')&&!G.isHost)) startRoundSkillSelect();
-    else if(!G.isSkillMode) startNewRound();
+    startNewRound();
 }
 
 function switchTurn(){
@@ -1692,14 +1720,13 @@ function switchTurn(){
     const opponent=getOpponentPlayer(current.id);
     current.blind=false; current.pierce=false; current.speed=false;
     current.shield=false; current.reflect=false;
-    current.fog=false; current.lie=false; current.illusion=false;
+    current.fog=false; current.lie=false;
     current.frozen=false;
     G.playerInput=''; updateInputDisplay();
 
     function doSwitch(){
         if(opponent.skipNext){
             opponent.skipNext=false; opponent.blind=false;
-            reduceCooldowns(opponent.id);
             messageDisplay.textContent='🕐 '+opponent.name+' 被暂停，跳过回合！';
             G.processing=false;
             G.playerInput=''; updateInputDisplay();
@@ -1712,12 +1739,13 @@ function switchTurn(){
         G.processing=false;
         opponent.skillUsedThisTurn = false;
         if(G.tideShrinkNext){
-            G.low = Math.max(G.low, G.low+5);
-            G.high = Math.min(G.high, G.high-5);
             G.tideShrinkNext=false;
+            G.low = Math.min(G.low+5, G.high);
+            G.high = Math.max(G.high-5, G.low);
+            if(G.bombNumber < G.low) G.low = G.bombNumber;
+            if(G.bombNumber > G.high) G.high = G.bombNumber;
             updateRange();
         }
-        reduceCooldowns(opponent.id);
         renderSkills(); updateTurnIndicator(); updateRange();
         if(G.mode.includes('ai')&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
         syncIfRemote();
@@ -1740,7 +1768,6 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
 
     if(!ignoreChecks){
         if(user.skillUsedThisTurn && !user.chain){ messageDisplay.textContent='⚠️ 本回合已使用过技能'; return; }
-        if(user.lock && skillId!=='lock'){ messageDisplay.textContent='🚫 技能被封锁，无法使用！'; return; }
         if(user.lockedSkill === skillId || user.secondLockedSkill === skillId){ messageDisplay.textContent='🔒 该技能已被封锁！'; return; }
         const cd = user.cooldowns[skillId] || 0;
         if(cd > 0) { messageDisplay.textContent='⚠️ 技能冷却中'; return; }
@@ -2105,7 +2132,7 @@ function aiGuess(){
     const ai=getPlayer('p2');
     let guess;
     const range=G.high-G.low+1;
-    if(G.aiLevel===1) guess=Math.floor(Math.random()*range)+G.low;
+    if(G.aiLevel===1 || ai.blind || ai.fog) guess=Math.floor(Math.random()*range)+G.low;
     else if(G.aiLevel===2){
         const mid=(G.low+G.high)/2;
         const spread=Math.max(1, Math.floor(range*0.25));
@@ -2164,6 +2191,11 @@ keypadButtons.forEach(function(btn){
             if(G.playerInput===''){ messageDisplay.textContent='⚠️ 请先输入数字'; return; }
             const guess=parseInt(G.playerInput);
             if(G.mode.includes('remote')&&!G.isHost){
+                if(isNaN(guess)||guess<G.low||guess>G.high){
+                    messageDisplay.textContent='⚠️ 请输入 '+G.low+'~'+G.high+' 之间的数字';
+                    G.playerInput=''; updateInputDisplay();
+                    return;
+                }
                 if(G.conn){
                     G.conn.send({type:'action',action:'guess',playerId:getMyPlayer().id,guess:guess});
                     G.processing=true;
@@ -2208,6 +2240,11 @@ document.addEventListener('keydown', function(e){
         const guess = parseInt(G.playerInput);
         if(isNaN(guess)) return;
         if(G.mode.includes('remote') && !G.isHost){
+            if(isNaN(guess)||guess<G.low||guess>G.high){
+                messageDisplay.textContent='⚠️ 请输入 '+G.low+'~'+G.high+' 之间的数字';
+                G.playerInput=''; updateInputDisplay();
+                return;
+            }
             if(G.conn){
                 G.conn.send({type:'action', action:'guess', playerId:getMyPlayer().id, guess:guess});
                 G.processing=true;
@@ -2255,6 +2292,8 @@ function updateRange(){
     const cur=getCurrentPlayer();
     if(cur.blind){
         rangeDisplay.textContent='🙈 范围被遮蔽...';
+    } else if(cur.fog){
+        rangeDisplay.textContent='🌫️ 迷雾笼罩，范围不可见...';
     } else {
         rangeDisplay.textContent='范围：'+G.low+' - '+G.high;
     }
@@ -2314,8 +2353,7 @@ function renderSkills(){
     skillsBar.style.display='flex';
     const owner=Privacy.isLocal()?getCurrentPlayer():getMyPlayer();
     if(!owner||!owner.skills) { renderOpponentSkills(); return; }
-    const isLocked=owner.lock;
-    const canAct=G.active && !G.processing && owner.id===G.currentPlayer && !isLocked && !owner.skillUsedThisTurn;
+    const canAct=G.active && !G.processing && owner.id===G.currentPlayer && !owner.skillUsedThisTurn && Privacy._state!=='confirm';
     owner.skills.forEach(skill=>{
         const wrap=document.createElement('div');
         wrap.className='skill-btn-wrap';
@@ -2329,10 +2367,6 @@ function renderSkills(){
         }
         else if(isLockedSkill){
             btn.textContent='🔒'+skill.name;
-            btn.disabled=true;
-        }
-        else if(isLocked){
-            btn.textContent='🚫'+skill.name;
             btn.disabled=true;
         }
         else if(owner.skillUsedThisTurn){
@@ -2453,6 +2487,7 @@ function showRemoteSetup(){
 function showRemoteWaiting(){ hideAll(); remoteWaiting.classList.remove('hidden'); }
 function showBattleArea(){
     hideAll();
+    if(G.mode.includes('remote') && G.conn && G.conn.open) startPing();
     battleArea.style.display='flex';
     surrenderBtn.style.display='block';
     if(G.isSkillMode){ skillsBar.style.display='flex'; renderSkills(); }
