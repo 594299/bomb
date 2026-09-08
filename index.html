@@ -867,7 +867,6 @@ function syncIfRemote(){
     if(!G.mode.includes('remote')||!G.conn||!G.isHost) return;
     const p1Clone = deepClone(G.players.p1);
     const p2Clone = deepClone(G.players.p2);
-    // 清除对手（p1）的敏感字段，防止Guest看到
     const sensitiveFields = ['trappedNumber','bluffNumber','disguiseNumber','disguise','fakeLow','fakeHigh','lockedSkill'];
     sensitiveFields.forEach(f => {
         p1Clone[f] = null;
@@ -1218,6 +1217,10 @@ function showSkillSelectWithCallback(forPlayerId, skillCount, onComplete){
             const roundOptionIds = preGeneratedOptions.slice(startIdx, startIdx + 3);
             finalOptions = roundOptionIds.map(id=>getSkillById(id)).filter(s=>s);
             if(finalOptions.length === 0) finalOptions = getRandomSkills(3);
+            finalOptions = finalOptions.filter(s => !selectedSkills.some(sel => sel.id === s.id));
+            while(finalOptions.length === 0){
+                finalOptions = getRandomSkills(3).filter(s => !selectedSkills.some(sel => sel.id === s.id));
+            }
         } else {
             let roundOptions = getRandomSkills(3);
             let filtered = roundOptions.filter(s => !selectedSkills.some(sel => sel.id === s.id));
@@ -1351,12 +1354,9 @@ function showSkillSelectWithOptions(forPlayerId, optionIds, skillCount){
         let roundOptions = roundOptionIds.map(id=>getSkillById(id)).filter(s=>s);
         if(roundOptions.length === 0) roundOptions = getRandomSkills(3);
         roundOptions = roundOptions.filter(s => !selectedSkills.some(sel => sel.id === s.id));
-        if(roundOptions.length === 0){
-            let newOptions = getRandomSkills(3);
-            while(newOptions.some(s => selectedSkills.some(sel => sel.id === s.id))){
-                newOptions = getRandomSkills(3);
-            }
-            roundOptions = newOptions;
+        while(roundOptions.length === 0){
+            const newOptions = getRandomSkills(3);
+            roundOptions = newOptions.filter(s => !selectedSkills.some(sel => sel.id === s.id));
         }
 
         skillSelectGrid.innerHTML = '';
@@ -1433,7 +1433,7 @@ function processGuess(guess, isSkillAttack, guesserId){
     }
 
     let isHit=(guess===G.bombNumber)||isSkillAttack;
-    let selfInflicted = false; // 是否因陷阱/虚张声势导致自己受伤
+    let selfInflicted = false;
     if(!isHit && defender.trappedNumber !== null && guess === defender.trappedNumber){
         isHit = true;
         selfInflicted = true;
@@ -1447,7 +1447,6 @@ function processGuess(guess, isSkillAttack, guesserId){
         if(dist <= 3 && dist > 0) isHit = true;
     }
 
-    // 冰封效果：猜中不爆炸，切换回合
     if(isHit && defender.frozen && !selfInflicted){
         defender.frozen = false;
         messageDisplay.textContent = '🧊 炸弹被冰封，无法引爆！';
@@ -1461,7 +1460,6 @@ function processGuess(guess, isSkillAttack, guesserId){
         return;
     }
 
-    // 伪装效果：猜中伪装数字，揭露伪装，切换回合（仅正常炸弹命中，非陷阱/虚张声势）
     if(isHit && defender.disguise && G.bombNumber !== guess && !selfInflicted){
         defender.disguise = false;
         defender.disguiseNumber = null;
@@ -1496,7 +1494,6 @@ function processGuess(guess, isSkillAttack, guesserId){
         if(isHit){
             let damage=1;
             if(!selfInflicted){
-                // 正常命中：伤害由攻击者技能加成
                 if(guesser.double) { damage *= 2; guesser.double=false; }
                 if(guesser.allin) { damage *= 3; guesser.allin=false; }
                 if(guesser.anger) {
@@ -1509,7 +1506,6 @@ function processGuess(guess, isSkillAttack, guesserId){
             }
 
             if(selfInflicted){
-                // 自己触发陷阱：伤害直接作用于自己，忽略自身攻击加成，但可受自己护盾、重生影响
                 if(guesser.shield){
                     guesser.shield=false;
                     messageDisplay.textContent='🛡️ '+guesserName+' 的护盾抵挡了陷阱伤害！';
@@ -1521,20 +1517,17 @@ function processGuess(guess, isSkillAttack, guesserId){
                         messageDisplay.textContent+=' 🕊️ 重生！以2血复活';
                     }
                 }
-                // 清除陷阱和虚张声势标记，防止重复触发
                 defender.trappedNumber = null;
                 defender.bluffNumber = null;
                 renderPlayers();
                 guesser.pierce=false;
                 if(getPlayer('p1').hp<=0||getPlayer('p2').hp<=0){ endGame(); return; }
-                // 延迟进入下一阶段，让玩家看到爆炸消息
                 setTimeout(function(){
                     afterHitSkillPhase();
                 }, 600);
                 return;
             }
 
-            // 正常命中或攻击者主动引发（自爆等）：检查防御方护盾、反射
             if(defender.reflect && !isSkillAttack){
                 defender.reflect=false;
                 if(guesser.shield){
@@ -1715,7 +1708,6 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
     const skill=getSkillById(skillId);
     if(!skill) return;
 
-    // 检查技能是否可用（对于非ignoreChecks）
     if(!ignoreChecks){
         if(user.skillUsedThisTurn && !user.chain){ messageDisplay.textContent='⚠️ 本回合已使用过技能'; return; }
         if(user.lock && skillId!=='lock'){ messageDisplay.textContent='🚫 技能被封锁，无法使用！'; return; }
@@ -1724,7 +1716,6 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
         if(cd > 0) { messageDisplay.textContent='⚠️ 技能冷却中'; return; }
     }
 
-    // 远程 Guest 使用技能：发送请求给 Host，不本地执行
     if(G.mode.includes('remote') && !G.isHost && !ignoreChecks){
         const needsNumber = ['verifier','trap','bluff','blackhole'].includes(skillId);
         if(needsNumber){
@@ -1763,7 +1754,6 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
         return;
     }
 
-    // Host 或本地执行技能逻辑
     if(user.chain){
         user.chain = false;
         user.skillUsedThisTurn = false;
@@ -1805,7 +1795,6 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
         }
     }
 
-    // 处理AI需要数字输入的技能
     if(G.mode.includes('ai') && user.id === 'p2') {
         const autoNumber = Math.floor(Math.random() * (G.high - G.low + 1)) + G.low;
         if(skillId === 'verifier') {
@@ -2365,10 +2354,22 @@ function renderSkills(){
         btn.className='skill-btn';
         const cd=owner.cooldowns[skill.id]||0;
         const isLockedSkill = owner.lockedSkill === skill.id;
-        if(cd>0){ btn.textContent=skill.name+' ('+cd+')'; btn.disabled=true; }
-        else if(isLockedSkill){ btn.textContent='🔒'+skill.name; btn.disabled=true; }
-        else if(isLocked){ btn.textContent='🚫'+skill.name; btn.disabled=true; }
-        else if(owner.skillUsedThisTurn){ btn.textContent=skill.name+' (已用)'; btn.disabled=true; }
+        if(cd>0){
+            btn.textContent=skill.name+' ('+cd+')';
+            btn.disabled=true;
+        }
+        else if(isLockedSkill){
+            btn.textContent='🔒'+skill.name;
+            btn.disabled=true;
+        }
+        else if(isLocked){
+            btn.textContent='🚫'+skill.name;
+            btn.disabled=true;
+        }
+        else if(owner.skillUsedThisTurn){
+            btn.textContent=skill.name+' (已用)';
+            btn.disabled=true;
+        }
         else {
             btn.textContent=skill.name;
             btn.disabled=!canAct;
