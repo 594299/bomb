@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>💣 数字炸弹 · 最终修复版</title>
+<title>💣 数字炸弹 · 技能完善版</title>
 <style>
 :root { --neon:#00f0ff; --blue:#4da6ff; --red:#ff6b6b; --green:#00ff88; --orange:#ff8800; }
 * { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent; }
@@ -49,7 +49,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
 #turn-indicator.turn-opponent { color:var(--red); border:1px solid var(--red); }
 #message-display { font-size:0.7rem; color:#bbb; min-height:1rem; text-align:center; max-width:95%; padding:0 5px; }
 #opponent-skills-bar { display:none; gap:4px; justify-content:center; flex-wrap:wrap; padding:2px 0; }
-#opponent-skills-bar .opp-skill-tag { padding:3px 8px; border:1px solid rgba(255,100,100,0.35); border-radius:8px; background:rgba(255,100,100,0.07); color:#ff9999; font-size:0.6rem; font-weight:700; }
+#opponent-skills-bar .opp-skill-tag { padding:3px 8px; border:1px solid rgba(255,100,100,0.35); border-radius:8px; background:rgba(255,100,100,0.07); color:#ff9999; font-size:0.6rem; font-weight:700; display:flex; align-items:center; gap:4px; }
 #input-keypad-container { display:flex; flex-direction:column; align-items:center; gap:3px; padding:2px 0; }
 #input-display { font-size:1.2rem; font-weight:900; min-height:1.8rem; letter-spacing:2px; background:rgba(0,0,0,0.4); border:2px solid rgba(0,240,255,0.35); border-radius:8px; padding:2px 16px; min-width:100px; text-align:center; }
 #input-display.empty { border-color:rgba(255,255,255,0.15); color:#555; }
@@ -67,9 +67,13 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
 #cheat-toast.show { opacity:1; }
 #surrender-btn { padding:6px 12px; border:1px solid rgba(255,80,80,0.4); border-radius:15px; background:rgba(255,50,50,0.08); color:#ff6666; font-size:0.65rem; font-weight:700; cursor:pointer; margin-top:4px; display:none; }
 #skills-bar { display:none; gap:4px; margin-top:4px; flex-wrap:wrap; justify-content:center; }
+.skill-btn-wrap { display:flex; align-items:center; gap:2px; }
 .skill-btn { padding:4px 10px; border:1.5px solid rgba(255,255,255,0.3); border-radius:10px; background:rgba(255,255,255,0.05); color:#999; font-size:0.65rem; font-weight:700; cursor:pointer; min-height:32px; }
 .skill-btn.ready { border-color:var(--neon); color:var(--neon); background:rgba(0,240,255,0.08); box-shadow:0 0 8px rgba(0,240,255,0.2); }
 .skill-btn:disabled { opacity:0.3; pointer-events:none; }
+.skill-help-btn { width:20px; height:20px; border-radius:50%; border:1px solid rgba(255,255,255,0.4); background:rgba(255,255,255,0.1); color:#ccc; font-size:0.6rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.skill-help-btn:active { transform:scale(0.8); }
+.opp-skill-tag .skill-help-btn { width:16px; height:16px; font-size:0.5rem; }
 #skill-select-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.96); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:2000; padding:20px; }
 #skill-select-overlay.active { display:flex; }
 .skill-select-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-width:340px; }
@@ -123,6 +127,7 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
 </head>
 <body>
 <div id="game-container">
+  <!-- 所有 HTML 结构保持不变，与之前相同 -->
   <div id="header">
     <h1>💣 数字炸弹</h1>
     <div id="header-right">
@@ -130,13 +135,11 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
       <div id="room-info">未连接</div>
     </div>
   </div>
-
   <div id="main-menu" class="overlay">
     <div class="overlay-title">选择模式</div>
     <button class="btn" id="normal-mode-btn">🎮 普通模式</button>
     <button class="btn secondary" id="skill-mode-btn">⚡ 技能模式</button>
   </div>
-
   <div id="normal-submenu" class="overlay hidden">
     <div class="overlay-title">普通模式</div>
     <button class="btn" id="normal-local-btn">📱 本地双人</button>
@@ -144,7 +147,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <button class="btn" id="normal-remote-btn">🌐 远程对战</button>
     <button class="btn secondary" id="normal-back-btn">返回</button>
   </div>
-
   <div id="skill-submenu" class="overlay hidden">
     <div class="overlay-title">技能模式</div>
     <button class="btn" id="skill-local-btn">📱 本地双人</button>
@@ -152,7 +154,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <button class="btn" id="skill-remote-btn">🌐 远程对战</button>
     <button class="btn secondary" id="skill-back-btn">返回</button>
   </div>
-
   <div id="setup-overlay" class="overlay hidden">
     <div class="overlay-title">⚙️ 游戏设置</div>
     <div class="setting-row">
@@ -171,7 +172,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <button class="btn" id="start-game-btn">开始游戏</button>
     <button class="btn secondary" id="back-menu-btn1">返回</button>
   </div>
-
   <div id="remote-lobby" class="overlay hidden">
     <div class="overlay-title">远程对战</div>
     <button class="btn" id="create-room-btn">创建房间</button>
@@ -182,7 +182,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <div id="conn-status"></div>
     <button class="btn secondary" id="back-menu-btn2">返回</button>
   </div>
-
   <div id="remote-waiting" class="overlay hidden">
     <div class="overlay-title">房间码</div>
     <div class="room-display" id="waiting-room-code">------</div>
@@ -190,7 +189,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     <button class="btn" id="cancel-waiting-btn">取消</button>
     <button class="btn small" id="copy-link-btn" style="display:none;">📋 复制邀请链接</button>
   </div>
-
   <div id="remote-setup-overlay" class="overlay hidden">
     <div class="overlay-title">⚙️ 远程游戏设置</div>
     <div class="setting-row">
@@ -202,7 +200,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     </div>
     <button class="btn" id="remote-start-btn">开始游戏</button>
   </div>
-
   <div id="battle-area">
     <div class="player-area" id="opponent-area">
       <div class="highlight" id="opponent-highlight">
@@ -249,13 +246,11 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
       </div>
     </div>
   </div>
-
   <div id="skill-select-overlay">
     <div class="overlay-title" id="skill-select-title">选择技能</div>
     <div id="skill-timer">30</div>
     <div class="skill-select-grid" id="skill-select-grid"></div>
   </div>
-
   <div id="privacy-screen">
     <div class="privacy-handoff" id="privacy-handoff">
       <div class="p-title" id="privacy-title">🔒 请将设备交给对方</div>
@@ -263,7 +258,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     </div>
     <div id="privacy-content"></div>
   </div>
-
   <div id="chat-overlay" class="overlay hidden">
     <div class="chat-container">
       <div class="chat-header">
@@ -277,7 +271,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
       </div>
     </div>
   </div>
-
   <div id="chat-notification">
     <div class="chat-notif-header">
       <span>💬 新消息</span>
@@ -285,14 +278,12 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
     </div>
     <div class="chat-notif-body" id="chat-notif-body"></div>
   </div>
-
   <div id="name-edit-overlay">
     <div class="overlay-title">✏️ 编辑名称</div>
     <input type="text" class="name-edit-input" id="name-edit-input" placeholder="输入新名称" maxlength="10">
     <button class="btn" id="name-edit-confirm">确认</button>
     <button class="btn secondary" id="name-edit-cancel">取消</button>
   </div>
-
   <div id="number-select-overlay" class="overlay hidden">
     <div class="overlay-title" id="number-select-title">选择数字</div>
     <div style="color:#888;font-size:0.85rem;margin-bottom:5px;" id="number-select-range">范围：1 - 100</div>
@@ -302,7 +293,6 @@ body { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-
       <button class="btn secondary" id="number-select-cancel" style="min-width:100px;margin-top:0;">取消</button>
     </div>
   </div>
-
   <div id="cheat-toast"></div>
 </div>
 
@@ -724,7 +714,6 @@ function handleGuestAction(data){
     G.playerInput='';
     processGuess(data.guess,false,'p2');
   } else if(data.action==='skill'&&data.playerId==='p2'&&G.currentPlayer==='p2'&&!G.processing){
-    // Guest 使用 trap/insight 时，数字已经在 Guest 端选择并通过 data.number 发送
     if((data.skillId==='trap'||data.skillId==='insight') && data.number !== undefined){
       const p2 = getPlayer('p2');
       const skill = getSkillById(data.skillId);
@@ -732,11 +721,13 @@ function handleGuestAction(data){
         p2.cooldowns[data.skillId] = skill.cooldown;
         if(data.skillId === 'trap'){
           p2.trapNumber = data.number;
-          messageDisplay.textContent = '🪤 Guest设置了陷阱数字：' + data.number;
+          // 不泄露具体数字，仅提示
+          messageDisplay.textContent = '🪤 对方设置了陷阱';
         } else {
+          // 洞察结果仅发送给使用者，Host不显示具体距离
           const dist = Math.abs(G.bombNumber - data.number);
-          messageDisplay.textContent = '🕯️ Guest洞察：数字 ' + data.number + ' 与炸弹距离为 ' + dist;
           if(G.conn) G.conn.send({type:'private', title:'🕯️洞察', text:'数字 '+data.number+' 与炸弹距离为 '+dist});
+          messageDisplay.textContent = '🕯️ 对方使用了洞察';
         }
         renderSkills();
         updateTurnIndicator();
@@ -936,8 +927,8 @@ function startNewRound(){
   G.low=G.minVal; G.high=G.maxVal;
   G.bombNumber=Math.floor(Math.random()*(G.maxVal-G.minVal+1))+G.minVal;
   G.playerInput=''; G.processing=false;
-  reduceCooldowns('p1');
-  reduceCooldowns('p2');
+  // 新回合减少当前玩家冷却
+  reduceCooldowns(G.currentPlayer);
   updateRange(); updateInputDisplay();
   messageDisplay.textContent='💥 炸弹重置！新的一轮！';
   renderSkills();
@@ -1218,7 +1209,11 @@ function processGuess(guess, isSkillAttack, guesserId){
   const defender=getOpponentPlayer(guesser.id);
   if(!isSkillAttack){
     if(isNaN(guess)||guess<G.low||guess>G.high){
-      messageDisplay.textContent='⚠️ 请输入 '+G.low+'~'+G.high+' 之间的数字';
+      if(guesser.blind){
+        messageDisplay.textContent='⚠️ 输入无效，请重新输入';
+      } else {
+        messageDisplay.textContent='⚠️ 请输入 '+G.low+'~'+G.high+' 之间的数字';
+      }
       G.playerInput=''; updateInputDisplay();
       if(!(G.mode.includes('ai')&&guesser.id==='p2')) setKeypadEnabled(isMyTurn()&&!G.processing);
       return;
@@ -1243,10 +1238,8 @@ function processGuess(guess, isSkillAttack, guesserId){
       if(guesser.triple){ damage=3; guesser.triple=false; }
       else if(guesser.double){ damage=2; guesser.double=false; }
 
-      if(defender.shield && !guesser.pierce){
-        defender.shield=false;
-        messageDisplay.textContent='🛡️ '+defender.name+' 的护盾抵挡了伤害！';
-      } else if(defender.reflect && !isSkillAttack && !guesser.pierce){
+      // 反射判断：反射优先于护盾，且穿透不能无视反射
+      if(defender.reflect && !isSkillAttack && !guesser.pierce){
         defender.reflect=false;
         guesser.hp-=damage;
         const targetArea = Privacy.isLocal() ? (guesser.id===G.currentPlayer?'me':'opponent') : (guesser.id===getMyPlayer().id?'me':'opponent');
@@ -1257,6 +1250,11 @@ function processGuess(guess, isSkillAttack, guesserId){
         if(getPlayer('p1').hp<=0||getPlayer('p2').hp<=0){ endGame(); return; }
         afterHitSkillPhase();
         return;
+      }
+      // 护盾判断：只有穿透能无视护盾
+      if(defender.shield && !guesser.pierce){
+        defender.shield=false;
+        messageDisplay.textContent='🛡️ '+defender.name+' 的护盾抵挡了伤害！';
       } else {
         defender.hp-=damage;
         if(guesser.lifesteal){ guesser.hp=Math.min(guesser.maxHP,guesser.hp+1); guesser.lifesteal=false; }
@@ -1301,6 +1299,8 @@ function processGuess(guess, isSkillAttack, guesserId){
           }
         }
       }
+      // 双倍未命中也要消耗
+      if(guesser.double){ guesser.double = false; }
       if(guesser.speed){
         guesser.speed=false;
         messageDisplay.textContent+='（🏃加速：可再猜一次）';
@@ -1353,6 +1353,7 @@ function switchTurn(){
     }
     G.currentPlayer=opponent.id;
     G.processing=false;
+    reduceCooldowns(opponent.id);
     renderSkills(); updateTurnIndicator(); updateRange();
     if(G.mode.includes('ai')&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
     syncIfRemote();
@@ -1489,17 +1490,15 @@ function useSkill(skillId, playerId){
     case 'blind': opponent.blind=true; messageDisplay.textContent='🙈 '+userName+'致盲！'+opponent.name+'下回合看不到范围'; break;
     case 'swap': { const t=user.hp; user.hp=opponent.hp; opponent.hp=t; renderPlayers(); messageDisplay.textContent='🔄 '+userName+'交换生命！'+user.name+':'+user.hp+' '+opponent.name+':'+opponent.hp; if(getPlayer('p1').hp<=0||getPlayer('p2').hp<=0){ endGame(); return; } break; }
     case 'trap': {
-      // AI 自动处理
       if(G.mode.includes('ai') && user.id === 'p2'){
         user.trapNumber = Math.floor(Math.random() * (G.high - G.low + 1)) + G.low;
-        messageDisplay.textContent = '🤖 AI 设置了陷阱数字';
-        G.processing = false;  // 关键修复：重置 processing
+        messageDisplay.textContent = '🤖 AI 设置了陷阱';
+        G.processing = false;
         renderSkills();
         updateTurnIndicator();
         syncIfRemote();
         return;
       }
-      // 本地/远程 Host 自己使用
       G.processing=true;
       showNumberPicker('设置陷阱数字', G.low, G.high, function(num){
         user.trapNumber = num;
@@ -1519,18 +1518,16 @@ function useSkill(skillId, playerId){
       return;
     }
     case 'insight': {
-      // AI 自动处理
       if(G.mode.includes('ai') && user.id === 'p2'){
         const num = Math.floor(Math.random() * (G.high - G.low + 1)) + G.low;
         const dist = Math.abs(G.bombNumber - num);
-        messageDisplay.textContent = '🤖 AI 洞察：数字 ' + num + ' 与炸弹距离为 ' + dist;
-        G.processing = false;  // 关键修复：重置 processing
+        messageDisplay.textContent = '🤖 AI 使用了洞察';
+        G.processing = false;
         renderSkills();
         updateTurnIndicator();
         syncIfRemote();
         return;
       }
-      // 本地/远程 Host 自己使用
       G.processing=true;
       showNumberPicker('选择数字查看与炸弹的距离', G.low, G.high, function(num){
         const dist = Math.abs(G.bombNumber - num);
@@ -1609,12 +1606,9 @@ function aiTurn(){
         );
         if(shouldUse||Math.random()<0.35){
           useSkill(skill.id,'p2');
-          // suicide 由 processGuess 接管后续流程
           if(skill.id === 'suicide'){
             return;
           }
-          // ==================== 关键修复 ====================
-          // 使用技能后重置 processing，让 aiGuess 可以正常执行
           G.processing = false;
           if(G.active && G.currentPlayer==='p2'){
             setTimeout(aiGuess, 900);
@@ -1785,6 +1779,7 @@ function showExplosion(target){
   area.appendChild(ex);
   setTimeout(()=>ex.remove(),700);
 }
+// 修改技能渲染：添加问号按钮
 function renderSkills(){
   skillsBar.innerHTML='';
   if(!G.isSkillMode || battleArea.style.display==='none'){
@@ -1798,6 +1793,8 @@ function renderSkills(){
   const isLocked=owner.lock;
   const canAct=G.active && !G.processing && owner.id===G.currentPlayer && !isLocked;
   owner.skills.forEach(skill=>{
+    const wrap=document.createElement('div');
+    wrap.className='skill-btn-wrap';
     const btn=document.createElement('button');
     btn.className='skill-btn';
     const cd=owner.cooldowns[skill.id]||0;
@@ -1809,13 +1806,23 @@ function renderSkills(){
       if(canAct) btn.classList.add('ready');
     }
     btn.addEventListener('click',function(){ useSkill(skill.id); });
-    skillsBar.appendChild(btn);
+    wrap.appendChild(btn);
+    // 问号按钮
+    const helpBtn=document.createElement('button');
+    helpBtn.className='skill-help-btn';
+    helpBtn.textContent='?';
+    helpBtn.addEventListener('click',function(e){
+      e.stopPropagation();
+      showCheatToast(skill.name+'：'+skill.desc);
+    });
+    wrap.appendChild(helpBtn);
+    skillsBar.appendChild(wrap);
   });
   renderOpponentSkills();
 }
 function renderOpponentSkills(){
   opponentSkillsBar.innerHTML='';
-  if(!G.isSkillMode || battleArea.style.display==='none' || Privacy.isLocal()){
+  if(!G.isSkillMode || battleArea.style.display==='none'){
     opponentSkillsBar.style.display='none';
     return;
   }
@@ -1824,12 +1831,22 @@ function renderOpponentSkills(){
     opponentSkillsBar.style.display='none';
     return;
   }
+  // 本地模式也显示对手技能
   opponentSkillsBar.style.display='flex';
   opp.skills.forEach(skill=>{
     const tag=document.createElement('span');
     tag.className='opp-skill-tag';
     const cd=opp.cooldowns[skill.id]||0;
     tag.textContent=opp.name+'：'+skill.name+(cd>0?' ('+cd+')':'');
+    // 问号按钮
+    const helpBtn=document.createElement('button');
+    helpBtn.className='skill-help-btn';
+    helpBtn.textContent='?';
+    helpBtn.addEventListener('click',function(e){
+      e.stopPropagation();
+      showCheatToast(skill.name+'：'+skill.desc);
+    });
+    tag.appendChild(helpBtn);
     opponentSkillsBar.appendChild(tag);
   });
 }
