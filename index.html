@@ -1210,6 +1210,8 @@ function startNewRound(){
         p.shield=0; p.reflect=0; p.lifesteal=false; p.lifestealAmount=1; p.empower=0;
         p.doubleDamage=null; p.allin=false; p.allinMultiplier=null; p.bombletDamage=null; p.dormantBonus=false;
         p.trappedNumber=null; p.web=false; p.dormant=false; p.disguise=false; p.disguiseNumber=null; p.volley=0;
+        // 修复：重生状态回合结束清除，避免跨回合永久有效
+        p.rebirth = false;
     });
     updateRange(); updateInputDisplay();
     messageDisplay.textContent='💥 炸弹重置！第 '+G.roundCount+' 轮';
@@ -2393,7 +2395,7 @@ function aiTurn(){
     setKeypadEnabled(false);
     messageDisplay.textContent='🤖 AI思考中...';
     const ai=getPlayer('p2'), human=getPlayer('p1');
-    if(G.isSkillMode && ai.skills.length>0 && !ai.lock){
+    if(G.isSkillMode && ai.skills.length>0){
         let chosenSkill = null;
         let bestScore = -Infinity;
         for(const skill of ai.skills){
