@@ -163,6 +163,17 @@
         .qc-btn { padding:4px 10px; border:1px solid rgba(255,255,255,0.25); border-radius:12px; background:rgba(255,255,255,0.06); color:#ccc; font-size:0.65rem; font-weight:700; cursor:pointer; min-height:30px; }
         .qc-btn:active { transform:scale(0.9); background:rgba(0,240,255,0.15); color:var(--neon); }
         @keyframes talkPop { from { transform:translateX(-50%) scale(0.7); opacity:0; } to { transform:translateX(-50%) scale(1); opacity:1; } }
+        /* ========== 管理员调试 ========== */
+        #admin-debug-btn { position:fixed; right:8px; bottom:8px; z-index:4000; background:rgba(0,240,255,0.12); border:1px solid var(--neon); color:var(--neon); padding:5px 9px; border-radius:10px; font-size:0.85rem; cursor:pointer; display:none; }
+        #admin-debug-btn:active { transform:scale(0.92); }
+        #admin-debug-panel { position:fixed; left:50%; top:6%; transform:translateX(-50%); width:94%; max-width:490px; height:74%; background:#10101c; border:1px solid var(--neon); border-radius:12px; z-index:4600; display:none; flex-direction:column; box-shadow:0 8px 30px rgba(0,0,0,0.75); overflow:hidden; }
+        #admin-debug-header { padding:8px 12px; font-weight:700; font-size:0.8rem; cursor:move; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.15); background:rgba(0,240,255,0.07); touch-action:none; }
+        #admin-debug-close { cursor:pointer; padding:2px 8px; border:1px solid rgba(255,255,255,0.3); border-radius:6px; }
+        #admin-debug-state { font-size:0.6rem; color:#8ff; padding:4px 10px; border-bottom:1px solid rgba(255,255,255,0.1); user-select:text; -webkit-user-select:text; word-break:break-all; }
+        #admin-log-text { flex:1; background:#05050a; color:#9fe; font-size:0.62rem; font-family:Consolas,monospace; border:none; outline:none; padding:6px; resize:none; user-select:text !important; -webkit-user-select:text !important; line-height:1.5; }
+        #admin-debug-actions { display:flex; gap:6px; padding:6px; border-top:1px solid rgba(255,255,255,0.1); }
+        #admin-debug-actions button { flex:1; padding:7px 2px; font-size:0.68rem; border-radius:8px; border:1px solid rgba(255,255,255,0.3); background:rgba(255,255,255,0.08); color:#fff; cursor:pointer; }
+        #admin-debug-actions button:active { transform:scale(0.95); }
     </style>
 </head>
 <body>
@@ -209,6 +220,11 @@
         <button class="btn" id="settings-save-btn">💾 保存</button>
         <button class="btn secondary" id="settings-back-btn">返回</button>
         <button class="btn secondary" id="settings-clear-cache-btn" style="border-color:rgba(255,80,80,0.5);color:#ff6666;">🗑️ 清除缓存并刷新</button>
+        <div class="setting-row" style="margin-top:10px;">
+            <label>管理员密码：</label><input type="password" id="admin-pass-input" placeholder="输入密码开启调试" style="width:150px;">
+            <button class="ai-level-btn" id="admin-unlock-btn">开启</button>
+        </div>
+        <div style="font-size:0.6rem;color:#8ff;" id="admin-status"></div>
         <div style="font-size:0.6rem;color:#666;margin-top:4px;" id="version-display"></div>
         <div style="font-size:0.6rem;color:#666;">遇到卡死/异常时先点上面按钮，强制加载最新代码</div>
     </div>
@@ -442,6 +458,17 @@
     <div id="cheat-toast"></div>
     <div id="ai-talk"></div>
     <div id="player-talk"></div>
+    <div id="admin-debug-btn">🛠️</div>
+    <div id="admin-debug-panel">
+        <div id="admin-debug-header"><span>🛠️ 调试日志（可拖动）</span><span id="admin-debug-close">✖</span></div>
+        <div id="admin-debug-state"></div>
+        <textarea id="admin-log-text" readonly></textarea>
+        <div id="admin-debug-actions">
+            <button id="admin-copy-btn">📋 复制全部</button>
+            <button id="admin-refresh-btn">🔄 刷新</button>
+            <button id="admin-clear-btn">🗑️ 清空</button>
+        </div>
+    </div>
 </div>
 
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -584,6 +611,7 @@ function startAiWatchdog(){
         G.aiTurnToken=(G.aiTurnToken||0)+1;
         G.processing=false;
         aiMarkProgress();
+        dlog('WATCHDOG','AI停滞超10s，强制重启回合 新token='+G.aiTurnToken);
         if(G.mode==='tutorial') tutorialAI(); else aiPlayNormal();
     }, 2000);
 }
@@ -741,7 +769,123 @@ function showSettings(){
     $('set-min-input').value=s.minVal; $('set-max-input').value=s.maxVal;
     $('set-hp-input').value=s.hp; $('set-skill-input').value=s.skillCount;
     applyTheme(s.theme);
+    updateAdminUI();
 }
+
+// ========== 管理员模式 / 调试日志系统 ==========
+const ADMIN_PASSWORD = 'admin666'; // 管理员密码，可自行修改
+let adminMode = false;
+try { adminMode = localStorage.getItem('bomb_admin')==='1'; } catch(e) {}
+const DBG_LOGS = [];
+const DBG_T0 = Date.now();
+function dlog(cat, msg){
+    try{
+        const t = ((Date.now()-DBG_T0)/1000).toFixed(1);
+        DBG_LOGS.push('['+t+'s]['+cat+'] '+msg);
+        if(DBG_LOGS.length>3000) DBG_LOGS.splice(0, DBG_LOGS.length-3000);
+    }catch(e){}
+}
+window.addEventListener('error', function(e){ dlog('ERROR', (e.message||'?')+' @行'+(e.lineno||'?')); });
+window.addEventListener('unhandledrejection', function(e){ dlog('REJECT', String(e.reason||'?')); });
+
+function debugSnapshot(){
+    return 'turn='+G.currentPlayer+' | processing='+G.processing+' | active='+G.active
+        +' | token='+G.aiTurnToken+' | round='+G.roundCount+' | range='+G.low+'~'+G.high
+        +' | bomb='+G.bombNumber+' | p1hp='+(G.players.p1&&G.players.p1.hp)+' | p2hp='+(G.players.p2&&G.players.p2.hp)
+        +' | 看门狗='+(aiWatchdogInterval?'运行中':'已停止')+' | AI停滞='+((Date.now()-aiLastProgress)/1000).toFixed(1)+'s'
+        +' | msg='+(messageDisplay?messageDisplay.textContent:'');
+}
+function updateAdminBtnVisibility(){
+    const btn = $('admin-debug-btn');
+    if(!btn) return;
+    const inBattle = battleArea.style.display && battleArea.style.display!=='none';
+    btn.style.display = (adminMode && inBattle) ? 'block' : 'none';
+}
+function updateAdminUI(){
+    const st = $('admin-status'), btn = $('admin-unlock-btn'), inp = $('admin-pass-input');
+    if(st) st.textContent = adminMode ? '🛠️ 管理员模式已开启（对局中右下角出现调试按钮）' : '';
+    if(btn) btn.textContent = adminMode ? '关闭' : '开启';
+    if(inp){ inp.style.display = adminMode ? 'none' : ''; inp.value=''; }
+    updateAdminBtnVisibility();
+}
+$('admin-unlock-btn').addEventListener('click', function(){
+    if(adminMode){
+        adminMode=false;
+        try{ localStorage.removeItem('bomb_admin'); }catch(e){}
+        dlog('ADMIN','管理员模式关闭');
+        updateAdminUI();
+        showCheatToast('管理员模式已关闭');
+        return;
+    }
+    const v = $('admin-pass-input').value.trim();
+    if(v===ADMIN_PASSWORD){
+        adminMode=true;
+        try{ localStorage.setItem('bomb_admin','1'); }catch(e){}
+        dlog('ADMIN','管理员模式开启');
+        updateAdminUI();
+        showCheatToast('🛠️ 管理员模式已开启');
+    } else {
+        showCheatToast('❌ 密码错误');
+    }
+});
+
+// ---- 调试悬浮窗 ----
+let adminLogTimer = null;
+function refreshAdminLogs(){
+    const st = $('admin-debug-state'), ta = $('admin-log-text');
+    if(!st||!ta) return;
+    st.textContent = debugSnapshot();
+    const atBottom = ta.scrollTop + ta.clientHeight >= ta.scrollHeight - 30;
+    ta.value = DBG_LOGS.join('\n');
+    if(atBottom) ta.scrollTop = ta.scrollHeight;
+}
+function startAdminLogTimer(){ stopAdminLogTimer(); adminLogTimer = setInterval(refreshAdminLogs, 1000); }
+function stopAdminLogTimer(){ if(adminLogTimer){ clearInterval(adminLogTimer); adminLogTimer=null; } }
+$('admin-debug-btn').addEventListener('click', function(){
+    const p = $('admin-debug-panel');
+    const opening = p.style.display!=='flex';
+    p.style.display = opening ? 'flex' : 'none';
+    if(opening){ refreshAdminLogs(); startAdminLogTimer(); } else stopAdminLogTimer();
+});
+$('admin-debug-close').addEventListener('click', function(){
+    $('admin-debug-panel').style.display='none';
+    stopAdminLogTimer();
+});
+$('admin-refresh-btn').addEventListener('click', refreshAdminLogs);
+$('admin-clear-btn').addEventListener('click', function(){ DBG_LOGS.length=0; dlog('ADMIN','日志已清空'); refreshAdminLogs(); });
+$('admin-copy-btn').addEventListener('click', function(){
+    refreshAdminLogs();
+    const ta = $('admin-log-text');
+    ta.focus(); ta.select();
+    const done = function(){ showCheatToast('📋 已复制 '+DBG_LOGS.length+' 条日志'); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(ta.value).then(done, function(){
+            try{ document.execCommand('copy'); done(); }catch(e){ showCheatToast('复制失败，请在文本框内手动全选复制'); }
+        });
+    } else {
+        try{ document.execCommand('copy'); done(); }catch(e){ showCheatToast('复制失败，请在文本框内手动全选复制'); }
+    }
+});
+// 悬浮窗拖动
+(function(){
+    const panel = $('admin-debug-panel'), header = $('admin-debug-header');
+    let dragging=false, offX=0, offY=0;
+    header.addEventListener('pointerdown', function(e){
+        if(e.target.id==='admin-debug-close') return;
+        dragging=true;
+        const r = panel.getBoundingClientRect();
+        offX = e.clientX - r.left; offY = e.clientY - r.top;
+        panel.style.left = r.left+'px'; panel.style.top = r.top+'px'; panel.style.transform = 'none';
+        e.preventDefault();
+    });
+    window.addEventListener('pointermove', function(e){
+        if(!dragging) return;
+        panel.style.left = Math.max(0, Math.min(window.innerWidth-60, e.clientX-offX))+'px';
+        panel.style.top = Math.max(0, Math.min(window.innerHeight-60, e.clientY-offY))+'px';
+    });
+    window.addEventListener('pointerup', function(){ dragging=false; });
+})();
+updateAdminUI();
 
 // ========== 工具函数 ==========
 function getPlayer(id){ return G.players[id]; }
@@ -1486,6 +1630,7 @@ function startNewRound(){
         G.currentPlayer = 'p1'; // 玩家先手
     }
     updateRange(); updateInputDisplay();
+    dlog('ROUND','第 '+G.roundCount+' 轮开始 bomb='+G.bombNumber+' 先手='+G.currentPlayer);
     messageDisplay.textContent='💥 炸弹重置！第 '+G.roundCount+' 轮';
     renderSkills();
     updateTurnIndicator();
@@ -1560,6 +1705,7 @@ function endGame(){
 }
 
 function initGame(){
+    dlog('GAME','开局 mode='+G.mode+' aiLevel='+G.aiLevel+' skillCount='+G.skillCount+' range='+G.minVal+'~'+G.maxVal);
     resetGameState();
     if(G.mode.includes('remote')&&!G.isHost){
         showBattleArea();
@@ -1933,8 +2079,9 @@ function showSkillSelectWithOptions(forPlayerId, optionIds, skillCount){
 
 // ========== 核心游戏逻辑：猜测处理 ==========
 function processGuess(guess, isSkillAttack, guesserId){
-    if(!G.active||G.processing) return;
+    if(!G.active||G.processing){ dlog('GUESS','被守卫拦截 guess='+guess+' active='+G.active+' processing='+G.processing); return; }
     aiMarkProgress();
+    dlog('GUESS', (guesserId||G.currentPlayer)+' 猜 '+guess+(isSkillAttack?'(技能攻击)':''));
     const guesser=guesserId?getPlayer(guesserId):getCurrentPlayer();
     const defender=getOpponentPlayer(guesser.id);
     if(!isSkillAttack){
@@ -2320,6 +2467,7 @@ function switchTurn(){
     function doSwitch(){
         if(opponent.skipNext){
             opponent.skipNext=false;
+            dlog('TURN', current.id+' 回合结束，'+opponent.id+' 被暂停跳过');
             messageDisplay.textContent='🕐 '+opponent.name+' 被暂停，跳过回合！';
             G.processing=false;
             G.playerInput=''; updateInputDisplay();
@@ -2331,6 +2479,7 @@ function switchTurn(){
         }
         G.currentPlayer=opponent.id;
         G.processing=false;
+        dlog('TURN', current.id+' → '+opponent.id);
         // 禁猜只约束对手的一个行动回合：轮到设置者的下个回合开始时失效
         opponent.forbidNumber=null;
         if(G.tideShrinkNext){
@@ -2353,7 +2502,7 @@ function switchTurn(){
 
 // ========== 技能使用 ==========
 function useSkill(skillId, playerId, ignoreChecks, copyDepth){
-    if(!G.active||G.processing) return;
+    if(!G.active||G.processing){ dlog('SKILL','被守卫拦截 '+skillId+' active='+G.active+' processing='+G.processing); return; }
     copyDepth = copyDepth || 0;
     if(copyDepth > 3) return;
 
@@ -2361,6 +2510,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
     if(user.id!==G.currentPlayer) return;
     const skill=getSkillById(skillId);
     if(!skill) return;
+    dlog('SKILL', user.id+' 使用 '+skillId);
 
     if(!ignoreChecks){
         if(user.lockedSkill === skillId || user.secondLockedSkill === skillId){ messageDisplay.textContent='🔒 该技能已被封锁！'; return; }
@@ -3450,6 +3600,7 @@ function aiPlayNormal(){
     messageDisplay.textContent='🤖 AI思考中...';
     const ai=getPlayer('p2'), human=getPlayer('p1');
     const plan = aiPlanSkills(ai, human);
+    dlog('AI','回合开始 token='+token+' plan=['+plan.join(',')+'] range='+G.low+'~'+G.high+' hp='+ai.hp+'/'+human.hp);
     // 赛前垃圾话/鼓励（怒气越高话越多）
     if(G.mode.includes('ai')){
         const aggroTalk = Math.min(0.25, (G.aiAggro||0)*0.05);
@@ -3465,23 +3616,26 @@ function aiPlayNormal(){
     let topUpDone = false;
     const used = {};
     const step = function(){
-        if(!G.active || G.currentPlayer!=='p2' || token!==G.aiTurnToken) return;
+        if(!G.active || G.currentPlayer!=='p2' || token!==G.aiTurnToken){ dlog('AI','step中止 active='+G.active+' turn='+G.currentPlayer+' token='+token+'/'+G.aiTurnToken); return; }
         aiMarkProgress();
         if(i>=plan.length && !topUpDone){
             topUpDone = true;
             // 信息技能已放完，候选集已收敛——动态追加斩杀/确认技能（真正的“看着线索打”）
             const extra = aiTopUp(ai, human, used);
-            if(extra.length) plan.push.apply(plan, extra);
+            if(extra.length){ plan.push.apply(plan, extra); dlog('AI','追加技能 ['+extra.join(',')+']'); }
         }
-        if(i>=plan.length){ G.processing=false; setTimeout(function(){ if(token===G.aiTurnToken) aiGuess(token); }, 500); return; } // 必须复位processing，否则aiGuess的守卫会拒绝执行导致卡死
+        if(i>=plan.length){ G.processing=false; dlog('AI','技能放完，500ms后猜数'); setTimeout(function(){ if(token===G.aiTurnToken) aiGuess(token); }, 500); return; } // 必须复位processing，否则aiGuess的守卫会拒绝执行导致卡死
         const id = plan[i++];
         // 放之前再校验一次（前面的技能可能改变了状态），同一技能每回合只放一次
         const usable = !used[id] && ai.skills.some(s=>s.id===id) && (ai.cooldowns[id]||0)<=0 && ai.lockedSkill!==id && ai.secondLockedSkill!==id;
         if(usable){
             used[id]=true;
             G.processing=false;
+            dlog('AI','放技能 '+id+' ('+i+'/'+plan.length+')');
             useSkill(id, 'p2', true); // ignoreChecks：已预检，且让选数类技能走自动选数
-            G.processing=true;
+            // skip/终局类技能可能已换边或结束游戏，此时绝不能恢复processing（否则人类回合被锁死）
+            if(G.active && G.currentPlayer==='p2') G.processing=true;
+            else { dlog('AI','技能改变了回合/游戏状态 processing保持false turn='+G.currentPlayer); return; }
         }
         setTimeout(step, 850);
     };
@@ -3489,8 +3643,8 @@ function aiPlayNormal(){
 }
 
 function aiGuess(token){
-    if(token!==undefined && token!==G.aiTurnToken) return; // 旧执行链的残留调用直接丢弃
-    if(!G.active||G.processing||G.currentPlayer!=='p2') return;
+    if(token!==undefined && token!==G.aiTurnToken){ dlog('AI','aiGuess被令牌拦截 token='+token+'/'+G.aiTurnToken); return; } // 旧执行链的残留调用直接丢弃
+    if(!G.active||G.processing||G.currentPlayer!=='p2'){ dlog('AI','aiGuess被守卫拦截 active='+G.active+' processing='+G.processing+' turn='+G.currentPlayer); return; }
     if(G.mode!=='tutorial' && !G.mode.includes('ai')) return;
     aiMarkProgress();
     const ai=getPlayer('p2');
@@ -3545,6 +3699,7 @@ function aiGuess(token){
     }
     G.playerInput=String(guess);
     updateInputDisplay();
+    dlog('AI','猜 '+guess+' range='+G.low+'~'+G.high+(usedClues?'(线索)' : '(盲猜)'));
     messageDisplay.textContent='🤖 AI 输入了 '+guess;
     setTimeout(function(){
         if(!G.active) return;
@@ -3902,6 +4057,8 @@ function renderOpponentSkills(){
 function hideAll(){
     [mainMenu,setupOverlay,tutorialMenu,remoteLobby,remoteWaiting,remoteSetupOverlay,$('settings-overlay')].forEach(el=>el.classList.add('hidden'));
     battleArea.style.display='none';
+    if($('admin-debug-btn')) $('admin-debug-btn').style.display='none';
+    if($('admin-debug-panel')){ $('admin-debug-panel').style.display='none'; stopAdminLogTimer(); }
     skillsBar.style.display='none';
     opponentSkillsBar.style.display='none';
     surrenderBtn.style.display='none';
@@ -4010,6 +4167,7 @@ function showBattleArea(){
     hideAll();
     if(G.mode.includes('remote') && G.conn && G.conn.open) startPing();
     battleArea.style.display='flex';
+    updateAdminBtnVisibility();
     surrenderBtn.style.display='block';
     $('quick-chat-bar').style.display = (G.mode.includes('ai')||G.mode.includes('remote')) ? 'flex' : 'none';
     if(G.isSkillMode){ skillsBar.style.display='flex'; renderSkills(); }
@@ -4240,7 +4398,7 @@ $('settings-save-btn').addEventListener('click', function(){
     showMainMenu();
 });
 // 清除本页所有本地缓存并强制刷新（解决浏览器缓存旧版代码导致的卡死）
-const GAME_VERSION = 'v2026.09.09-watchdog';
+const GAME_VERSION = 'v2026.09.09-admin';
 $('settings-clear-cache-btn').addEventListener('click', function(){
     if(!confirm('将清除本页面的本地缓存（设置/战绩/临时数据）并强制刷新加载最新代码。\n确定继续吗？')) return;
     try { localStorage.clear(); } catch(e) {}
