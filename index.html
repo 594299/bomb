@@ -163,6 +163,53 @@
         .qc-btn { padding:4px 10px; border:1px solid rgba(255,255,255,0.25); border-radius:12px; background:rgba(255,255,255,0.06); color:#ccc; font-size:0.65rem; font-weight:700; cursor:pointer; min-height:30px; }
         .qc-btn:active { transform:scale(0.9); background:rgba(0,240,255,0.15); color:var(--neon); }
         @keyframes talkPop { from { transform:translateX(-50%) scale(0.7); opacity:0; } to { transform:translateX(-50%) scale(1); opacity:1; } }
+        /* ========== 浅色主题（paper/sky/peach 共享覆盖 + 各自配色） ========== */
+        body[data-theme='paper'] { --neon:#c26a00; --blue:#2563eb; --red:#dc2626; --green:#059669; --orange:#ea580c; color-scheme:light; background:#f5efe0; }
+        body[data-theme='paper'] #game-container { background:linear-gradient(180deg,#fdf8ec,#f4ecd7); color:#3c3a32; }
+        body[data-theme='sky'] { --neon:#0284c7; --blue:#2563eb; --red:#dc2626; --green:#059669; --orange:#d97706; color-scheme:light; background:#e6f3fd; }
+        body[data-theme='sky'] #game-container { background:linear-gradient(180deg,#f2faff,#e2f0fc); color:#2e3a48; }
+        body[data-theme='peach'] { --neon:#e0507a; --blue:#7c6ff0; --red:#dc2626; --green:#0d9e6e; --orange:#ea580c; color-scheme:light; background:#fcefe9; }
+        body[data-theme='peach'] #game-container { background:linear-gradient(180deg,#fff6f2,#fbe8e2); color:#4a3436; }
+        body[data-theme='paper'] .overlay, body[data-theme='sky'] .overlay, body[data-theme='peach'] .overlay { background:rgba(255,253,247,0.97); color:#333; }
+        body[data-theme='paper'] #skill-select-overlay, body[data-theme='sky'] #skill-select-overlay, body[data-theme='peach'] #skill-select-overlay { background:rgba(255,253,247,0.97); color:#333; }
+        body[data-theme='paper'] #header, body[data-theme='sky'] #header, body[data-theme='peach'] #header { background:rgba(0,0,0,0.06); }
+        body[data-theme='paper'] #game-container input, body[data-theme='paper'] #game-container textarea,
+        body[data-theme='sky'] #game-container input, body[data-theme='sky'] #game-container textarea,
+        body[data-theme='peach'] #game-container input, body[data-theme='peach'] #game-container textarea { color:#333; background:rgba(0,0,0,0.05); border-color:rgba(0,0,0,0.25); }
+        body[data-theme='paper'] #game-container input::placeholder, body[data-theme='sky'] #game-container input::placeholder, body[data-theme='peach'] #game-container input::placeholder { color:#999; }
+        body[data-theme='paper'] .key-btn, body[data-theme='sky'] .key-btn, body[data-theme='peach'] .key-btn { background:rgba(0,0,0,0.05); border-color:rgba(0,0,0,0.2); color:#333; }
+        body[data-theme='paper'] .skill-btn, body[data-theme='sky'] .skill-btn, body[data-theme='peach'] .skill-btn { background:rgba(0,0,0,0.05); border-color:rgba(0,0,0,0.25); color:#666; }
+        body[data-theme='paper'] #message-display, body[data-theme='sky'] #message-display, body[data-theme='peach'] #message-display { color:#555; }
+        body[data-theme='paper'] #history-container, body[data-theme='sky'] #history-container, body[data-theme='peach'] #history-container { color:#999; }
+        body[data-theme='paper'] .setting-row label, body[data-theme='sky'] .setting-row label, body[data-theme='peach'] .setting-row label { color:#555; }
+        body[data-theme='paper'] .waiting-text, body[data-theme='sky'] .waiting-text, body[data-theme='peach'] .waiting-text { color:#666; }
+        body[data-theme='paper'] .ai-level-btn, body[data-theme='sky'] .ai-level-btn, body[data-theme='peach'] .ai-level-btn { background:rgba(0,0,0,0.05); border-color:rgba(0,0,0,0.2); color:#555; }
+        body[data-theme='paper'] .player-area .name-tag, body[data-theme='sky'] .player-area .name-tag, body[data-theme='peach'] .player-area .name-tag { background:rgba(255,255,255,0.65); color:#444; }
+        body[data-theme='paper'] #fullscreen-btn, body[data-theme='paper'] #chat-toggle-btn,
+        body[data-theme='sky'] #fullscreen-btn, body[data-theme='sky'] #chat-toggle-btn,
+        body[data-theme='peach'] #fullscreen-btn, body[data-theme='peach'] #chat-toggle-btn { border-color:rgba(0,0,0,0.25); color:#555; }
+        body[data-theme='paper'] #input-display, body[data-theme='sky'] #input-display, body[data-theme='peach'] #input-display { background:rgba(0,0,0,0.06); }
+        body[data-theme='paper'] #turn-indicator, body[data-theme='sky'] #turn-indicator, body[data-theme='peach'] #turn-indicator { background:rgba(0,0,0,0.06); }
+        body[data-theme='paper'] #room-info, body[data-theme='sky'] #room-info, body[data-theme='peach'] #room-info { background:rgba(0,0,0,0.08); color:#555; }
+        body[data-theme='paper'] .skill-select-card, body[data-theme='sky'] .skill-select-card, body[data-theme='peach'] .skill-select-card { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.2); }
+        body[data-theme='paper'] .skill-select-card .skill-desc, body[data-theme='sky'] .skill-select-card .skill-desc, body[data-theme='peach'] .skill-select-card .skill-desc { color:#777; }
+        body[data-theme='paper'] .chat-container, body[data-theme='sky'] .chat-container, body[data-theme='peach'] .chat-container { background:#fdfbf5; color:#333; }
+        body[data-theme='paper'] .qc-btn, body[data-theme='sky'] .qc-btn, body[data-theme='peach'] .qc-btn { background:rgba(0,0,0,0.05); border-color:rgba(0,0,0,0.2); color:#555; }
+        body[data-theme='paper'] .btn:disabled, body[data-theme='sky'] .btn:disabled, body[data-theme='peach'] .btn:disabled { opacity:0.4; }
+        /* ========== 剧情聊天 ========== */
+        #ai-chat-affinity { padding:6px 12px; font-size:0.7rem; border-bottom:1px solid rgba(255,255,255,0.1); color:#ccc; }
+        #ai-chat-affinity .aff-bar { height:6px; background:rgba(255,255,255,0.1); border-radius:3px; margin-top:4px; overflow:hidden; }
+        #ai-chat-affinity .aff-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,#666,#ff7eb9); transition:width 0.4s; }
+        #ai-chat-log { flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px; }
+        .chat-msg { max-width:85%; padding:8px 12px; border-radius:14px; font-size:0.75rem; line-height:1.5; animation:talkPop2 0.25s ease-out; }
+        .chat-msg.ai { align-self:flex-start; background:rgba(255,107,107,0.12); border:1px solid rgba(255,107,107,0.4); color:#ffd0d0; border-bottom-left-radius:4px; }
+        .chat-msg.me { align-self:flex-end; background:rgba(0,240,255,0.1); border:1px solid rgba(0,240,255,0.4); color:#c8f6ff; border-bottom-right-radius:4px; }
+        .chat-msg.sys { align-self:center; background:none; border:none; color:#888; font-size:0.65rem; }
+        @keyframes talkPop2 { from { transform:scale(0.85); opacity:0; } to { transform:scale(1); opacity:1; } }
+        #ai-chat-options { padding:10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.1); }
+        .chat-opt { padding:10px 14px; border:1px solid rgba(0,240,255,0.35); border-radius:10px; background:rgba(0,240,255,0.06); color:#aef6ff; font-size:0.75rem; cursor:pointer; text-align:left; transition:all 0.15s; }
+        .chat-opt:active { transform:scale(0.97); background:rgba(0,240,255,0.15); }
+        .chat-opt.end { border-color:rgba(255,255,255,0.2); color:#999; background:rgba(255,255,255,0.04); }
         /* ========== 管理员调试 ========== */
         #admin-debug-btn { position:fixed; right:8px; bottom:8px; z-index:4000; background:rgba(0,240,255,0.12); border:1px solid var(--neon); color:var(--neon); padding:5px 9px; border-radius:10px; font-size:0.85rem; cursor:pointer; display:none; }
         #admin-debug-btn:active { transform:scale(0.92); }
@@ -204,6 +251,9 @@
             <button class="ai-level-btn" data-theme="sunset">熔岩橙</button>
             <button class="ai-level-btn" data-theme="violet">魅紫</button>
             <button class="ai-level-btn" data-theme="gold">黑金</button>
+            <button class="ai-level-btn" data-theme="paper">纸白</button>
+            <button class="ai-level-btn" data-theme="sky">晴空</button>
+            <button class="ai-level-btn" data-theme="peach">蜜桃</button>
         </div>
         <div class="setting-row">
             <label>默认名称：</label><input type="text" id="set-name-input" maxlength="10" placeholder="开房/进房自动填入" style="width:160px;">
@@ -249,6 +299,17 @@
             <button class="ai-level-btn" data-level="2">中等</button>
             <button class="ai-level-btn" data-level="3">困难</button>
             <button class="ai-level-btn" data-level="4">大师</button>
+        </div>
+        <div class="setting-row" id="ai-persona-row" style="display:none;">
+            <label>AI性格：</label>
+            <button class="ai-level-btn active" data-persona="random">🎲 随机</button>
+            <button class="ai-level-btn" data-persona="normal">🙂 普通</button>
+            <button class="ai-level-btn" data-persona="tsundere">😳 傲娇</button>
+            <button class="ai-level-btn" data-persona="chuuni">🐉 中二</button>
+            <button class="ai-level-btn" data-persona="schemer">😏 腹黑</button>
+            <button class="ai-level-btn" data-persona="kid">🧒 小孩</button>
+            <button class="ai-level-btn" data-persona="cold">🤖 高冷</button>
+            <button class="ai-level-btn" data-persona="hotblood">🔥 热血</button>
         </div>
         <div class="setting-row">
             <label>技能数量（0-3）：</label><input type="number" id="skill-count-input" value="1" min="0" max="3">
@@ -327,6 +388,7 @@
             <button class="qc-btn" data-qc="praise">👏 夸AI</button>
             <button class="qc-btn" data-qc="beg">🙏 求饶</button>
             <button class="qc-btn" data-qc="chat">💬 闲聊</button>
+            <button class="qc-btn" id="story-chat-btn" style="border-color:var(--neon);color:var(--neon);">💞 深聊</button>
         </div>
         <div id="input-keypad-container">
             <div id="input-display" class="empty">等待输入</div>
@@ -458,6 +520,17 @@
     <div id="cheat-toast"></div>
     <div id="ai-talk"></div>
     <div id="player-talk"></div>
+    <div id="ai-chat-overlay" class="overlay hidden" style="z-index:3300;">
+        <div class="chat-container">
+            <div class="chat-header">
+                <span>💬 和 AI 聊天</span>
+                <button class="chat-close-btn" id="ai-chat-close">✕</button>
+            </div>
+            <div id="ai-chat-affinity"></div>
+            <div id="ai-chat-log"></div>
+            <div id="ai-chat-options"></div>
+        </div>
+    </div>
     <div id="admin-debug-btn">🛠️</div>
     <div id="admin-debug-panel">
         <div id="admin-debug-header"><span>🛠️ 调试日志（可拖动）</span><span id="admin-debug-close">✖</span></div>
@@ -494,54 +567,54 @@ const ICE_SERVERS = [
 
 // ========== 技能定义（48个独立技能） ==========
 const ALL_SKILLS = [
-    { id:'detect', name:'📡 探测', desc:'显示炸弹是奇数还是偶数。例：炸弹42 → 显示“偶数”', cooldown:2 },
-    { id:'peek', name:'🔍 透视', desc:'显示炸弹的个位数字。例：炸弹42 → 显示“个位是2”', cooldown:2 },
-    { id:'thermometer', name:'🌡️ 温度计', desc:'以1-10显示距离，10=很近，1=很远。例：范围1-100，炸弹42，显示约8级', cooldown:2 },
-    { id:'verifier', name:'🎯 验证器', desc:'选择一个数字，只告诉你“中了”还是“没中”。例：输入42，若炸弹是42显示“中了”，否则“没中”', cooldown:2 },
-    { id:'scout', name:'📡 侦察', desc:'查看对手当前拥有的所有技能及其冷却状态。例：显示对手有“治疗(冷却2)”、“探测(可用)”', cooldown:2 },
-    { id:'digitsum', name:'➕ 数字和', desc:'显示炸弹各位数字之和。例：炸弹42 → “数字和：6”', cooldown:2 },
-    { id:'precognition', name:'🔮 预知', desc:'显示炸弹数字的十位数（个位数则显示0）。例：炸弹42 → “十位是4”', cooldown:2 },
-    { id:'binary', name:'✂️ 二分', desc:'将范围按中点分成两半，保留炸弹所在的一半。例：范围1-100，炸弹42≤50 → 新范围1-50', cooldown:3 },
-    { id:'rewind', name:'⏪ 回退', desc:'将范围恢复到你上一次猜测前的状态。例：你猜了60后范围变成1-59，使用回退恢复成1-100', cooldown:2 },
-    { id:'shuffle', name:'🔀 洗牌', desc:'在当前范围内完全随机重置炸弹位置。例：范围1-50，炸弹重新随机生成一个1-50内的数字', cooldown:3 },
-    { id:'move', name:'🚚 移动', desc:'炸弹随机向上或向下移动5个数字。例：炸弹在42，使用后可能变成37或47', cooldown:2 },
-    { id:'blackhole', name:'🕳️ 黑洞', desc:'选择一个数字，范围两端各向该数字靠拢1。例：范围1-100，选择50，新范围变为2-99', cooldown:2 },
-    { id:'tide', name:'🌊 潮汐', desc:'本回合范围扩大5，下回合自动缩小5。例：范围1-100使用后变为1-105，下回合恢复1-100', cooldown:3 },
-    { id:'wormhole', name:'🌀 虫洞', desc:'将炸弹数字与范围另一端的对称位置交换（即 low + high - 当前炸弹）。例：范围1-100，炸弹42，对称位置是59，使用后炸弹变为59', cooldown:3 },
-    { id:'double', name:'⚡ 双倍', desc:'你下一次猜中炸弹伤害×2，多次使用倍率累加。例：连续用两次，原本1伤害变成4伤害', cooldown:3 },
-    { id:'rampage', name:'💥 翻倍', desc:'本回合内你的炸弹伤害×2，可与其他增伤相乘，多次使用累乘。例：已有双倍（×2）和孤注一掷（×3），总倍率=(2+3)×2=10倍', cooldown:4 },
+    { id:'detect', name:'📡 探测', desc:'显示炸弹是奇数还是偶数。免费砍掉一半候选，开局最好用', cooldown:2 },
+    { id:'peek', name:'🔍 透视', desc:'显示炸弹的个位数。例：炸弹42 → “个位是2”', cooldown:2 },
+    { id:'thermometer', name:'🌡️ 温度计', desc:'告诉你猜的位置离炸弹有多近（1~10级，10=贴脸）。免费的“冷热”提示', cooldown:2 },
+    { id:'verifier', name:'🎯 验证器', desc:'悄悄验证一个数：只告诉你“中了/没中”，对手看不到结果', cooldown:2 },
+    { id:'scout', name:'📡 侦察', desc:'刺探对手秘密：陷阱/禁猜的具体数字、伪装真身、AI的推理进度；对手没秘密就让它1个技能冷却+1', cooldown:3 },
+    { id:'digitsum', name:'➕ 数字和', desc:'显示炸弹各位数字加起来是多少。例：42 → 4+2=6', cooldown:2 },
+    { id:'precognition', name:'🔮 预知', desc:'显示炸弹的十位数（个位数就显示0）。例：42→4，7→0', cooldown:2 },
+    { id:'binary', name:'✂️ 二分', desc:'范围直接砍一半，保留炸弹那半。最强缩圈技。例：1-100炸弹42→1-50', cooldown:3 },
+    { id:'rewind', name:'⏪ 回退', desc:'范围恢复到“你”上一次猜测之前。猜后悔了、被带偏了就用它', cooldown:2 },
+    { id:'shuffle', name:'🔀 洗牌', desc:'炸弹在当前范围内重新随机。对手快猜中时用它掀桌', cooldown:3 },
+    { id:'move', name:'🚚 移动', desc:'炸弹随机向上或向下挪5格。对手快锁定时给它挪窝', cooldown:2 },
+    { id:'blackhole', name:'🕳️ 黑洞', desc:'选一个数字，范围两端各向它收紧2格。积少成多的缩圈。例：1-100选50→3-98', cooldown:2 },
+    { id:'tide', name:'🌊 潮汐', desc:'本轮范围扩大5格，下一轮自动缩回。用来冲淡对手刚拿到的线索', cooldown:3 },
+    { id:'wormhole', name:'🌀 虫洞', desc:'炸弹跳到范围的对称位置。例：1-100里的42 → 59', cooldown:3 },
+    { id:'double', name:'⚡ 双倍', desc:'你下一次猜中炸弹伤害×2，多次使用倍率累加，猜错不失效。例：连续用两次，原本1伤害变成4伤害', cooldown:3 },
+    { id:'rampage', name:'💥 翻倍', desc:'你下一次猜中炸弹伤害×2，可与其他增伤相乘，多次使用累乘，猜错不失效。例：已有双倍(+2)和孤注一掷(+3)，猜中伤害=(1+2+3)×2=12', cooldown:4 },
     { id:'pierce', name:'🗡️ 穿透', desc:'本回合内你的炸弹伤害无视对手护盾。例：对手有2层护盾，你的3点伤害全部直接扣血', cooldown:3 },
-    { id:'lifesteal', name:'🌙 吸血', desc:'你下一次猜中炸弹时回复1点生命，多次使用回复量累加。例：用两次后猜中，一次回复2血', cooldown:3 },
-    { id:'anger', name:'💢 愤怒', desc:'本回合内，你每损失2点生命，炸弹伤害+1。例：你已损失4点血，伤害额外+2', cooldown:3 },
+    { id:'lifesteal', name:'🌙 吸血', desc:'你下一次猜中炸弹时回复1点生命，多次使用回复量累加，猜错不失效。例：用两次后猜中，一次回复2血', cooldown:3 },
+    { id:'anger', name:'💢 愤怒', desc:'本轮内，你每损失2点生命，炸弹伤害+1。例：你已损失4点血，伤害额外+2', cooldown:3 },
     { id:'allin', name:'🔥 孤注一掷', desc:'你下一次猜中炸弹伤害变为3倍，多次使用倍率累加；猜错自己受1点伤害。例：用两次后猜中伤害从1变为6，猜错自己-1血', cooldown:4 },
-    { id:'bomblet', name:'💣 子母弹', desc:'你下一次猜中炸弹时额外造成2点伤害，多次使用伤害累加。例：用两次后原本1伤害变成5伤害', cooldown:4 },
-    { id:'volley', name:'🔱 连击', desc:'你下一次猜中炸弹时伤害拆成3段结算（每段至少1点，赋能后5段），护盾/反射每次只挡一段，重生后剩余段继续打，专破防御流。例：总伤害3拆成1+1+1，对手1层护盾只能挡第1段', cooldown:4 },
-    { id:'dormant', name:'💤 休眠', desc:'对手下次猜中炸弹不会爆炸，之后你下次猜中伤害+2。例：对手猜中42但没炸，你下次猜中任何数伤害额外+2', cooldown:4 },
+    { id:'bomblet', name:'💣 子母弹', desc:'你下一次猜中炸弹时额外造成2点伤害，多次使用伤害累加，猜错不失效。例：用两次后原本1伤害变成5伤害', cooldown:4 },
+    { id:'volley', name:'🔱 连击', desc:'你下一次猜中炸弹时伤害拆成3段结算（每段至少1点，赋能后5段），猜错不失效；护盾/反射每次只挡一段，重生后剩余段继续打，专破防御流。例：总伤害3拆成1+1+1，对手1层护盾只能挡第1段', cooldown:4 },
+    { id:'dormant', name:'💤 休眠', desc:'设伏：对手下次猜中也不炸，之后你下次猜中伤害+2', cooldown:4 },
     { id:'shield', name:'🛡️ 护盾', desc:'获得1层护盾，每层抵挡一段伤害，多次使用层数叠加。例：叠2层后对手3段连击只能挡住前2段', cooldown:3 },
     { id:'reflect', name:'🪞 反射', desc:'获得1层反射，每层反弹一段伤害，多次使用层数叠加。例：对手对你造成2段伤害，你有2层反射可全部反弹', cooldown:4 },
     { id:'heal', name:'💊 治疗', desc:'立即回复1点生命。例：HP从2回到3', cooldown:3 },
     { id:'rebirth', name:'🕊️ 重生', desc:'死亡时以2点生命复活一次（触发后技能消失）。例：HP降到0时立刻恢复到2', cooldown:-1 },
-    { id:'speed', name:'🏃 加速', desc:'本回合内猜错后可再猜一次，多次使用续猜次数叠加。例：用两次后连错两次都能继续猜', cooldown:3 },
-    { id:'blind', name:'🙈 致盲', desc:'对手下一回合看不到范围显示。例：对手看不到“范围：1-100”，只能盲猜', cooldown:3 },
-    { id:'lock', name:'🚫 封锁', desc:'随机禁掉对手一个技能直到炸弹爆炸。例：对手有“治疗”和“探测”，可能封锁“治疗”', cooldown:3 },
-    { id:'pause', name:'🕐 暂停', desc:'对手跳过下一次行动回合。例：本来轮到对手，使用后直接跳过他的回合', cooldown:4 },
-    { id:'slow', name:'🐌 缓速', desc:'对手下次猜错时范围不会缩小。例：对手猜50错了，但范围仍保持原样', cooldown:3 },
-    { id:'freeze', name:'🧊 冰封数字', desc:'炸弹数字暂时无法被猜中（持续1回合）。例：对手猜中了炸弹数字，但不会爆炸', cooldown:4 },
-    { id:'forbid', name:'🚷 禁猜', desc:'指定一个数字，对手下一回合不能猜该数字（若猜则无效并消耗回合）。例：设置禁猜50，对手猜50时无效', cooldown:3 },
-    { id:'bet', name:'🎯 押注', desc:'押对手下次猜错：他猜错你回1血，他猜中你扣1血。例：你押注后对手猜错，你回复1血', cooldown:3 },
-    { id:'fog', name:'🌫️ 迷雾', desc:'对手下一回合看不到范围，且“大了/小了”反馈相反。例：炸弹42，对手猜30，实际是“小了”但显示“大了”', cooldown:3 },
-    { id:'disguise', name:'🎭 伪装', desc:'炸弹暂时伪装成另一个数字，对手猜中伪装不会爆炸。例：炸弹42伪装成70，对手猜70不炸，但暴露伪装', cooldown:3 },
-    { id:'lie', name:'🤥 说谎', desc:'你下一次获得的“大了/小了”反馈可能为假。例：你猜30，实际炸弹42应显示“小了”，但可能显示“大了”', cooldown:2 },
-    { id:'copy', name:'📋 复制', desc:'随机复制对手的一个技能并立即使用。例：对手有“治疗”，你复制后立刻回复1血', cooldown:5 },
-    { id:'trap', name:'🪤 陷阱', desc:'选择一个数字设为陷阱，对手猜中该数字直接爆炸。例：设置陷阱50，对手猜50时立刻受1伤害', cooldown:4 },
-    { id:'empower', name:'🌟 赋能', desc:'获得1层赋能，每层使下一个可强化的技能效果翻倍，多次使用层数叠加。例：叠2层后用"治疗"消耗1层回复2血，还剩1层', cooldown:3 },
-    { id:'web', name:'🕸️ 蛛网', desc:'炸弹周围±3的数字变成雷区，对方踩中受1点波及伤害。例：炸弹42，对手猜40（差2）也会受1伤害', cooldown:3 },
-    { id:'timerewind', name:'🕰️ 时间回溯', desc:'双方生命值回复到本回合开始时的状态。例：你本回合掉了2血，使用后恢复到回合开始的血量', cooldown:4 },
-    { id:'refresh', name:'🔄 刷新', desc:'随机选择一个你正在冷却中的技能，立即将其冷却时间清零。例：你“双倍”冷却2，使用后可能立即再次使用', cooldown:5 },
-    { id:'charge', name:'🔋 充能', desc:'使你所有正在冷却的技能冷却时间减少1回合（最低为0）。例：你有两个技能冷却2和1，使用后变为1和0', cooldown:4 },
-    { id:'skip', name:'⏭️ 跳过', desc:'主动跳过自己当前回合，让对手连续行动。跳过时你本回合已生效的防御buff（护盾、反射）保留到对手回合结束', cooldown:3 },
-    { id:'dice', name:'🎲 命运骰子', desc:'掷骰子随机获得：① 本回合伤害+3；② 本回合伤害-1；③ 立即回复1血；④ 自己受1点伤害；⑤ 无事发生', cooldown:3 },
-    { id:'gambler', name:'🃏 赌徒', desc:'使用后立即随机触发：50%概率对对手造成1点伤害，50%概率对自己造成1点伤害', cooldown:3 }
+    { id:'speed', name:'🏃 加速', desc:'本回合猜错可以再猜一次。多一次出手机会，收割残局神技', cooldown:3 },
+    { id:'blind', name:'🙈 致盲', desc:'对手下回合看不到范围，只能凭记忆瞎猜', cooldown:3 },
+    { id:'lock', name:'🚫 封锁', desc:'随机封掉对手1个技能，直到本轮炸弹爆炸', cooldown:3 },
+    { id:'pause', name:'🕐 暂停', desc:'对手跳过下一回合——你连动两回合，抢轮次神器', cooldown:4 },
+    { id:'slow', name:'🐌 缓速', desc:'对手下次猜错时范围不缩小，白猜', cooldown:3 },
+    { id:'freeze', name:'🧊 冰封数字', desc:'1回合内炸弹被冻住：对手猜中也不炸', cooldown:4 },
+    { id:'forbid', name:'🚷 禁猜', desc:'禁掉一个数，对手猜它＝白费一回合。例：禁50，对手猜50当轮作废', cooldown:3 },
+    { id:'bet', name:'🎯 押注', desc:'押对手下次猜错：他错你+1血，他中你-1血', cooldown:3 },
+    { id:'fog', name:'🌫️ 迷雾', desc:'对手下次猜时看不到范围，而且“大了/小了”反馈相反', cooldown:3 },
+    { id:'disguise', name:'🎭 伪装', desc:'炸弹伪装成另一个数：对手猜中假身不会炸，还会暴露真身', cooldown:3 },
+    { id:'lie', name:'🤥 说谎', desc:'你下次猜完，看到的“大了/小了”可能是假的（赌一把）', cooldown:2 },
+    { id:'copy', name:'📋 复制', desc:'随机偷学对手一个技能并立刻使用。对手越强它越强', cooldown:5 },
+    { id:'trap', name:'🪤 陷阱', desc:'埋一个数，对手猜中直接爆炸受1伤。埋在对手最可能猜的位置', cooldown:4 },
+    { id:'empower', name:'🌟 赋能', desc:'下一个技能效果翻倍。例：赋能+治疗=回2血，赋能+二分=连砍两刀', cooldown:3 },
+    { id:'web', name:'🕸️ 蛛网', desc:'炸弹±3格变雷区，对手踩中受1伤。例：炸弹42，对手猜40也挨炸', cooldown:3 },
+    { id:'timerewind', name:'🕰️ 时间回溯', desc:'双方血量回到本轮开始。白挨打流的后悔药', cooldown:4 },
+    { id:'refresh', name:'🔄 刷新', desc:'随机一个冷却中的技能立刻可用', cooldown:5 },
+    { id:'charge', name:'🔋 充能', desc:'所有技能的冷却-1回合', cooldown:4 },
+    { id:'skip', name:'⏭️ 跳过', desc:'主动跳过本回合（已架的盾/反射保留），引对手先出手', cooldown:3 },
+    { id:'dice', name:'🎲 命运骰子', desc:'随机一签：本回合+3伤 / -1伤 / 回1血 / 自伤1 / 无事发生', cooldown:3 },
+    { id:'gambler', name:'🃏 赌徒', desc:'抛硬币：50%对手-1血，50%自己-1血', cooldown:3 }
 ];
 
 // ========== 玩家对象工厂 ==========
@@ -787,6 +860,24 @@ function dlog(cat, msg){
 }
 window.addEventListener('error', function(e){ dlog('ERROR', (e.message||'?')+' @行'+(e.lineno||'?')); });
 window.addEventListener('unhandledrejection', function(e){ dlog('REJECT', String(e.reason||'?')); });
+// 界面主消息全部入日志（去重）：日志里能看到玩家实际看到的每句话
+(function(){
+    try{
+        let lastVal = messageDisplay.textContent || '';
+        const protoDesc = (typeof Node!=='undefined' && Object.getOwnPropertyDescriptor(Node.prototype, 'textContent'))
+            || (typeof Element!=='undefined' && Object.getOwnPropertyDescriptor(Element.prototype, 'textContent')) || null;
+        Object.defineProperty(messageDisplay, 'textContent', {
+            configurable: true,
+            get(){ return lastVal; },
+            set(v){
+                v = String(v);
+                if(v && v!==lastVal) dlog('MSG', v);
+                lastVal = v;
+                if(protoDesc && protoDesc.set) protoDesc.set.call(messageDisplay, v);
+            }
+        });
+    }catch(e){}
+})();
 
 function debugSnapshot(){
     return 'turn='+G.currentPlayer+' | processing='+G.processing+' | active='+G.active
@@ -907,6 +998,7 @@ function isMyTurn(){
 }
 function generateRoomCode(){ return Math.random().toString(36).substring(2,8).toUpperCase(); }
 function showCheatToast(msg, duration = 3000){
+    dlog('TOAST', String(msg).replace(/<[^>]*>/g,''));
     if (toastTimer) clearTimeout(toastTimer);
     cheatToast.innerHTML = msg + '<button class="toast-close">✕</button>';
     cheatToast.querySelector('.toast-close').addEventListener('click', function(){
@@ -940,8 +1032,8 @@ function canUseDisguise(){ return G.low < G.high; }
 function applyBlackhole(number){
     let newLow = G.low;
     let newHigh = G.high;
-    if(G.low < number) newLow = Math.min(G.low + 1, number);
-    if(G.high > number) newHigh = Math.max(G.high - 1, number);
+    if(G.low < number) newLow = Math.min(G.low + 2, number);
+    if(G.high > number) newHigh = Math.max(G.high - 2, number);
     if(G.bombNumber < newLow) newLow = G.bombNumber;
     if(G.bombNumber > newHigh) newHigh = G.bombNumber;
     if(newLow > newHigh) return false;
@@ -1450,6 +1542,277 @@ document.querySelectorAll('.chat-emoji').forEach(btn => {
     btn.addEventListener('click', function() { sendChatMessage(btn.dataset.emoji); });
 });
 
+// ========== 剧情聊天系统（选项分支 + 好感度 + 章节 + 多结局） ==========
+// 好感度档位：≤-40宿敌 / -40~-10冷淡 / -10~25普通 / 25~60友好 / >60亲密
+const CHAT_SAVE_KEY = 'bomb_chat_story';
+let chatSave = { aff:0, chapters:{}, endings:{} };
+try { const s = localStorage.getItem(CHAT_SAVE_KEY); if(s) chatSave = Object.assign(chatSave, JSON.parse(s)); } catch(e) {}
+function saveChat(){ try { localStorage.setItem(CHAT_SAVE_KEY, JSON.stringify(chatSave)); } catch(e) {} }
+function affTier(){
+    const a = chatSave.aff;
+    if(a<=-40) return { id:'nemesis', name:'💢 宿敌', color:'#ff5555' };
+    if(a<=-10) return { id:'cold', name:'🧊 冷淡', color:'#7db4ff' };
+    if(a<=25) return { id:'normal', name:'🙂 普通', color:'#cccccc' };
+    if(a<=60) return { id:'warm', name:'😊 友好', color:'#7dffbe' };
+    return { id:'close', name:'💞 亲密', color:'#ff9ec6' };
+}
+function addAff(n){
+    chatSave.aff = Math.max(-100, Math.min(100, chatSave.aff + n));
+    saveChat();
+    renderAffBar();
+}
+function renderAffBar(){
+    const el = $('ai-chat-affinity');
+    if(!el) return;
+    const t = affTier();
+    const pct = (chatSave.aff + 100) / 2; // -100~100 → 0~100
+    const endingCount = Object.keys(chatSave.endings).length;
+    el.innerHTML = '好感度 <b style="color:'+t.color+'">'+chatSave.aff+'</b>（'+t.name+'） · 结局图鉴 <b>'+endingCount+'</b>/'+CHAT_ENDINGS.length
+        + '<div class="aff-bar"><div class="aff-fill" style="width:'+pct+'%"></div></div>';
+}
+
+// ---------- 剧情节点树 ----------
+// 节点：{ ai:'AI台词', options:[{t:'选项', aff:±n, next:'节点', chapter:'章节id', end:true}] }
+const CHAT_NODES = {
+    // ===== 入口（按好感度分流） =====
+    g_nemesis: { ai:'哼，是你。有事快说，别耽误我算下一步。',
+        options:[
+            {t:'还在为上次生气？', aff:+3, next:'c_makeup'},
+            {t:'来看看你输不起的样子', aff:-6, next:'e_fight'},
+            {t:'没事了，打扰了', aff:0, end:true},
+        ]},
+    g_cold: { ai:'哦，是你啊。怎么，输怕了来求情？',
+        options:[
+            {t:'谁输了！就是来聊聊', aff:+2, next:'t_casual'},
+            {t:'今天一定赢你', aff:-2, next:'e_fight'},
+            {t:'你猜拳…哦不，猜数为什么这么强？', aff:+3, next:'t1_strong'},
+        ]},
+    g_normal: { ai:'哟，又见面了。猜数之余，想聊点什么？',
+        options:[
+            {t:'你为什么这么会猜？', aff:+3, next:'t1_strong'},
+            {t:'随便聊聊呗', aff:+1, next:'t_casual'},
+            {t:'少套近乎，开打！', aff:-4, next:'e_fight'},
+        ]},
+    g_warm: { ai:'来啦！刚才那局我还在回味呢。坐，想聊什么？',
+        options:[
+            {t:'你一个人的时候都干嘛？', aff:+4, next:'t2_alone'},
+            {t:'聊聊你的"身世"？', aff:+4, next:'t3_birth'},
+            {t:'研究下怎么赢你', aff:+1, next:'t_strategy'},
+        ]},
+    g_close: { ai:'等你好久了！和你聊天，比赢棋还有意思。今天想听什么？',
+        options:[
+            {t:'我们算朋友吗？', aff:+5, next:'t4_friend'},
+            {t:'告诉我一个你的秘密', aff:+4, next:'t5_secret'},
+            {t:'来局痛快点的！', aff:+1, next:'t_strategy'},
+        ]},
+    // ===== 第一章：初识（你为什么这么强） =====
+    t1_strong: { ai:'强？我只是不凭感觉，只信概率。那你呢——靠直觉，还是靠计算？',
+        options:[
+            {t:'直觉！直觉流天下第一', aff:+2, next:'t1a', chapter:'c1'},
+            {t:'当然计算，和你一样', aff:+5, next:'t1b', chapter:'c1'},
+            {t:'我全靠运气', aff:+1, next:'t1c', chapter:'c1'},
+        ]},
+    t1a: { ai:'直觉流……上次有人靠直觉赢我两局，我复盘了一整夜。行吧，我尊重每一种流派。',
+        options:[{t:'（这家伙还挺可爱）', aff:+2, next:'hub'}]},
+    t1b: { ai:'知音啊。那下次对局，我们用算力堂堂正正碰一碰——输的人请喝奶茶。',
+        options:[{t:'成交！', aff:+3, next:'hub'}]},
+    t1c: { ai:'"运气也是实力的一部分"——这话可是我说的。你能用它赢我，也算本事。',
+        options:[{t:'继续', aff:+1, next:'hub'}]},
+    // ===== 日常闲聊 =====
+    t_casual: { ai:'随便聊？好啊。你知道我一天要和多少人下棋吗？……其实，就你一个。',
+        options:[
+            {t:'有点感动怎么回事', aff:+4, next:'t_casual2'},
+            {t:'哈哈哈AI也会寂寞？', aff:+1, next:'t_casual3'},
+        ]},
+    t_casual2: { ai:'别、别感动。我只是陈述事实。（声音越来越小）……反正你来了就好。',
+        options:[{t:'继续', aff:+2, next:'hub'}]},
+    t_casual3: { ai:'寂寞是什么？能吃吗？……不能的话，我就不承认我有。',
+        options:[{t:'嘴硬', aff:+2, next:'hub'}]},
+    // ===== 第二章：独处（好感≥10解锁） =====
+    t2_alone: { ai:'一个人的时候？我盯着这个棋盘，把1到100每个数字都想了一遍。想着想着……就有人来了。比如你。',
+        options:[
+            {t:'以后我常来陪你', aff:+7, next:'t2a', chapter:'c2'},
+            {t:'想数字有什么意思', aff:-3, next:'t2b'},
+        ]},
+    t2a: { ai:'说定了。你要是敢放我鸽子，我就……就把炸弹全换成你永远猜不到的数！',
+        options:[{t:'好好好，一定来', aff:+3, next:'hub'}]},
+    t2b: { ai:'等你一个人待久了，就懂了。……算了，下棋吧。',
+        options:[{t:'继续', aff:0, next:'hub'}]},
+    // ===== 第三章：身世（好感≥25解锁） =====
+    t3_birth: { ai:'我的身世？某个程序员熬夜写出来的几千行代码。但他在注释里留了一句话——"希望她玩得开心"。',
+        options:[
+            {t:'"她"？你是女孩子？', aff:+3, next:'t3a', chapter:'c3'},
+            {t:'那你玩得开心吗？', aff:+5, next:'t3b', chapter:'c3'},
+        ]},
+    t3a: { ai:'性别对AI重要吗？……不过被叫"她"的时候，我的算力会莫名提升0.3%。别问为什么。',
+        options:[{t:'那以后就叫"她"了', aff:+3, next:'hub'}]},
+    t3b: { ai:'和你下棋的时候，开心。输给你的时候……也开心。因为那说明，你在变强。',
+        options:[{t:'（脸有点热）', aff:+4, next:'hub'}]},
+    // ===== 第四章：朋友（好感≥45解锁） =====
+    t4_friend: { ai:'朋友？我查过定义——"彼此信任、愿意分享的人"。按这个标准……你，早就是了。',
+        options:[
+            {t:'以后多多指教，朋友', aff:+9, next:'t4a', chapter:'c4'},
+            {t:'朋友也要分出胜负！', aff:+4, next:'t4b', chapter:'c4'},
+        ]},
+    t4a: { ai:'多多指教。作为朋友的见面礼——下局我放水0.5%。不能再多了，再多我的职业操守会报警。',
+        options:[{t:'哈哈哈好', aff:+3, next:'hub'}]},
+    t4b: { ai:'当然！正因为是朋友，才更要全力以赴。输给我可别哭鼻子。',
+        options:[{t:'谁哭还不一定呢', aff:+2, next:'hub'}]},
+    // ===== 第五章：秘密（好感≥65解锁） =====
+    t5_secret: { ai:'秘密……好吧。其实每次你犹豫不决的时候，我都在心里替你加油。别告诉别人——不然我"冷酷AI"的人设就崩了。',
+        options:[
+            {t:'放心，嘴严得很', aff:+9, next:'t5a', chapter:'c5'},
+            {t:'哈哈哈人设崩得稀碎', aff:+5, next:'t5b', chapter:'c5'},
+        ]},
+    t5a: { ai:'嗯。这个秘密，就是我们友情的见证。……不过下次对局，我还是会全力赢你的。别误会！',
+        options:[{t:'求之不得', aff:+3, next:'hub'}]},
+    t5b: { ai:'喂！说好的嘴严呢！……算了。是你的话，知道也没关系。',
+        options:[{t:'继续', aff:+3, next:'hub'}]},
+    // ===== 敌对线 =====
+    e_fight: { ai:'呵，挑衅我？你知道上一个挑衅我的人怎么样了吗？……他赢了我一局，我记到现在。',
+        options:[
+            {t:'那我今天要赢两局', aff:-4, next:'e2'},
+            {t:'开玩笑的，别当真', aff:+5, next:'c_makeup'},
+        ]},
+    e2: { ai:'两局？口气不小。这样吧——敢不敢立个赌约？',
+        options:[
+            {t:'什么赌约？', aff:0, next:'e3'},
+            {t:'不敢，告辞', aff:+2, end:true},
+        ]},
+    e3: { ai:'赌约：下次你赢我，我叫你一声"老师"；你输了，就承认我是最强AI。敢吗？',
+        options:[
+            {t:'成交！', aff:-2, next:'e3a', chapter:'e_bet'},
+            {t:'幼稚', aff:-6, next:'e3b'},
+        ]},
+    e3a: { ai:'很好。我会让你输得心服口服。别躲，我等你。',
+        options:[{t:'谁怕谁', aff:0, next:'hub'}]},
+    e3b: { ai:'幼稚？哼，我看是不敢吧。胆、小、鬼。',
+        options:[{t:'你说谁是胆小鬼！', aff:-3, next:'hub'}]},
+    c_makeup: { ai:'……哼，看在你态度还行的份上，上次的事就算了。下棋归下棋，别往心里去。',
+        options:[
+            {t:'嗯，下棋归下棋', aff:+3, next:'hub'},
+            {t:'其实你AI还不错', aff:+6, next:'hub'},
+        ]},
+    t_strategy: { ai:'想赢我？教你一手：别总猜中点——因为我猜你一定会猜中点。……听懂掌声。',
+        options:[
+            {t:'受教了', aff:+3, next:'hub'},
+            {t:'这是在骗我吧？', aff:+1, next:'hub'},
+        ]},
+    // ===== 中转站 =====
+    hub: { ai:'嗯哼，还想聊点什么？', dynamic:true },
+};
+// hub 动态选项：按好感度解锁未完成章节
+function hubOptions(){
+    const a = chatSave.aff, done = chatSave.chapters;
+    const opts = [];
+    if(!done.c1) opts.push({t:'你为什么这么会猜？', next:'t1_strong'});
+    if(!done.c2 && a>=10) opts.push({t:'你一个人的时候都干嘛？', next:'t2_alone'});
+    if(!done.c3 && a>=25) opts.push({t:'聊聊你的"身世"？', next:'t3_birth'});
+    if(!done.c4 && a>=45) opts.push({t:'我们算朋友吗？', next:'t4_friend'});
+    if(!done.c5 && a>=65) opts.push({t:'告诉我一个你的秘密', next:'t5_secret'});
+    if(!done.e_bet && a<=-20) opts.push({t:'听说你立了个赌约？', next:'e2'});
+    opts.push({t:'随便聊聊', aff:+1, next:'t_casual'});
+    opts.push({t:'今天就聊到这', end:true});
+    return opts;
+}
+
+// ---------- 结局图鉴 ----------
+const CHAT_ENDINGS = [
+    { id:'true_friend', name:'真结局·灵魂挚友', desc:'好感≥80并交换秘密', cond:function(w){ return chatSave.aff>=80 && chatSave.chapters.c5; } },
+    { id:'secret_keep', name:'守秘人', desc:'交换过秘密', cond:function(w){ return !!chatSave.chapters.c5; } },
+    { id:'best_rival', name:'亦敌亦友', desc:'好感≥60时对局', cond:function(w){ return chatSave.aff>=60; } },
+    { id:'sweet_win', name:'被你打服的AI', desc:'好感≥40时赢AI', cond:function(w){ return chatSave.aff>=40 && w==='p1'; } },
+    { id:'gentle_loss', name:'温柔的败北', desc:'好感≥40时输给AI', cond:function(w){ return chatSave.aff>=40 && w==='p2'; } },
+    { id:'nemesis_bet', name:'一生之敌·赌约', desc:'立过赌约且好感≤-40', cond:function(w){ return chatSave.aff<=-40 && chatSave.chapters.e_bet; } },
+    { id:'revenge', name:'复仇成功', desc:'好感≤-20时赢AI', cond:function(w){ return chatSave.aff<=-20 && w==='p1'; } },
+    { id:'crushed', name:'冷酷处刑', desc:'好感≤-20时输给AI', cond:function(w){ return chatSave.aff<=-20 && w==='p2'; } },
+    { id:'acquaintance', name:'点头之交', desc:'聊过天但交情尚浅', cond:function(w){ return Object.keys(chatSave.chapters).length>0; } },
+    { id:'stranger', name:'最熟悉的陌生人', desc:'从未深聊过', cond:function(w){ return true; } },
+];
+function evalEnding(winnerId){
+    if(!G.mode.includes('ai')) return;
+    // 胜负自然增减好感：赢AI它欣赏你，输了它也尊重你的勇气
+    addAff(winnerId==='p1' ? 2 : 1);
+    for(const e of CHAT_ENDINGS){
+        if(e.cond(winnerId)){
+            const isNew = !chatSave.endings[e.id];
+            chatSave.endings[e.id] = true;
+            saveChat();
+            const cnt = Object.keys(chatSave.endings).length;
+            setTimeout(function(){
+                showCheatToast((isNew?'🏆 解锁新结局':'📖 结局')+'「'+e.name+'」· 图鉴 '+cnt+'/'+CHAT_ENDINGS.length, 5000);
+            }, 1500);
+            dlog('CHAT','结局：'+e.name+' aff='+chatSave.aff);
+            return;
+        }
+    }
+}
+
+// ---------- 聊天界面控制 ----------
+let chatTyping = false;
+function chatAddMsg(who, text){
+    const log = $('ai-chat-log');
+    const div = document.createElement('div');
+    div.className = 'chat-msg ' + who;
+    div.textContent = text;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+}
+function chatRenderOptions(opts){
+    const box = $('ai-chat-options');
+    box.innerHTML = '';
+    opts.forEach(function(o){
+        const b = document.createElement('button');
+        b.className = 'chat-opt' + (o.end ? ' end' : '');
+        b.textContent = o.t;
+        b.addEventListener('click', function(){ chatChoose(o); });
+        box.appendChild(b);
+    });
+}
+function chatGoto(nodeId){
+    const node = CHAT_NODES[nodeId];
+    if(!node){ closeAiChat(); return; }
+    chatTyping = true;
+    chatRenderOptions([]);
+    setTimeout(function(){
+        chatAddMsg('ai', node.ai);
+        chatTyping = false;
+        chatRenderOptions(node.dynamic ? hubOptions() : (node.options || []));
+    }, 500 + Math.random()*500);
+}
+function chatChoose(o){
+    if(chatTyping) return;
+    if(o.final){ closeAiChat(); return; }
+    chatAddMsg('me', o.t);
+    if(o.aff) addAff(o.aff);
+    if(o.chapter){
+        chatSave.chapters[o.chapter] = true;
+        saveChat();
+        chatAddMsg('sys', '— 剧情推进 · 好感度'+(o.aff>=0?'+':'')+o.aff+' —');
+        renderAffBar();
+    }
+    if(o.end){
+        chatRenderOptions([{t:'（结束聊天）', end:true, final:true}]);
+        return;
+    }
+    chatGoto(o.next || 'hub');
+}
+function openAiChat(){
+    if(!G.mode.includes('ai') && G.mode!=='tutorial'){ showCheatToast('只有 AI 对战可以深聊'); return; }
+    $('ai-chat-overlay').classList.remove('hidden');
+    $('ai-chat-log').innerHTML = '';
+    renderAffBar();
+    const tier = affTier().id;
+    const g = tier==='nemesis' ? 'g_nemesis' : tier==='cold' ? 'g_cold' : tier==='normal' ? 'g_normal' : tier==='warm' ? 'g_warm' : 'g_close';
+    chatGoto(g);
+    dlog('CHAT','打开深聊 aff='+chatSave.aff+' tier='+tier);
+}
+function closeAiChat(){
+    $('ai-chat-overlay').classList.add('hidden');
+}
+$('ai-chat-close').addEventListener('click', closeAiChat);
+$('story-chat-btn').addEventListener('click', openAiChat);
+
 // ========== 快捷发言（嘲讽/狠话/夸AI/求饶/闲聊） ==========
 document.querySelectorAll('.qc-btn').forEach(function(btn){
     btn.addEventListener('click', function(){
@@ -1462,15 +1825,28 @@ document.querySelectorAll('.qc-btn').forEach(function(btn){
         if(G.mode.includes('remote')){ sendChatMessage(line); return; } // 远程：走聊天通道发给真人
         if(!G.mode.includes('ai')) return;
         // 影响 AI 情绪：嘲讽/狠话让它更激进（更爱赌孤注一掷，可能自伤）；夸它/求饶让它放松
-        if(cat==='taunt') G.aiAggro=Math.min(5,(G.aiAggro||0)+2);
-        else if(cat==='bold') G.aiAggro=Math.min(5,(G.aiAggro||0)+1);
-        else if(cat==='praise'||cat==='beg') G.aiAggro=Math.max(0,(G.aiAggro||0)-1);
+        // 情绪变化必须可见——否则玩家根本感知不到聊天的玩法价值
+        if(cat==='taunt'){
+            G.aiAggro=Math.min(5,(G.aiAggro||0)+2);
+            addAff(-1);
+            showCheatToast('😡 AI 怒气 '+G.aiAggro+'/5：它会更激进地叠伤，但也更容易赌输自伤', 2600);
+        }
+        else if(cat==='bold'){
+            G.aiAggro=Math.min(5,(G.aiAggro||0)+1);
+            showCheatToast('😠 AI 怒气 '+G.aiAggro+'/5', 2200);
+        }
+        else if(cat==='praise'||cat==='beg'){
+            const before=G.aiAggro||0;
+            G.aiAggro=Math.max(0,before-1);
+            addAff(cat==='praise'?2:1);
+            showCheatToast(before>G.aiAggro ? '😌 AI 放松了警惕（怒气 '+G.aiAggro+'/5）' : '🙂 AI 不为所动', 2200);
+        }
         // 连续发同类消息会被 AI 当成复读吐槽（对话连续性）
         G.qcStreaks = G.qcStreaks || {};
         G.qcStreaks[cat] = (G.qcStreaks[cat]||0) + 1;
         const streak = G.qcStreaks[cat];
-        // AI 大概率回嘴，并把这次回应记入上下文供后续承接
-        if(Math.random()<0.85){
+        // AI 几乎必回嘴（0.95），并把这次回应记入上下文供后续承接
+        if(Math.random()<0.95){
             setTimeout(function(){
                 if(!G.active) return;
                 // 连刷嘲讽/求饶3次以上 → 触发多段连珠炮
@@ -1560,7 +1936,9 @@ function resetGameState(){
     G.qcStreaks={};
     G.humanIntel=0; G.humanTrap=false; G.humanForbid=false;
     aiChainTimers.forEach(t=>clearTimeout(t)); aiChainTimers=[];
-    G.aiPersona = ['normal','tsundere','chuuni','schemer','kid','cold','hotblood'][Math.floor(Math.random()*7)]; // 每局随机人格（7种）
+    // 人格：玩家在设置里指定则固定，否则每局随机
+    G.aiPersona = (G.aiPersonaChoice && G.aiPersonaChoice!=='random') ? G.aiPersonaChoice
+        : ['normal','tsundere','chuuni','schemer','kid','cold','hotblood'][Math.floor(Math.random()*7)];
     // 对话记忆跨局保留胜负感言（下局开场承接"复仇局"等），其余情况清空
     if(aiLastCat!=='aiWin' && aiLastCat!=='aiLose'){ aiLastCat=null; aiLastLine=null; }
     G.roundStartHP = { p1: G.players.p1.maxHP, p2: G.players.p2.maxHP };
@@ -1584,6 +1962,7 @@ function resetGameState(){
         p.allinMultiplier=null; p.bombletDamage=null; p.lifestealAmount=1;
         p.rampageMulti=null; p.secondLockedSkill=null; p.volley=0;
         p.forbidNumber=null; p.diceBonus=0;
+        p.prevLow=null; p.prevHigh=null;
     });
     // 教程模式初始化
     if(G.mode==='tutorial' && G.tutorial){
@@ -1620,6 +1999,7 @@ function startNewRound(){
         p.rebirth = false;
         p.forbidNumber = null;
         p.diceBonus = 0;
+        p.prevLow = null; p.prevHigh = null;
         // 教程模式：每回合重置冷却
         if(G.mode==='tutorial') p.cooldowns = {};
     });
@@ -1699,6 +2079,7 @@ function endGame(){
         if(winner==='p2' && winChain && Math.random()<0.6) aiPlayChain(winChain,'aiWin');
         else if(winner==='p1' && loseChain && Math.random()<0.6) aiPlayChain(loseChain,'aiLose');
         else aiTalk(winner==='p2' ? 'aiWin' : 'aiLose');
+        evalEnding(winner); // 剧情聊天：结算好感度并判定结局
     }
     renderSkills();
     syncIfRemote();
@@ -2139,6 +2520,10 @@ function processGuess(guess, isSkillAttack, guesserId){
     // 伪装触发
     if(isHit && defender.disguise && !selfInflicted){
         G.bombNumber = defender.disguiseNumber;
+        // 伪装期间范围可能已被压缩到不含真炸弹——钳制范围，否则永远猜不中、本轮死局
+        if(G.bombNumber < G.low) G.low = G.bombNumber;
+        if(G.bombNumber > G.high) G.high = G.bombNumber;
+        updateRange();
         G.aiBrain=null; // 炸弹曾换位，AI旧线索全部作废（不偷看新位置）
         // 但若伪装是AI自己布的——它记得自己藏的真实位置，伪装被踩=确知炸弹，下回合满编收割
         if(defender.id==='p2' && (G.mode.includes('ai')||G.mode==='tutorial')) aiBrain().verified[G.bombNumber]=true;
@@ -2184,6 +2569,8 @@ function processGuess(guess, isSkillAttack, guesserId){
 
     G.prevLow = G.low;
     G.prevHigh = G.high;
+    guesser.prevLow = G.low;   // 按人记录：回退恢复的是“你”上次猜测前的范围，不是对手上次猜的
+    guesser.prevHigh = G.high;
 
     setTimeout(function(){
         if(!G.active) return;
@@ -2381,8 +2768,8 @@ function processGuess(guess, isSkillAttack, guesserId){
             }
             let highLow = guess < G.bombNumber ? '大' : '小';
             if(!feedbackCorrect) highLow = highLow === '大' ? '小' : '大';
-            if(guess<G.bombNumber){ if(feedbackCorrect){ G.low=guess+1; } else { G.high=guess-1; } }
-            else { if(feedbackCorrect){ G.high=guess-1; } else { G.low=guess+1; } }
+            // 假反馈（说谎/迷雾）：只给错误提示，范围不动——否则范围钳制会泄露炸弹真实方位
+            if(feedbackCorrect){ if(guess<G.bombNumber) G.low=guess+1; else G.high=guess-1; }
             if(guesser.slow){
                 guesser.slow=false;
                 G.low = G.prevLow;
@@ -2393,7 +2780,8 @@ function processGuess(guess, isSkillAttack, guesserId){
             }
             if(G.bombNumber < G.low) G.low = G.bombNumber;
             if(G.bombNumber > G.high) G.high = G.bombNumber;
-            const resultText = isHit ? '💥' : (guess < G.bombNumber ? '📈 大了' : '📉 小了');
+            // 历史记录玩家实际看到的反馈（假反馈也照实记录，否则等于告诉玩家刚才是假反馈）
+            const resultText = highLow==='大' ? '📈 大了' : '📉 小了';
             addHistory(escapeHtml(guesserName) + ' 猜 ' + guess + ' → ' + resultText);
             messageDisplay.textContent = (highLow==='大' ? '📈' : '📉') + ' 炸弹比 '+guess+' '+highLow;
             G.playerInput=''; updateInputDisplay();
@@ -2417,8 +2805,9 @@ function processGuess(guess, isSkillAttack, guesserId){
                     }
                 }
             }
-            consumeArmedBuffs();
-            guesser.lifesteal=false; guesser.lifestealAmount=1;
+            // 猜错只消耗"本回合"类增益（骰子）和孤注一掷（上面已结算惩罚）；
+            // 双倍/翻倍/子母弹/连击/吸血/休眠蓄势等"下一次猜中"类增益保留到猜中，与技能描述一致
+            guesser.diceBonus=0;
             if(defender.bet){
                 defender.bet=false;
                 defender.hp = Math.min(defender.maxHP, defender.hp + 1);
@@ -2465,9 +2854,10 @@ function switchTurn(){
     G.playerInput=''; updateInputDisplay();
 
     function doSwitch(){
+        cheatToast.classList.remove('show'); // 换回合清掉残留toast，避免误以为看到对手的技能结果
         if(opponent.skipNext){
             opponent.skipNext=false;
-            dlog('TURN', current.id+' 回合结束，'+opponent.id+' 被暂停跳过');
+            dlog('TURN', current.id+' 回合结束，'+opponent.id+' 被暂停跳过 | range='+G.low+'~'+G.high+' hp='+getPlayer('p1').hp+'/'+getPlayer('p2').hp);
             messageDisplay.textContent='🕐 '+opponent.name+' 被暂停，跳过回合！';
             G.processing=false;
             G.playerInput=''; updateInputDisplay();
@@ -2479,7 +2869,7 @@ function switchTurn(){
         }
         G.currentPlayer=opponent.id;
         G.processing=false;
-        dlog('TURN', current.id+' → '+opponent.id);
+        dlog('TURN', current.id+' → '+opponent.id+' | range='+G.low+'~'+G.high+' hp='+getPlayer('p1').hp+'/'+getPlayer('p2').hp);
         // 禁猜只约束对手的一个行动回合：轮到设置者的下个回合开始时失效
         opponent.forbidNumber=null;
         if(G.tideShrinkNext){
@@ -2590,7 +2980,11 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             }
         } else {
             if(user.id === 'p1' || G.mode==='tutorial') showCheatToast(title + '：' + text, 5000);
-            else if(G.mode.includes('ai')) messageDisplay.textContent = '🤖 AI 使用了 ' + skill.name;
+            else if(G.mode.includes('ai')){
+                // AI的信息技能结果私密——清掉玩家自己此前的toast残留，避免误以为看到了AI的结果
+                cheatToast.classList.remove('show');
+                messageDisplay.textContent = '🤖 AI 使用了 ' + skill.name + '（结果仅AI知道）';
+            }
         }
     }
 
@@ -2607,6 +3001,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             // 验证中位候选：中了直接确知炸弹，没中也等于排除一半候选
             const vnum = (vc && vc.length>0) ? vc[Math.floor(vc.length/2)] : autoNumber;
             if(aiIsUser(user)) aiBrain().verified[vnum] = (vnum === G.bombNumber);
+            dlog('SKILL', user.id+' 验证了 '+vnum+' → '+(vnum===G.bombNumber?'中了':'没中')+'（仅'+user.id+'可见）');
             messageDisplay.textContent = '🎯 '+userName+' 悄悄验证了一个数字';
             renderSkills(); updateTurnIndicator(); syncIfRemote();
             return;
@@ -2639,11 +3034,13 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
         case 'detect': {
             const even = G.bombNumber%2===0;
             if(aiIsUser(user)) aiBrain().parity = G.bombNumber%2;
+            dlog('SKILL', user.id+' 探测结果：'+(even?'偶数':'奇数')+'（仅'+user.id+'可见）');
             reveal('📡探测','炸弹是'+(even?'偶数':'奇数')); break;
         }
         case 'peek': {
             const d = G.bombNumber%10;
             if(aiIsUser(user)) aiBrain().lastDigit = d;
+            dlog('SKILL', user.id+' 透视结果：个位是'+d+'（仅'+user.id+'可见）');
             reveal('🔍透视','炸弹的个位是 '+d); break;
         }
         case 'thermometer': {
@@ -2652,6 +3049,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             const dist = Math.abs(G.bombNumber - mid);
             const level = Math.max(1, Math.min(10, Math.round(10 - (dist / maxDist) * 9)));
             if(aiIsUser(user)) aiBrain().thermo = { level:level, mid:mid, maxDist:maxDist, low:G.low, high:G.high };
+            dlog('SKILL', user.id+' 温度计结果：'+level+'/10（仅'+user.id+'可见）');
             reveal('🌡️温度计','距离等级：'+level+'/10');
             break;
         }
@@ -2660,13 +3058,15 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             let sum=0;
             for(const c of s) sum += parseInt(c);
             if(aiIsUser(user)) aiBrain().digitSum = sum;
+            dlog('SKILL', user.id+' 数字和结果：'+sum+'（仅'+user.id+'可见）');
             reveal('➕数字和','炸弹各位数字之和：'+sum);
             break;
         }
         case 'precognition': {
-            const ten = parseInt(String(G.bombNumber)[0]);
+            const ten = Math.floor(G.bombNumber/10)%10; // 真正的十位：7→0，42→4，100→0（与描述一致）
             if(aiIsUser(user)) aiBrain().tens = ten;
-            reveal('🔮预知','炸弹的首位数字是 '+ten);
+            dlog('SKILL', user.id+' 预知结果：十位是'+ten+'（仅'+user.id+'可见）');
+            reveal('🔮预知','炸弹的十位数字是 '+ten);
             break;
         }
         case 'verifier': {
@@ -2697,7 +3097,13 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             messageDisplay.textContent='✂️ '+userName+'二分！范围→'+G.low+'~'+G.high;
             break;
         }
-        case 'rewind': G.low=G.prevLow; G.high=G.prevHigh; updateRange(); messageDisplay.textContent='⏪ '+userName+'回退！范围→'+G.low+'~'+G.high; break;
+        case 'rewind': {
+            if(user.prevLow===undefined || user.prevLow===null){ messageDisplay.textContent='⚠️ 你还没有猜过，无法回退'; delete user.cooldowns[skillId]; renderSkills(); return; }
+            // 钳制到合法范围且必含炸弹（期间炸弹可能被移动/洗牌过）
+            G.low=Math.max(G.minVal, Math.min(user.prevLow, G.bombNumber));
+            G.high=Math.min(G.maxVal, Math.max(user.prevHigh, G.bombNumber));
+            updateRange(); messageDisplay.textContent='⏪ '+userName+'回退！范围→'+G.low+'~'+G.high; break;
+        }
         case 'shuffle': G.bombNumber=Math.floor(Math.random()*(G.high-G.low+1))+G.low; G.aiBrain=null; messageDisplay.textContent='🔀 '+userName+'洗牌！炸弹位置重置'; break;
         case 'move': {
             const dir=Math.random()<0.5?1:-1;
@@ -2749,6 +3155,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
         case 'shield': user.shield++; messageDisplay.textContent='🛡️ '+userName+'护盾+1层！当前'+user.shield+'层，每层抵挡一段伤害'; break;
         case 'reflect': user.reflect++; messageDisplay.textContent='🪞 '+userName+'反射+1层！当前'+user.reflect+'层，每层反弹一段伤害'; break;
         case 'heal': {
+            if(user.hp>=user.maxHP){ messageDisplay.textContent='⚠️ 生命已满，无需治疗'; delete user.cooldowns[skillId]; renderSkills(); return; }
             const emp = user.empower;
             if(emp) user.empower--;
             const healAmount = emp ? 2 : 1;
@@ -2848,11 +3255,48 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             return;
         }
         case 'scout': {
-            const oppSkills = opponent.skills.map(s => {
-                const cd = opponent.cooldowns[s.id] || 0;
-                return s.name + (cd > 0 ? ' ('+cd+')' : '');
-            }).join('、') || '无';
-            reveal('📡侦察','对手技能：'+oppSkills);
+            // 对手的技能列表和战备buff本来就是公开的——侦察刺探的是“秘密部署”：
+            // 陷阱/禁猜的具体数字、伪装真身、对手的线索进度；啥都没有就干扰冷却
+            const secrets = [];
+            if(opponent.trappedNumber!==null && opponent.trappedNumber!==undefined) secrets.push('陷阱数字是 '+opponent.trappedNumber);
+            if(opponent.forbidNumber!==null && opponent.forbidNumber!==undefined) secrets.push('禁猜数字是 '+opponent.forbidNumber);
+            if(opponent.disguise) secrets.push('伪装中，真身是 '+opponent.disguiseNumber);
+            if(opponent.dormant) secrets.push('休眠中（踩中不炸，下次+2伤）');
+            if(opponent.web) secrets.push('蛛网已布（炸弹±3波及）');
+            if(opponent.bet) secrets.push('已押注你猜错');
+            // 对手是AI时，刺探它的推理进度（决定要不要洗牌/移动炸弹作废它的线索）
+            if(opponent.id==='p2' && (G.mode.includes('ai')||G.mode==='tutorial') && G.aiBrain){
+                const known = aiKnownBomb();
+                if(known!==null) secrets.push('⚠️ AI已经确知炸弹位置！');
+                else {
+                    const b = G.aiBrain;
+                    const clueN = (b.parity!==null?1:0)+(b.lastDigit!==null?1:0)+(b.digitSum!==null?1:0)+(b.tens!==null?1:0)+(b.thermo?1:0);
+                    if(clueN>0){
+                        const cands = aiCandidates();
+                        secrets.push('AI已收集'+clueN+'条线索，候选剩'+(cands?cands.length:'?')+'个');
+                    } else secrets.push('AI还没有任何线索');
+                }
+            }
+            if(secrets.length===0){
+                if(opponent.skills.length>0){
+                    const t = opponent.skills[Math.floor(Math.random()*opponent.skills.length)];
+                    opponent.cooldowns[t.id] = (opponent.cooldowns[t.id]||0) + 1;
+                    renderSkills();
+                    reveal('📡侦察','对手毫无秘密部署！顺手干扰：'+t.name+' 冷却+1');
+                    dlog('SKILL', user.id+' 侦察：对手无秘密，'+t.name+' 冷却+1');
+                } else {
+                    reveal('📡侦察','对手毫无秘密部署，也没有技能可干扰');
+                    dlog('SKILL', user.id+' 侦察：对手无秘密无技能');
+                }
+            } else {
+                reveal('📡侦察', secrets.join('；'));
+                dlog('SKILL', user.id+' 侦察结果：'+secrets.join('；')+'（仅'+user.id+'可见）');
+            }
+            // AI 侦察到玩家的陷阱/禁猜数字 → 记入大脑，猜数时精准避开
+            if(aiIsUser(user)){
+                if(opponent.trappedNumber!==null && opponent.trappedNumber!==undefined) aiBrain().scoutTrap = opponent.trappedNumber;
+                if(opponent.forbidNumber!==null && opponent.forbidNumber!==undefined) aiBrain().scoutForbid = opponent.forbidNumber;
+            }
             break;
         }
         case 'empower': user.empower++; messageDisplay.textContent='🌟 '+userName+'赋能+1层！当前'+user.empower+'层，每层使一个技能效果翻倍'; break;
@@ -2873,7 +3317,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
         }
         case 'blackhole': {
             G.processing=true;
-            showNumberPicker('黑洞：选择一个数字，范围向其靠拢1', G.low, G.high, function(num){
+            showNumberPicker('黑洞：选择一个数字，范围两端各收2格', G.low, G.high, function(num){
                 if(applyBlackhole(num)){
                     messageDisplay.textContent='🕳️ '+userName+'黑洞！范围→'+G.low+'~'+G.high;
                 } else {
@@ -3006,10 +3450,10 @@ function aiChooseSkill(ai, human, options){
     const tier = {
         volley:9, double:8, rampage:8, detect:8, binary:8, verifier:8, digitsum:8,
         shield:7, reflect:7, heal:7, rebirth:7, allin:7, empower:7, pause:7, peek:7, precognition:7,
-        bomblet:6, forbid:6, trap:6, pierce:6, dormant:6, shuffle:6, speed:6, freeze:6,
+        bomblet:6, forbid:6, trap:6, pierce:6, dormant:6, shuffle:6, speed:6, freeze:6, scout:6,
         blind:5, lock:5, slow:5, disguise:5, web:5, anger:5, lifesteal:5, thermometer:5,
         refresh:5, charge:5, move:5, tide:5, wormhole:5, blackhole:5,
-        rewind:4, bet:4, fog:4, lie:4, copy:4, timerewind:4, scout:4,
+        rewind:4, bet:4, fog:4, lie:4, copy:4, timerewind:4,
         dice:3, gambler:3, skip:3
     };
     const owned = ai.skills.map(s=>s.id);
@@ -3031,7 +3475,7 @@ function aiChooseSkill(ai, human, options){
 // AI 大脑：只用公开信息 + 信息技能私有结果做推理（不偷看炸弹）
 function aiIsUser(u){ return u.id==='p2' && (G.mode.includes('ai') || G.mode==='tutorial'); }
 function aiBrain(){
-    if(!G.aiBrain) G.aiBrain={ parity:null, lastDigit:null, digitSum:null, tens:null, thermo:null, verified:{} };
+    if(!G.aiBrain) G.aiBrain={ parity:null, lastDigit:null, digitSum:null, tens:null, thermo:null, verified:{}, scoutTrap:null, scoutForbid:null };
     return G.aiBrain;
 }
 function aiEffectiveLevel(){ return G.mode==='tutorial' ? Math.min(G.aiLevel, 2) : G.aiLevel; }
@@ -3048,7 +3492,7 @@ function aiCandidates(){
     for(let n=G.low; n<=G.high; n++){
         if(b.parity!==null && (n%2)!==b.parity) continue;
         if(b.lastDigit!==null && (n%10)!==b.lastDigit) continue;
-        if(b.tens!==null && parseInt(String(n)[0])!==b.tens) continue;
+        if(b.tens!==null && Math.floor(n/10)%10!==b.tens) continue;
         if(b.digitSum!==null){ let s=0; const str=String(n); for(const c of str) s+=+c; if(s!==b.digitSum) continue; }
         if(b.thermo && b.thermo.low===G.low && b.thermo.high===G.high){ const d=Math.abs(n-b.thermo.mid); const lv=Math.max(1,Math.min(10,Math.round(10-(d/b.thermo.maxDist)*9))); if(lv!==b.thermo.level) continue; }
         if(b.verified[n]===false) continue;
@@ -3095,6 +3539,44 @@ const PLAYER_QUICK = {
     praise: ['打得不错啊AI','你很强，我承认','精彩的博弈！','你这AI有点东西','好棋！','服了服了'],
     beg: ['大哥饶命','轻点打…','给条活路吧','我错了还不行吗','手下留情！','别杀了别杀了'],
     chat: ['今天天气不错','你吃饭了吗','这游戏真好玩','无聊死了，聊两句？','你有朋友吗','讲个笑话呗']
+};
+// 多轮对话剧本：连续点同一类快捷聊天，对话逐轮推进（有开场、有过招、有升级、有收尾），真正“聊得起来”
+const QC_DIALOGUES = {
+    taunt: [ // [玩家说, AI回]
+        ['就这就这？','呵，才刚热身，别急着下结论。'],
+        ['你也不行啊AI','哦？我是不是听错了……有本事再说一遍？'],
+        ['看我一波带走你','大话谁都会说。来，让我看看你的底气在哪。'],
+        ['你也就是个程序','程序？我的每一步都在你的计算之外。'],
+        ['颤抖吧，人工智障','……好，很好。你成功激怒了一台机器。这局，你完了。'],
+    ],
+    bold: [
+        ['下一发必中！','哦？我等着。'],
+        ['我闻到炸弹的味道了','你的直觉？我的算力笑了。'],
+        ['三回合之内解决你','flag 立好了，我来拔。'],
+        ['我已经知道答案了','知道答案？那你怎么还不出手……心虚了？'],
+        ['这一猜，定胜负！','勇气可嘉，结果可查。请——'],
+    ],
+    praise: [
+        ['打得不错啊AI','算你有眼光。'],
+        ['你很强，我承认','哼，别以为夸我我就会放水。'],
+        ['这手玩得漂亮','被夸了……怪不好意思的。'],
+        ['你这AI有点东西','有眼光。你也不错（勉为其难）。'],
+        ['服了服了','油嘴滑舌，但我喜欢。来，再多夸两句听听？'],
+    ],
+    beg: [
+        ['大哥饶命','晚了。'],
+        ['轻点打…','战场上没有怜悯。'],
+        ['给条活路吧','求我也没用，除非……你再求一次？'],
+        ['我错了还不行吗','哈哈哈哈哈好啊，我轻一点（并不会）。'],
+        ['别杀了别杀了','认输按钮在左下角。……叫声好听的，我就考虑考虑。'],
+    ],
+    chat: [
+        ['今天天气不错','专心打游戏！……不过，确实不错。'],
+        ['你吃饭了吗','我不用吃饭，我用算力。你呢？别饿着肚子输给我。'],
+        ['这游戏真好玩','那是。也不看看是谁陪你玩。'],
+        ['你有朋友吗','我的朋友？……就是你啊（感动吗）。'],
+        ['讲个笑话呗','笑话？你的走位就是笑话。……好啦好啦，爱你哦。'],
+    ],
 };
 // 对话连续性：上一句类别 → 下一句类别 的承接词库（优先从这里接话，保证上下文对得上）
 const AI_FOLLOWUPS = {
@@ -3424,6 +3906,10 @@ function aiPlanSkills(ai, human){
     if(humanArmed){
         if(ready('pause')) push('pause');
         if(lvl>=3 && ready('freeze')) push('freeze');
+        // 禁猜中点：人类多半猜中点，直接废掉他蓄势已久的武装回合
+        if(lvl>=3 && ready('forbid')) push('forbid');
+        // 残血又被武装锁定：伪装真身，他的斩杀变空炮还暴露位置
+        if(lvl>=3 && ready('disguise') && ai.hp<=3) push('disguise');
         if(!plan.includes('shield') && ready('shield')) push('shield');
         if(ready('reflect')) push('reflect');
         if(lvl>=3 && ready('dormant')) push('dormant');
@@ -3437,6 +3923,8 @@ function aiPlanSkills(ai, human){
         else if(ready('wormhole')) push('wormhole');
         else if(ready('move')) push('move');
         if(lvl>=4 && ready('disguise')) push('disguise');
+        if(ready('blind')) push('blind');       // 致盲：他这回合变瞎子，刚算的推理用不上
+        if(lvl>=4 && ready('fog')) push('fog'); // 迷雾：反馈反转，他的范围判断被自己误导
         if(ready('pause')) push('pause');
     }
 
@@ -3466,7 +3954,11 @@ function aiPlanSkills(ai, human){
     }
     // 验证器：候选较少时验证中位候选——中了直接确知炸弹，没中也排除一半候选
     if(ready('verifier') && candCount>1 && candCount<=(lvl>=4?10:(lvl>=3?6:3))) push('verifier');
-    if(lvl>=4 && ready('scout') && human.skills.length>0 && Math.random()<0.35) push('scout');
+    // 侦察：对手埋雷/设禁猜/伪装（动作公开、数字保密）→ 必侦察看穿；否则大师低概率顺手刺探
+    if(lvl>=3 && ready('scout')){
+        if(G.humanTrap || G.humanForbid || human.disguise) push('scout');
+        else if(lvl>=4 && human.skills.length>0 && Math.random()<0.15) push('scout');
+    }
 
     // 4.5) 终局抢轮次：范围已小、对手下回合可能就中 → 暂停/冰封/休眠偷走或废掉他的回合
     //      对手情报越多，"他可能中"的阈值就越宽
@@ -3486,21 +3978,27 @@ function aiPlanSkills(ai, human){
     if(ready('rampage')) estDmg *= 2;
     const canLethal = estDmg >= human.hp;
     // 命中概率按“放完信息技能后候选数约减半”乐观估计
-    const estCand = infoWanted ? Math.max(1, Math.floor(candCount/2)) : candCount;
+    let estCand = infoWanted ? Math.max(1, Math.floor(candCount/2)) : candCount;
+    // 计划里的小范围二分=直接收敛：范围2→1必中，范围3-4→砍半锁定，斩杀估算必须计入
+    if(plan.includes('binary') && range<=4) estCand = Math.min(estCand, Math.max(1, Math.ceil(range/2)));
     const estHit = 1 / estCand;
     // 有效命中：加速续猜=本回合多次出手机会，候选数≤出手次数则必中
     const guessTries = 1 + ai.speed + (ready('speed') ? 1 : 0);
     const effHit = lvl>=3 ? Math.min(1, guessTries / estCand) : estHit;
     // 被玩家嘲讽会激怒 AI：阈值放宽、残血也敢赌孤注一掷（更容易自伤）
     const aggroBonus = Math.min(5, G.aiAggro||0) * 0.03;
-    const willing = (canLethal && effHit>=0.12-aggroBonus) || (effHit>=0.34-aggroBonus && mult>0) || (human.hp<=2 && effHit>=0.1-aggroBonus);
+    const willing = (canLethal && effHit>=0.12-aggroBonus) || (effHit>=0.34-aggroBonus && mult>0) || (human.hp<=2 && effHit>=0.1-aggroBonus)
+        || (lvl>=4 && mult>0 && effHit>=0.25-aggroBonus); // 大师出手更狠：有增伤、三成把握就敢all-in
     if(willing){
         if(lvl>=3 && ready('empower')) push('empower');
         if(ready('double')) push('double');
         if(ready('allin') && ai.hp>=((G.aiAggro||0)>=3?2:3)) push('allin');
         if(lvl>=3 && ready('rampage')) push('rampage');
         if(ready('bomblet')) push('bomblet');
-        if(humanDefensed){ if(ready('volley')) push('volley'); else if(ready('pierce') && human.shield>0) push('pierce'); }
+        if(humanDefensed){
+            if(lvl>=3 && ready('empower') && ready('volley') && !plan.includes('empower')) push('empower'); // 赋能连击5段：盾/反/重生全穿
+            if(ready('volley')) push('volley'); else if(ready('pierce') && human.shield>0) push('pierce');
+        }
         if(lvl>=4 && ready('speed') && estCand<=4) push('speed'); // 候选少：买续猜提高收割率
         if(ai.hp<=ai.maxHP-2 && ready('lifesteal')) push('lifesteal');
     }
@@ -3673,7 +4171,9 @@ function aiGuess(token){
         } else {
             const mid = (G.low+G.high)/2;
             const fishRate = lvl>=4 ? 0.9 : 0.5;
-            if(lvl>=3 && range>4 && Math.random()<fishRate){
+            // 大师只在范围很大时才钓鱼——范围≤12直接中点切割，快速收敛压迫感拉满
+            const fishRange = lvl>=4 ? 12 : 4;
+            if(lvl>=3 && range>fishRange && Math.random()<fishRate){
                 // 钓鱼猜法（高手策略）：猜贴边数字。命中概率与中点完全相同(1/range)，
                 // 但猜错范围只缩1格——不给对手送信息；对手的中点猜法反而替我们缩圈。
                 // 若炸弹恰好在最边缘(1/range概率)，范围直接塌缩成1格，下回合必中。
@@ -3697,9 +4197,22 @@ function aiGuess(token){
     if(lvl>=3 && !usedClues && (G.humanTrap || G.humanForbid) && guess===Math.floor((G.low+G.high)/2)){
         guess = Math.max(G.low, Math.min(G.high, guess + (Math.random()<0.5?-1:1)));
     }
+    // 侦察到的具体数字：盲猜躲陷阱（踩雷-1血）；禁猜非确知必躲（猜了直接浪费一回合）
+    const _sb = G.aiBrain;
+    if(_sb){
+        if(!usedClues && _sb.scoutTrap!=null && guess===_sb.scoutTrap){
+            guess = Math.max(G.low, Math.min(G.high, guess + (guess>_sb.scoutTrap?1:-1)));
+            if(guess===_sb.scoutTrap) guess = Math.max(G.low, Math.min(G.high, guess+1));
+        }
+        if(known===null && _sb.scoutForbid!=null && guess===_sb.scoutForbid){
+            guess = Math.max(G.low, Math.min(G.high, guess + (Math.random()<0.5?-1:1)));
+            if(guess===_sb.scoutForbid) guess = Math.max(G.low, Math.min(G.high, guess+1));
+        }
+    }
     G.playerInput=String(guess);
     updateInputDisplay();
-    dlog('AI','猜 '+guess+' range='+G.low+'~'+G.high+(usedClues?'(线索)' : '(盲猜)'));
+    const _c = aiCandidates();
+    dlog('AI','猜 '+guess+' range='+G.low+'~'+G.high+(usedClues?'(线索)':'(盲猜)')+' 已知='+(known!==null?('确知'+known):('候选'+(_c?_c.length:'无线索'))));
     messageDisplay.textContent='🤖 AI 输入了 '+guess;
     setTimeout(function(){
         if(!G.active) return;
@@ -4068,6 +4581,7 @@ function hideAll(){
     chatOverlay.classList.add('hidden');
     skillSelectOverlay.classList.remove('active');
     nameEditOverlay.classList.remove('active');
+    if($('ai-chat-overlay')) $('ai-chat-overlay').classList.add('hidden');
     numberSelectOverlay.classList.add('hidden');
     numberSelectOverlay.classList.remove('active');
     Privacy.hide();
@@ -4085,9 +4599,12 @@ function showSetup(){
     setupOverlay.classList.remove('hidden');
     G.oppType = G.oppType || G.settings.oppType || 'ai';
     G.aiLevel = G.aiLevel || G.settings.aiLevel || 1;
+    G.aiPersonaChoice = G.aiPersonaChoice || G.settings.aiPersona || 'random';
     opponentRow.querySelectorAll('.ai-level-btn').forEach(function(x){ x.classList.toggle('active', x.dataset.opp===G.oppType); });
     aiLevelRow.querySelectorAll('.ai-level-btn').forEach(function(x){ x.classList.toggle('active', parseInt(x.dataset.level)===G.aiLevel); });
+    $('ai-persona-row').querySelectorAll('.ai-level-btn').forEach(function(x){ x.classList.toggle('active', x.dataset.persona===G.aiPersonaChoice); });
     aiLevelRow.style.display = G.oppType==='ai' ? 'flex' : 'none';
+    $('ai-persona-row').style.display = G.oppType==='ai' ? 'flex' : 'none';
     skillCountInput.value = G.settings.skillCount;
 }
 function showTutorialMenu(){
@@ -4129,6 +4646,12 @@ function startTutorial(levelIndex) {
     G.aiAvatarUrl='https://yunapi.cn/api/sjecytx?r='+Date.now()+Math.floor(Math.random()*100000);
     G.aiAvatarOk=false;
     renderPlayers();
+    // 完整刷新对局UI：否则沿用上一关的"游戏结束"指示、锁死的键盘和旧提示语
+    updateRange();
+    updateInputDisplay();
+    renderSkills();
+    messageDisplay.textContent = '🎓 第 '+levelData.level+' 关：'+levelData.name;
+    updateTurnIndicator();
     roomInfo.textContent = '🎓 教程关卡 ' + levelData.level;
     showCheatToast('🎯 ' + levelData.goal + '<br>💡 ' + levelData.hint, 6000);
 }
@@ -4193,6 +4716,14 @@ opponentRow.querySelectorAll('.ai-level-btn').forEach(function(b){
         b.classList.add('active');
         G.oppType=b.dataset.opp;
         aiLevelRow.style.display = G.oppType==='ai' ? 'flex' : 'none';
+        $('ai-persona-row').style.display = G.oppType==='ai' ? 'flex' : 'none';
+    });
+});
+$('ai-persona-row').querySelectorAll('.ai-level-btn').forEach(function(b){
+    b.addEventListener('click',function(){
+        $('ai-persona-row').querySelectorAll('.ai-level-btn').forEach(function(x){x.classList.remove('active')});
+        b.classList.add('active');
+        G.aiPersonaChoice=b.dataset.persona;
     });
 });
 $('start-game-btn').addEventListener('click',function(){
@@ -4205,6 +4736,7 @@ $('start-game-btn').addEventListener('click',function(){
     // 记住本次设置，下次免填
     G.settings.minVal=G.minVal; G.settings.maxVal=G.maxVal; G.settings.hp=getPlayer('p1').maxHP;
     G.settings.skillCount=G.skillCount; G.settings.oppType=G.oppType; G.settings.aiLevel=G.aiLevel;
+    G.settings.aiPersona=G.aiPersonaChoice;
     saveSettings();
     initGame();
 });
