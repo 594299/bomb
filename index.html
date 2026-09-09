@@ -347,7 +347,7 @@
             <p>· 本地双人：同一设备轮流操作，带防偷看换手隐私屏。</p>
             <p>· AI 对战：简单 / 中等 / 困难三档，AI 会按血量与范围评估技能价值。</p>
             <p>· 远程对战：创建 6 位房间码或复制邀请链接，支持实时聊天与表情。</p>
-            <h3>⚡ 技能分类（共 38 种）</h3>
+            <h3>⚡ 技能分类（共 39 种）</h3>
             <p>· 信息类：📡探测(奇偶)、🔍透视(个位)、🌡️温度计(距离)、🎯验证器(中了没)、📡侦察(看对手技能)</p>
             <p>· 范围类：✂️二分、⏪回退、🔀洗牌、🚚移动、🕳️黑洞、🌊潮汐</p>
             <p>· 伤害强化：⚡双倍、🔥孤注一掷、💣子母弹、💢愤怒、🌙吸血、💥翻倍（增伤倍率相加后，翻倍最后相乘）</p>
@@ -395,7 +395,7 @@ const ICE_SERVERS = [
     { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
 ];
 
-// ========== 技能定义（37个独立机制） ==========
+// ========== 技能定义（39个独立技能） ==========
 const ALL_SKILLS = [
     { id:'detect', name:'📡 探测', desc:'显示炸弹是奇数还是偶数。可排除一半数字，适合开局使用。', cooldown:2 },
     { id:'peek', name:'🔍 透视', desc:'显示炸弹的个位数字。提供精确线索，但信息量有限。', cooldown:2 },
@@ -897,7 +897,15 @@ function setupConnection(conn){
                 if(chatOverlay.classList.contains('hidden')){ unreadChatCount++; updateChatBadge(); }
             }
         }
-        else if(data.type==='private'&&G.myRole==='guest'){ showCheatToast(data.title + '：' + data.text); }
+        else if(data.type==='private'&&G.myRole==='guest'){
+            showCheatToast(data.title + '：' + data.text);
+            // 若收到拒绝消息，立即恢复操作状态
+            if(data.title && data.title.includes('拒绝')){
+                G.processing = false;
+                setKeypadEnabled(isMyTurn() && G.active);
+                if(messageDisplay) messageDisplay.textContent = data.title + '，请重试';
+            }
+        }
     });
 
     conn.on('close',function(){
@@ -926,7 +934,13 @@ function handleGuestAction(data){
     clearGuestActionTimeout();
     if(data.action==='guess'&&data.playerId==='p2'&&G.currentPlayer==='p2'&&!G.processing){
         G.playerInput='';
-        processGuess(data.guess,false,'p2');
+        const guess = data.guess;
+        if(isNaN(guess) || guess < G.low || guess > G.high){
+            // 拒绝猜测，通知 Guest
+            if(G.conn) G.conn.send({type:'private', title:'❌ 猜测被拒绝', text:'数字不在当前范围内'});
+            return;
+        }
+        processGuess(guess,false,'p2');
     }
     else if(data.action==='skill'&&data.playerId==='p2'&&G.currentPlayer==='p2'&&!G.processing){
         const skillId = data.skillId;
@@ -1269,6 +1283,7 @@ function initGame(){
         roomInfo.textContent='🤖 AI ('+['简单','中等','困难'][G.aiLevel-1]+')';
     } else if(G.mode.includes('remote')){
         roomInfo.textContent='房间: '+G.roomCode;
+        // Host 名称已在 remoteStartBtn 中设置
     }
     renderPlayers(); updateRange(); updateInputDisplay();
     messageDisplay.textContent='游戏开始！第 1 轮';
@@ -2248,7 +2263,8 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
         case 'lie': user.lie=true; messageDisplay.textContent='🤥 '+userName+'说谎！下条信息可能为假'; break;
         case 'copy': {
             if(opponent.skills.length === 0){ messageDisplay.textContent='⚠️ 对手没有技能可复制'; delete user.cooldowns[skillId]; renderSkills(); return; }
-            const availableSkills = opponent.skills.filter(s => s.id !== 'copy');
+            // 过滤掉需要数字输入的技能，防止复制后出现交互问题
+            const availableSkills = opponent.skills.filter(s => s.id !== 'copy' && !['verifier','trap','blackhole'].includes(s.id));
             if(availableSkills.length === 0){ messageDisplay.textContent='⚠️ 对手没有可复制的技能'; delete user.cooldowns[skillId]; renderSkills(); return; }
             const randomSkill = availableSkills[Math.floor(Math.random()*availableSkills.length)];
             messageDisplay.textContent='📋 '+userName+'复制了对手的技能：'+randomSkill.name;
@@ -2947,6 +2963,9 @@ remoteReadyBtn.addEventListener('click',function(){
 
 remoteStartBtn.addEventListener('click',function(){
     if(!G.remoteReady.guest){ showCheatToast('对方尚未准备'); return; }
+    // 读取并设置 Host 名称
+    const hostName = remoteNameInput.value.trim() || 'Host';
+    getPlayer('p1').name = hostName;
     readSetupInputs(true);
     if(G.isSkillMode){
         G.skillCount = parseInt(remoteSkillCountInput.value) || 1;
