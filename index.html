@@ -152,26 +152,18 @@
     <div id="main-menu" class="overlay">
         <button class="help-btn" id="help-btn">?</button>
         <div class="overlay-title">选择模式</div>
-        <button class="btn" id="normal-mode-btn">🎮 普通模式</button>
-        <button class="btn secondary" id="skill-mode-btn">⚡ 技能模式</button>
+        <button class="btn" id="normal-mode-btn">🎮 开始游戏</button>
+        <button class="btn secondary" id="tutorial-mode-btn">🎓 教程模式</button>
         <div id="stats-display"></div>
-    </div>
-    <div id="normal-submenu" class="overlay hidden">
-        <div class="overlay-title">普通模式</div>
-        <button class="btn" id="normal-local-btn">📱 本地双人</button>
-        <button class="btn" id="normal-ai-btn">🤖 AI对战</button>
-        <button class="btn" id="normal-remote-btn">🌐 远程对战</button>
-        <button class="btn secondary" id="normal-back-btn">返回</button>
-    </div>
-    <div id="skill-submenu" class="overlay hidden">
-        <div class="overlay-title">技能模式</div>
-        <button class="btn" id="skill-local-btn">📱 本地双人</button>
-        <button class="btn" id="skill-ai-btn">🤖 AI对战</button>
-        <button class="btn" id="skill-remote-btn">🌐 远程对战</button>
-        <button class="btn secondary" id="skill-back-btn">返回</button>
     </div>
     <div id="setup-overlay" class="overlay hidden">
         <div class="overlay-title">⚙️ 游戏设置</div>
+        <div class="setting-row" id="opponent-row">
+            <label>对战对象：</label>
+            <button class="ai-level-btn" data-opp="local">📱 本地双人</button>
+            <button class="ai-level-btn active" data-opp="ai">🤖 AI对战</button>
+            <button class="ai-level-btn" data-opp="remote">🌐 远程对战</button>
+        </div>
         <div class="setting-row">
             <label>最小值：</label><input type="number" id="min-input" value="1" min="1">
             <label>最大值：</label><input type="number" id="max-input" value="100" min="2">
@@ -185,11 +177,16 @@
             <button class="ai-level-btn" data-level="2">中等</button>
             <button class="ai-level-btn" data-level="3">困难</button>
         </div>
-        <div class="setting-row" id="skill-count-row" style="display:none;">
-            <label>技能数量（1-3）：</label><input type="number" id="skill-count-input" value="1" min="1" max="3">
+        <div class="setting-row">
+            <label>技能数量（0-3）：</label><input type="number" id="skill-count-input" value="1" min="0" max="3">
         </div>
         <button class="btn" id="start-game-btn">开始游戏</button>
         <button class="btn secondary" id="back-menu-btn1">返回</button>
+    </div>
+    <div id="tutorial-menu" class="overlay hidden">
+        <div class="overlay-title">🎓 教程模式</div>
+        <div class="tutorial-levels" id="tutorial-levels"></div>
+        <button class="btn secondary" id="back-menu-btn2">返回</button>
     </div>
     <div id="remote-lobby" class="overlay hidden">
         <div class="overlay-title">远程对战</div>
@@ -199,7 +196,7 @@
         <button class="btn" id="join-room-btn">加入房间</button>
         <div id="lobby-message" style="margin-top:15px;color:#ff6666;font-size:0.8rem;"></div>
         <div id="conn-status"></div>
-        <button class="btn secondary" id="back-menu-btn2">返回</button>
+        <button class="btn secondary" id="back-menu-btn3">返回</button>
     </div>
     <div id="remote-waiting" class="overlay hidden">
         <div class="overlay-title">房间码</div>
@@ -219,7 +216,7 @@
                 <label>生命值（1-100）：</label><input type="number" id="remote-hp-input" value="5" min="1" max="100">
             </div>
             <div class="setting-row" id="remote-skill-count-row">
-                <label>技能数量（1-3）：</label><input type="number" id="remote-skill-count-input" value="1" min="1" max="3">
+                <label>技能数量（0-3）：</label><input type="number" id="remote-skill-count-input" value="1" min="0" max="3">
             </div>
         </div>
         <div class="setting-row">
@@ -338,33 +335,36 @@
             <h3>📏 基本规则</h3>
             <p>· 每轮随机生成一个炸弹数字，范围随猜测不断缩小；炸弹爆炸后进入下一轮，双方血量保留。</p>
             <p>· 猜数字的是进攻方，炸弹在谁那边谁就是防守方——踩中炸弹炸的是防守方，别搞反了。</p>
-            <p>· 技能模式：每轮开始双方各从随机 3 选 1 中挑技能（每人 1~3 个），技能有冷却回合。</p>
-            <h3>🎮 三种对战模式</h3>
-            <p>· 本地双人：同一设备轮流操作，带防偷看换手隐私屏。</p>
-            <p>· AI 对战：简单 / 中等 / 困难三档，AI 会按血量与范围评估技能价值。</p>
-            <p>· 远程对战：创建 6 位房间码或复制邀请链接，支持实时聊天与表情。</p>
+            <p>· 技能数量 0~3 可调：0 为普通模式；&gt;0 时每轮开始双方各从随机 3 选 1 中挑技能，技能有冷却回合。</p>
+            <p>· 教程模式：20 个关卡带你逐个认识技能与连招。</p>
+            <h3>🧩 技能叠加规则（重要）</h3>
+            <p>· <b>自己的技能不会互相覆盖</b>：护盾/反射/加速/赋能按层数叠加，双倍/孤注一掷/子母弹倍率累加，翻倍累乘，吸血回复量累加。</p>
+            <p>· 增伤结算顺序：双倍与孤注一掷倍率相加 → 子母弹/愤怒/休眠/骰子加固定伤 → 翻倍最后整体相乘。例：双倍+孤注一掷+翻倍 = (2+3)×2 = 10 倍。</p>
+            <p>· 增伤类「猜错或回合结束即失效」；回合结束时所有临时增益清空（重生除外）。</p>
+            <p>· 克制只对对手有效：🗡️穿透无视对手护盾；🔱连击把伤害拆成多段，护盾/反射每次只挡一段，专破防御流。</p>
             <h3>⚡ 技能分类（共 48 种）</h3>
-            <p>· 信息类：📡探测(奇偶)、🔍透视(个位)、🌡️温度计(距离)、🎯验证器(中了没)、📡侦察(看对手技能)、➕数字和、🔮预知</p>
-            <p>· 范围类：✂️二分、⏪回退、🔀洗牌、🚚移动、🕳️黑洞、🌊潮汐、🕳️虫洞</p>
-            <p>· 伤害强化：⚡双倍、🔥孤注一掷、💣子母弹、💢愤怒、🌙吸血、💥翻倍、🔱连击、💤休眠</p>
-            <p>· 防御类：🛡️护盾、🪞反射、💊治疗、🕊️重生</p>
+            <p>· 信息类：📡探测(奇偶)、🔍透视(个位)、🌡️温度计(距离)、🎯验证器(中了没)、📡侦察(看对手技能)、➕数字和、🔮预知(十位)</p>
+            <p>· 范围类：✂️二分、⏪回退、🔀洗牌、🚚移动、🕳️黑洞、🌊潮汐、🌀虫洞(对称换位)</p>
+            <p>· 伤害强化：⚡双倍、🔥孤注一掷、💣子母弹、💢愤怒、🌙吸血、💥翻倍、🎲命运骰子</p>
+            <p>· 防御类：🛡️护盾(可叠层)、🪞反射(可叠层)、💊治疗、🕊️重生</p>
             <p>· 干扰控制：🙈致盲、🚫封锁、🕐暂停、🐌缓速、🧊冰封、🚷禁猜</p>
             <p>· 心理欺诈：🌫️迷雾、🎭伪装、🤥说谎、🎯押注</p>
-            <p>· 陷阱特殊：🕸️蛛网、🪤陷阱、📋复制、🌟赋能、💤休眠、🕰️时间回溯</p>
-            <p>· 新增战术：🔄刷新、🔋充能、⏭️跳过、🎲命运骰子、🃏赌徒</p>
+            <p>· 陷阱特殊：🕸️蛛网、🪤陷阱、📋复制、🌟赋能、💤休眠、🕰️时间回溯、🔄刷新、🔋充能、⏭️跳过、🃏赌徒、🔱连击</p>
             <h3>🧠 推荐技能组合</h3>
             <p>· ✂️二分 + 🔥孤注一掷：先把范围压到个位数，再赌 3 倍伤害一击必杀。</p>
             <p>· 📡探测/🔍透视 + ✂️二分：信息配压缩，两轮就能锁定炸弹。</p>
-            <p>· 🕸️蛛网 + 🙈致盲/🌫️迷雾：把对手困在雷区里瞎猜，步步惊心。</p>
-            <p>· 💤休眠 + 💣子母弹/💢愤怒：故意不炸诱敌深入，下一轮爆发反击。</p>
-            <p>· 🛡️护盾 + 🪞反射：双重保险，反弹对手的致命一击。</p>
-            <p>· 🌟赋能 + ⚡双倍/💊治疗：关键时刻效果翻倍，逆转战局。</p>
-            <p>· 💥翻倍 + ⚡双倍 + 🔥孤注一掷：(2+3)×2 = 10 倍伤害，一键升天。</p>
+            <p>· 🛡️护盾×2：层数叠加硬扛连击，但挡不住穿透。</p>
+            <p>· 🔱连击 + ⚡双倍 + 🔥孤注一掷：总伤先拉高再拆段，护盾流也扛不住。</p>
+            <p>· 🪞反射 + ⏭️跳过：布好反弹阵就让对手先出手。</p>
+            <p>· 🌟赋能 + ⚡双倍/💊治疗：关键时刻效果翻倍，赋能层数也可叠加。</p>
             <h3>💡 小技巧</h3>
             <p>· 故意猜得离边界近可以少缩小范围「钓鱼」，但也会送给对手信息。</p>
             <p>· 对手技能栏是公开可见的，盯着冷却规划你的进攻节奏。</p>
-            <p>· 增伤只在本回合内有效：猜错或回合结束即消失；已生效的增益会实时显示在双方技能栏。</p>
-            <p>· 残局血量低时优先选治疗 / 护盾 / 重生；🗡️穿透专克护盾流。</p>
+            <p>· 残局血量低时优先选治疗 / 护盾 / 重生；对方叠盾就用🗡️穿透或🔱连击。</p>
+            <h3>🤖 AI 难度说明</h3>
+            <p>· <b>简单</b>：随机猜数、偶尔乱放技能，适合热身。</p>
+            <p>· <b>普通</b>：中点逼近猜数，会保命、斩杀、破防，每回合最多连放 2 个技能。</p>
+            <p>· <b>困难</b>：每回合最多连放 3 个技能；会连招（赋能→双倍→孤注一掷→翻倍）、用信息技能记线索并按候选集精确切猜、验证器确知炸弹后直接收割；你快排完时还会洗牌/虫洞/移动掀桌重来。它不偷看炸弹，只用公开信息推理。</p>
         </div>
         <button class="btn" id="help-close-btn">返回</button>
     </div>
@@ -407,21 +407,21 @@ const ALL_SKILLS = [
     { id:'move', name:'🚚 移动', desc:'炸弹随机向上或向下移动5个数字。例：炸弹在42，使用后可能变成37或47', cooldown:2 },
     { id:'blackhole', name:'🕳️ 黑洞', desc:'选择一个数字，范围两端各向该数字靠拢1。例：范围1-100，选择50，新范围变为2-99', cooldown:2 },
     { id:'tide', name:'🌊 潮汐', desc:'本回合范围扩大5，下回合自动缩小5。例：范围1-100使用后变为1-105，下回合恢复1-100', cooldown:3 },
-    { id:'wormhole', name:'🕳️ 虫洞', desc:'将炸弹数字与范围另一端的对称位置交换（即 low + high - 当前炸弹）。例：范围1-100，炸弹42，对称位置是59，使用后炸弹变为59', cooldown:3 },
-    { id:'double', name:'⚡ 双倍', desc:'你下一次猜中炸弹伤害×2。例：原本1伤害变成2伤害', cooldown:3 },
-    { id:'rampage', name:'💥 翻倍', desc:'本回合内你的炸弹伤害×2，可与其他增伤相乘。例：已有双倍（×2）和孤注一掷（×3），总倍率=(2+3)×2=10倍', cooldown:4 },
+    { id:'wormhole', name:'🌀 虫洞', desc:'将炸弹数字与范围另一端的对称位置交换（即 low + high - 当前炸弹）。例：范围1-100，炸弹42，对称位置是59，使用后炸弹变为59', cooldown:3 },
+    { id:'double', name:'⚡ 双倍', desc:'你下一次猜中炸弹伤害×2，多次使用倍率累加。例：连续用两次，原本1伤害变成4伤害', cooldown:3 },
+    { id:'rampage', name:'💥 翻倍', desc:'本回合内你的炸弹伤害×2，可与其他增伤相乘，多次使用累乘。例：已有双倍（×2）和孤注一掷（×3），总倍率=(2+3)×2=10倍', cooldown:4 },
     { id:'pierce', name:'🗡️ 穿透', desc:'本回合内你的炸弹伤害无视对手护盾。例：对手有2层护盾，你的3点伤害全部直接扣血', cooldown:3 },
-    { id:'lifesteal', name:'🌙 吸血', desc:'你下一次猜中炸弹时回复1点生命。例：你HP=3，猜中后回复到4', cooldown:3 },
+    { id:'lifesteal', name:'🌙 吸血', desc:'你下一次猜中炸弹时回复1点生命，多次使用回复量累加。例：用两次后猜中，一次回复2血', cooldown:3 },
     { id:'anger', name:'💢 愤怒', desc:'本回合内，你每损失2点生命，炸弹伤害+1。例：你已损失4点血，伤害额外+2', cooldown:3 },
-    { id:'allin', name:'🔥 孤注一掷', desc:'你下一次猜中炸弹伤害变为3倍；猜错自己受1点伤害。例：猜中伤害从1变为3，猜错自己-1血', cooldown:4 },
-    { id:'bomblet', name:'💣 子母弹', desc:'你下一次猜中炸弹时额外造成2点伤害。例：原本1伤害变成3伤害', cooldown:4 },
-    { id:'volley', name:'🔱 连击', desc:'你下一次猜中炸弹时伤害拆成3段结算，专破护盾/反射。例：总伤害3拆成1+1+1，每段独立结算', cooldown:4 },
+    { id:'allin', name:'🔥 孤注一掷', desc:'你下一次猜中炸弹伤害变为3倍，多次使用倍率累加；猜错自己受1点伤害。例：用两次后猜中伤害从1变为6，猜错自己-1血', cooldown:4 },
+    { id:'bomblet', name:'💣 子母弹', desc:'你下一次猜中炸弹时额外造成2点伤害，多次使用伤害累加。例：用两次后原本1伤害变成5伤害', cooldown:4 },
+    { id:'volley', name:'🔱 连击', desc:'你下一次猜中炸弹时伤害拆成3段结算（每段至少1点，赋能后5段），护盾/反射每次只挡一段，重生后剩余段继续打，专破防御流。例：总伤害3拆成1+1+1，对手1层护盾只能挡第1段', cooldown:4 },
     { id:'dormant', name:'💤 休眠', desc:'对手下次猜中炸弹不会爆炸，之后你下次猜中伤害+2。例：对手猜中42但没炸，你下次猜中任何数伤害额外+2', cooldown:4 },
-    { id:'shield', name:'🛡️ 护盾', desc:'获得1层护盾，每层抵挡一段伤害。例：对手造成2段伤害，你有1层护盾可挡住第一段', cooldown:3 },
-    { id:'reflect', name:'🪞 反射', desc:'获得1层反射，每层反弹一段伤害。例：对手对你造成2段伤害，你有1层反射可反弹第一段', cooldown:4 },
+    { id:'shield', name:'🛡️ 护盾', desc:'获得1层护盾，每层抵挡一段伤害，多次使用层数叠加。例：叠2层后对手3段连击只能挡住前2段', cooldown:3 },
+    { id:'reflect', name:'🪞 反射', desc:'获得1层反射，每层反弹一段伤害，多次使用层数叠加。例：对手对你造成2段伤害，你有2层反射可全部反弹', cooldown:4 },
     { id:'heal', name:'💊 治疗', desc:'立即回复1点生命。例：HP从2回到3', cooldown:3 },
     { id:'rebirth', name:'🕊️ 重生', desc:'死亡时以2点生命复活一次（触发后技能消失）。例：HP降到0时立刻恢复到2', cooldown:-1 },
-    { id:'speed', name:'🏃 加速', desc:'本回合内猜错后可再猜一次。例：猜错后不用结束回合，可以立即再输入一个数字', cooldown:3 },
+    { id:'speed', name:'🏃 加速', desc:'本回合内猜错后可再猜一次，多次使用续猜次数叠加。例：用两次后连错两次都能继续猜', cooldown:3 },
     { id:'blind', name:'🙈 致盲', desc:'对手下一回合看不到范围显示。例：对手看不到“范围：1-100”，只能盲猜', cooldown:3 },
     { id:'lock', name:'🚫 封锁', desc:'随机禁掉对手一个技能直到炸弹爆炸。例：对手有“治疗”和“探测”，可能封锁“治疗”', cooldown:3 },
     { id:'pause', name:'🕐 暂停', desc:'对手跳过下一次行动回合。例：本来轮到对手，使用后直接跳过他的回合', cooldown:4 },
@@ -434,7 +434,7 @@ const ALL_SKILLS = [
     { id:'lie', name:'🤥 说谎', desc:'你下一次获得的“大了/小了”反馈可能为假。例：你猜30，实际炸弹42应显示“小了”，但可能显示“大了”', cooldown:2 },
     { id:'copy', name:'📋 复制', desc:'随机复制对手的一个技能并立即使用。例：对手有“治疗”，你复制后立刻回复1血', cooldown:5 },
     { id:'trap', name:'🪤 陷阱', desc:'选择一个数字设为陷阱，对手猜中该数字直接爆炸。例：设置陷阱50，对手猜50时立刻受1伤害', cooldown:4 },
-    { id:'empower', name:'🌟 赋能', desc:'获得1层赋能，使下一个可强化的技能效果翻倍。例：赋能后使用“治疗”，回复量从1变为2', cooldown:3 },
+    { id:'empower', name:'🌟 赋能', desc:'获得1层赋能，每层使下一个可强化的技能效果翻倍，多次使用层数叠加。例：叠2层后用"治疗"消耗1层回复2血，还剩1层', cooldown:3 },
     { id:'web', name:'🕸️ 蛛网', desc:'炸弹周围±3的数字变成雷区，对方踩中受1点波及伤害。例：炸弹42，对手猜40（差2）也会受1伤害', cooldown:3 },
     { id:'timerewind', name:'🕰️ 时间回溯', desc:'双方生命值回复到本回合开始时的状态。例：你本回合掉了2血，使用后恢复到回合开始的血量', cooldown:4 },
     { id:'refresh', name:'🔄 刷新', desc:'随机选择一个你正在冷却中的技能，立即将其冷却时间清零。例：你“双倍”冷却2，使用后可能立即再次使用', cooldown:5 },
@@ -465,7 +465,7 @@ function makePlayer(id) {
 // ========== 全局状态 ==========
 const G = {
     mode:'', active:false, processing:false, isSkillMode:false,
-    aiLevel:1, minVal:1, maxVal:100, low:1, high:100,
+    aiLevel:1, aiBrain:null, minVal:1, maxVal:100, low:1, high:100,
     bombNumber:0, currentPlayer:'p1', playerInput:'',
     myRole:'', isHost:false,
     peer:null, conn:null, roomCode:'',
@@ -480,7 +480,8 @@ const G = {
     tideShrinkNext:false,
     requestId:0,
     skillSelectShown: false,
-    roundCount: 0
+    roundCount: 0,
+    tutorial: null // 教程相关数据
 };
 
 let skillSelectPhase = null;
@@ -493,13 +494,38 @@ let guestActionTimeout = null;
 let guessHistory = [];
 let toastTimer = null;
 
+// 教程关卡数据
+const TUTORIAL_LEVELS = [
+    { level:1, name:'基础规则', min:1, max:100, playerHP:5, aiHP:5, playerSkills:[], aiSkills:[], aiScript:[[{type:'guess', number:50, note:'AI 猜了中点 50——范围未知时猜中点信息量最大'}]], hint:'观察AI如何猜数字，学习基本流程。', goal:'猜中炸弹获胜，体会“猜错→缩小范围”的核心循环', lesson:'猜错不是坏事：每次猜错都帮你排除了一半方向。中点猜法是最优策略。' },
+    { level:2, name:'信息技能', min:1, max:100, playerHP:5, aiHP:5, playerSkills:['detect'], aiSkills:['detect'], aiScript:[[{type:'skill', id:'detect', note:'AI 用📡探测获知奇偶——候选数字直接减半'},{type:'guess', number:25}]], hint:'先使用探测技能，了解奇偶，再猜数。', goal:'养成“先放信息技能，再猜数”的习惯', lesson:'信息技能是免费的缩圈：探测一次相当于白猜一次还不挨炸。' },
+    { level:3, name:'范围控制', min:1, max:100, playerHP:5, aiHP:5, playerSkills:['binary'], aiSkills:['binary'], aiScript:[[{type:'skill', id:'binary', note:'AI 用✂️二分——范围直接砍半，不用赌运气'},{type:'guess', number:50}]], hint:'使用二分技能缩小范围，再猜中点。', goal:'学会用✂️二分主动压缩范围', lesson:'二分一次 = 白捡两次猜错的收益，是开局最强节奏技。' },
+    { level:4, name:'防守反击', min:1, max:100, playerHP:5, aiHP:5, playerSkills:['shield'], aiSkills:['shield'], aiScript:[[{type:'skill', id:'shield', note:'AI 架起🛡️护盾——你的下次攻击会被挡住'},{type:'guess', number:90}]], hint:'使用护盾抵挡伤害，再猜数。', goal:'用🛡️护盾挡住 AI 的攻击（连放两次会叠 2 层）', lesson:'护盾层数可叠加，但一段伤害只消耗一层——所以它只怕连击。' },
+    { level:5, name:'顺序爆发', min:1, max:50, playerHP:5, aiHP:10, playerSkills:[], aiSkills:['double','allin','rampage'], aiScript:[[{type:'skill', id:'double', note:'①双倍：倍率+2'},{type:'skill', id:'allin', note:'②孤注一掷：倍率再+3（猜错要自伤）'},{type:'skill', id:'rampage', note:'③翻倍：整体×2——(1+2+3)×2=12，看清楚结算顺序！'},{type:'guess', number:25}]], hint:'观察AI如何使用双倍+孤注一掷+翻倍造成10倍伤害。', goal:'看懂增伤连招的结算顺序：先相加、再相乘', lesson:'倍率类先相加、翻倍类最后相乘——顺序决定爆炸力。你也试试：(双倍+孤注一掷)×翻倍。' },
+    { level:6, name:'连击破防', min:1, max:50, playerHP:5, aiHP:10, playerSkills:['shield'], aiSkills:['volley'], aiScript:[[{type:'skill', id:'volley', note:'AI 用🔱连击：伤害拆成 3 段，你的护盾每层只能挡 1 段！'},{type:'guess', number:25}]], hint:'AI使用连击拆段伤害，你的护盾只能挡一段。', goal:'体验护盾被🔱连击拆段，理解分段结算', lesson:'连击专破护盾/反射/重生：每段独立结算，防不住全部。' },
+    { level:7, name:'控制流', min:1, max:100, playerHP:5, aiHP:5, playerSkills:['blind'], aiSkills:['blind','slow'], aiScript:[[{type:'skill', id:'blind', note:'AI 致盲了你——下次猜数不告诉你大了还是小了'},{type:'skill', id:'slow', note:'AI 给你挂了缓速——猜错范围不缩了'},{type:'guess', number:50}]], hint:'AI会致盲并缓速你，注意范围显示。', goal:'在被致盲/缓速的干扰下取胜', lesson:'致盲断信息、缓速断节奏——中了控制就保守猜中点。' },
+    { level:8, name:'陷阱与蛛网', min:1, max:50, playerHP:5, aiHP:5, playerSkills:['trap'], aiSkills:['trap','web'], aiScript:[[{type:'skill', id:'web', note:'AI 布下🕸️蛛网：炸弹周围±3 都会炸你'},{type:'skill', id:'trap', note:'AI 埋了🪤陷阱——猜猜埋在哪？多半在你最想猜的位置'},{type:'guess', number:30}]], hint:'AI设置陷阱和蛛网，小心踩雷。', goal:'避开陷阱、理解蛛网的溅射范围', lesson:'陷阱埋在中点收益最大——对手的二分直觉就是陷阱的猎物。' },
+    { level:9, name:'信息组合', min:1, max:100, playerHP:5, aiHP:5, playerSkills:['digitsum','precognition'], aiSkills:['digitsum','precognition'], aiScript:[[{type:'skill', id:'digitsum', note:'AI 用➕数字和：获知各位数字之和'},{type:'skill', id:'precognition', note:'AI 用🔮预知：获知首位数字——两条线索取交集，候选只剩个位数'},{type:'guess', number:42}]], hint:'AI使用数字和与预知快速锁定炸弹。', goal:'用➕数字和+🔮预知的交集锁定候选', lesson:'两条独立线索取交集，常常只剩几个候选——信息技能要组合用。' },
+    { level:10, name:'虫洞换位', min:1, max:100, playerHP:5, aiHP:5, playerSkills:['wormhole'], aiSkills:['wormhole'], aiScript:[[{type:'skill', id:'wormhole', note:'AI 用🌀虫洞把炸弹对称搬走了——你之前缩的范围作废！'},{type:'guess', number:50}]], hint:'AI使用虫洞改变炸弹位置，干扰你的判断。', goal:'学会在对手逼近时用🌀虫洞作废TA的线索', lesson:'炸弹移动后所有旧线索作废——虫洞/洗牌/移动是逆风翻盘键。' },
+    { level:11, name:'刷新循环', min:1, max:50, playerHP:5, aiHP:5, playerSkills:['refresh'], aiSkills:['double','refresh'], aiScript:[[{type:'skill', id:'double', note:'①双倍上身'},{type:'skill', id:'refresh', note:'②刷新：刚用过的双倍冷却清零！'},{type:'skill', id:'double', note:'③双倍再来一次——倍率+4 了'},{type:'guess', number:25}]], hint:'AI使用刷新重置双倍冷却，连续爆发。', goal:'学会用🔄刷新让高价值技能连放两次', lesson:'刷新配双倍/连击 = 一回合叠两层爆发，比省着用强得多。' },
+    { level:12, name:'充能加速', min:1, max:50, playerHP:5, aiHP:5, playerSkills:['charge'], aiSkills:['heal','charge'], aiScript:[[{type:'skill', id:'heal', note:'AI 先奶一口'},{type:'skill', id:'charge', note:'AI 用🔋充能：治疗冷却-1，下回合又能奶'},{type:'guess', number:25}]], hint:'AI使用充能减少治疗冷却，持续回复。', goal:'理解🔋充能的续航价值', lesson:'充能越早放收益越大——它让所有冷却转得更快。' },
+    { level:13, name:'赌徒博弈', min:1, max:50, playerHP:5, aiHP:5, playerSkills:['gambler'], aiSkills:['gambler'], aiScript:[[{type:'skill', id:'gambler', note:'AI 开赌：50% 你掉血，50% 它自己掉血'},{type:'guess', number:25}]], hint:'AI使用赌徒，50%概率伤害你或自己。', goal:'体会🎲赌徒的风险收益比', lesson:'赌徒在自己血多、对手血少时才值得开——落后时它是翻盘币。' },
+    { level:14, name:'命运骰子', min:1, max:50, playerHP:5, aiHP:5, playerSkills:['dice'], aiSkills:['dice'], aiScript:[[{type:'skill', id:'dice', note:'AI 掷骰子：伤害+3/+1/-1、自伤或无事，全看脸'},{type:'guess', number:25}]], hint:'AI使用命运骰子，随机获得效果。', goal:'体会🎲命运骰子的随机性', lesson:'骰子期望为正但会自伤，优势局锦上添花、劣势局别指望它。' },
+    { level:15, name:'跳过+反射', min:1, max:50, playerHP:5, aiHP:5, playerSkills:['reflect'], aiSkills:['skip','reflect'], aiScript:[[{type:'skill', id:'reflect', note:'AI 架起🪞反射——你打它多少就弹回多少'},{type:'skill', id:'skip', note:'AI 跳过回合——它在等你撞反射！这时候别贪攻'},{type:'guess', number:25}]], hint:'AI使用反射后跳过回合，诱你攻击并反弹。', goal:'识别“反射+跳过”的诱攻陷阱', lesson:'对手突然跳过回合，多半是布好了反射等你撞——这时先放技能别急着猜。' },
+    { level:16, name:'封锁+暂停', min:1, max:50, playerHP:5, aiHP:5, playerSkills:['lock'], aiSkills:['lock','pause'], aiScript:[[{type:'skill', id:'lock', note:'AI 用🔒封锁了你的一个技能'},{type:'skill', id:'pause', note:'AI 用⏸️暂停——你下回合直接跳过'},{type:'guess', number:25}]], hint:'AI封锁你的技能并暂停你的回合。', goal:'在技能被封锁、回合被暂停时稳住局面', lesson:'被锁技能别慌：猜数基本功才是本体，技能只是放大器。' },
+    { level:17, name:'伪装+说谎', min:1, max:50, playerHP:5, aiHP:5, playerSkills:['disguise'], aiSkills:['disguise','lie'], aiScript:[[{type:'skill', id:'disguise', note:'AI 用🎭伪装：你踩中假数字也不爆炸'},{type:'skill', id:'lie', note:'AI 开启🤥说谎：它下次反馈是假的！'},{type:'guess', number:25}]], hint:'AI伪装炸弹并说谎，反馈不可靠。', goal:'识破伪装与谎言，别被假反馈带偏', lesson:'反馈和直觉矛盾时，先怀疑说谎——交叉验证比单条信息可靠。' },
+    { level:18, name:'时间回溯', min:1, max:50, playerHP:5, aiHP:5, playerSkills:['timerewind'], aiSkills:['timerewind'], aiScript:[[{type:'skill', id:'timerewind', note:'AI 用⏰时间回溯：血量回到本回合开始——白打了'},{type:'guess', number:25}]], hint:'AI使用时间回溯恢复血量。', goal:'理解⏰时间回溯的回血时机', lesson:'回溯回到回合开始血量——对手爆发回合前用，等于白接一套连招。' },
+    { level:19, name:'全能连招', min:1, max:100, playerHP:5, aiHP:10, playerSkills:['detect','binary'], aiSkills:['detect','binary','double','rampage'], aiScript:[[{type:'skill', id:'detect', note:'①信息：探测奇偶'},{type:'skill', id:'binary', note:'②压缩：二分砍半'},{type:'skill', id:'double', note:'③武装：双倍上身'},{type:'skill', id:'rampage', note:'④引爆：翻倍×2——信息→压缩→增伤，标准击杀链'},{type:'guess', number:25}]], hint:'AI展示信息+范围+增伤全流程。', goal:'复刻“信息→压缩→增伤→收割”的完整击杀链', lesson:'标准击杀链：先拿信息、再压范围、最后叠增伤一击致命。' },
+    { level:20, name:'终极BOSS', min:1, max:100, playerHP:10, aiHP:10, playerSkills:['heal','shield','reflect'], aiSkills:['double','allin','rampage','volley','refresh'], aiScript:[[{type:'skill', id:'double', note:'BOSS 开始叠增伤…'},{type:'skill', id:'allin', note:'孤注一掷也上了——它要一波带走你'},{type:'skill', id:'rampage', note:'翻倍！这波伤害已经非常夸张'},{type:'skill', id:'volley', note:'连击收尾——你的护盾也只能挡一段，用反射或暂停反制！'},{type:'guess', number:25}]], hint:'AI使用多段爆发，你需要灵活应对。', goal:'综合运用所学，顶住多段爆发并反杀', lesson:'通关！你已经掌握：信息、压缩、连招、破防、反制——去打困难AI吧。' }
+];
+
 const $ = id => document.getElementById(id);
-const mainMenu=$('main-menu'), normalSubmenu=$('normal-submenu'), skillSubmenu=$('skill-submenu');
-const setupOverlay=$('setup-overlay'), remoteLobby=$('remote-lobby'), remoteWaiting=$('remote-waiting');
+const mainMenu=$('main-menu'), setupOverlay=$('setup-overlay'), tutorialMenu=$('tutorial-menu');
+const remoteLobby=$('remote-lobby'), remoteWaiting=$('remote-waiting');
 const remoteSetupOverlay=$('remote-setup-overlay'), battleArea=$('battle-area');
 const roomInfo=$('room-info'), minInput=$('min-input'), maxInput=$('max-input'), hpInput=$('hp-input');
 const remoteMinInput=$('remote-min-input'), remoteMaxInput=$('remote-max-input'), remoteHpInput=$('remote-hp-input');
 const aiLevelRow=$('ai-level-row');
+const opponentRow=$('opponent-row');
 const opponentHighlight=$('opponent-highlight'), meHighlight=$('me-highlight');
 const opponentLivesEl=$('opponent-lives'), meLivesEl=$('me-lives');
 const opponentAvatar=$('opponent-avatar'), opponentName=$('opponent-name');
@@ -578,6 +604,7 @@ function getCurrentPlayer(){ return getPlayer(G.currentPlayer); }
 function getOpponentPlayer(id){ return id==='p1' ? getPlayer('p2') : getPlayer('p1'); }
 function getMyPlayer(){
     if(G.mode.includes('remote')) return G.myRole==='host' ? getPlayer('p1') : getPlayer('p2');
+    if(G.mode==='tutorial') return getPlayer('p1');
     return getPlayer('p1');
 }
 function getMyOpponent(){ return getOpponentPlayer(getMyPlayer().id); }
@@ -586,12 +613,17 @@ function isMyTurn(){
     if(G.mode.includes('local')) return true;
     if(G.mode.includes('ai')) return G.currentPlayer==='p1' && !G.processing;
     if(G.mode.includes('remote')) return (G.currentPlayer==='p1'&&G.myRole==='host')||(G.currentPlayer==='p2'&&G.myRole==='guest');
+    if(G.mode==='tutorial') return G.currentPlayer==='p1';
     return false;
 }
 function generateRoomCode(){ return Math.random().toString(36).substring(2,8).toUpperCase(); }
 function showCheatToast(msg, duration = 3000){
     if (toastTimer) clearTimeout(toastTimer);
-    cheatToast.innerHTML = msg + '<button class="toast-close" onclick="this.parentNode.classList.remove(\'show\'); if(window.toastTimer) clearTimeout(window.toastTimer);">✕</button>';
+    cheatToast.innerHTML = msg + '<button class="toast-close">✕</button>';
+    cheatToast.querySelector('.toast-close').addEventListener('click', function(){
+        if (toastTimer) clearTimeout(toastTimer);
+        cheatToast.classList.remove('show');
+    });
     cheatToast.classList.add('show');
     toastTimer = setTimeout(() => cheatToast.classList.remove('show'), duration);
 }
@@ -1128,7 +1160,7 @@ document.querySelectorAll('.chat-emoji').forEach(btn => {
 // ========== 名称编辑 ==========
 let nameEditTarget = null;
 function openNameEditor(playerId) {
-    if (!G.mode.includes('local') && !G.mode.includes('remote')) return;
+    if (!G.mode.includes('local') && !G.mode.includes('remote') && G.mode!=='tutorial') return;
     if (G.mode.includes('remote') && !G.isHost) return;
     nameEditTarget = playerId;
     const player = getPlayer(playerId);
@@ -1145,7 +1177,7 @@ $('name-edit-confirm').addEventListener('click', function() {
 });
 $('name-edit-cancel').addEventListener('click', closeNameEditor);
 opponentName.addEventListener('click', function() {
-    if (G.mode.includes('local') || (G.mode.includes('remote') && G.isHost)) openNameEditor(getMyOpponent().id);
+    if (G.mode.includes('local') || (G.mode.includes('remote') && G.isHost) || G.mode==='tutorial') openNameEditor(getMyOpponent().id);
 });
 meName.addEventListener('click', function() { openNameEditor(getMyPlayer().id); });
 
@@ -1179,6 +1211,7 @@ function resetGameState(){
     G.pendingSkillCount=G.skillCount; G.pendingRoundOptions=null;
     skillSelectPhase=null; G.hostSkillComplete=null;
     G.tideShrinkNext=false;
+    G.aiBrain=null;
     G.roundStartHP = { p1: G.players.p1.maxHP, p2: G.players.p2.maxHP };
     G.skillSelectShown = false;
     G.roundCount = 0;
@@ -1201,6 +1234,18 @@ function resetGameState(){
         p.rampageMulti=null; p.secondLockedSkill=null; p.volley=0;
         p.forbidNumber=null; p.diceBonus=0;
     });
+    // 教程模式初始化
+    if(G.mode==='tutorial' && G.tutorial){
+        const lvl = G.tutorial.levelData;
+        G.currentPlayer = 'p1'; // 玩家先手
+        G.skillCount = lvl.playerSkills.length;
+        getPlayer('p1').skills = lvl.playerSkills.map(id=>getSkillById(id));
+        getPlayer('p2').skills = lvl.aiSkills.map(id=>getSkillById(id));
+        getPlayer('p1').cooldowns = {};
+        getPlayer('p2').cooldowns = {};
+        G.tutorial.aiScriptQueue = [];
+        G.tutorial.currentStepIndex = 0;
+    }
 }
 
 function startNewRound(){
@@ -1209,6 +1254,7 @@ function startNewRound(){
     G.bombNumber=Math.floor(Math.random()*(G.maxVal-G.minVal+1))+G.minVal;
     G.playerInput=''; G.processing=false;
     G.tideShrinkNext=false;
+    G.aiBrain=null; // AI的线索记忆每回合清空
     G.roundStartHP = { p1: G.players.p1.hp, p2: G.players.p2.hp };
     G.skillSelectShown = false;
     G.roundCount++;
@@ -1222,7 +1268,15 @@ function startNewRound(){
         p.rebirth = false;
         p.forbidNumber = null;
         p.diceBonus = 0;
+        // 教程模式：每回合重置冷却
+        if(G.mode==='tutorial') p.cooldowns = {};
     });
+    // 教程模式重置AI脚本队列
+    if(G.mode==='tutorial' && G.tutorial){
+        G.tutorial.aiScriptQueue = [];
+        G.tutorial.currentStepIndex = 0;
+        G.currentPlayer = 'p1'; // 玩家先手
+    }
     updateRange(); updateInputDisplay();
     messageDisplay.textContent='💥 炸弹重置！第 '+G.roundCount+' 轮';
     renderSkills();
@@ -1233,6 +1287,7 @@ function startNewRound(){
         });
     }
     if(G.mode.includes('ai')&&G.currentPlayer==='p2'&&G.active) setTimeout(aiTurn, 900);
+    if(G.mode==='tutorial'&&G.currentPlayer==='p2'&&G.active) setTimeout(aiTurn, 900);
     syncIfRemote();
 }
 
@@ -1264,7 +1319,7 @@ function endGame(){
     gameOverBtn.style.display='block';
     rematchBtn.disabled = false;
     rematchBtn.style.display='block';
-    rematchBtn.textContent = (G.mode.includes('remote') && !G.isHost) ? '🔄 请求重赛' : '🔄 再来一局';
+    rematchBtn.textContent = (G.mode.includes('remote') && !G.isHost) ? '🔄 请求重赛' : (G.mode==='tutorial' ? '🔄 重试本关' : '🔄 再来一局');
     renderSkills();
     syncIfRemote();
 }
@@ -1291,15 +1346,21 @@ function initGame(){
         getPlayer('p1').name='我'; getPlayer('p1').avatar='🙂';
         getPlayer('p2').name='AI'; getPlayer('p2').avatar='🤖';
         roomInfo.textContent='🤖 AI ('+['简单','中等','困难'][G.aiLevel-1]+')';
+    } else if(G.mode==='tutorial'){
+        getPlayer('p1').name='玩家'; getPlayer('p1').avatar='🙂';
+        getPlayer('p2').name='教程AI'; getPlayer('p2').avatar='🤖';
+        roomInfo.textContent='🎓 教程关卡 '+G.tutorial.levelData.level;
+        showCheatToast(G.tutorial.levelData.hint, 5000);
     } else if(G.mode.includes('remote')){
         roomInfo.textContent='房间: '+G.roomCode;
     }
     renderPlayers(); updateRange(); updateInputDisplay();
     messageDisplay.textContent='游戏开始！第 1 轮';
     updateTurnIndicator();
-    if(G.isSkillMode){
+    if(G.isSkillMode && G.mode!=='tutorial'){
         if(!(G.mode.includes('remote')&&!G.isHost)) startRoundSkillSelect();
     } else if(G.mode.includes('ai')&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
+    else if(G.mode==='tutorial'&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
     if(Privacy.isLocal()) setKeypadEnabled(true);
     syncIfRemote();
 }
@@ -1637,14 +1698,21 @@ function processGuess(guess, isSkillAttack, guesserId){
             else messageDisplay.textContent='⚠️ 请输入 '+G.low+'~'+G.high+' 之间的数字';
             G.playerInput=''; updateInputDisplay();
             if(G.mode.includes('ai')&&guesser.id==='p2'){ setTimeout(aiGuess, 800); }
+            else if(G.mode==='tutorial'&&guesser.id==='p2'){ setTimeout(aiTurn, 800); }
             else { setKeypadEnabled(isMyTurn()&&!G.processing); syncIfRemote(); }
             return;
         }
-        // 禁猜检查
+        // 禁猜检查：猜了禁猜数字 → 本次无效且消耗回合
         if(defender.forbidNumber !== null && guess === defender.forbidNumber){
-            messageDisplay.textContent='🚷 该数字被禁猜，请换一个数字';
+            const fn = defender.forbidNumber;
+            defender.forbidNumber = null;
+            messageDisplay.textContent = '🚷 猜了禁猜数字 '+fn+'，本回合无效！';
             G.playerInput=''; updateInputDisplay();
-            setKeypadEnabled(isMyTurn()&&!G.processing);
+            G.processing=false;
+            renderSkills();
+            updateTurnIndicator();
+            switchTurn();
+            syncIfRemote();
             return;
         }
     }
@@ -1708,6 +1776,7 @@ function processGuess(guess, isSkillAttack, guesserId){
 
     let guesserName;
     if(Privacy.isLocal()) guesserName=guesser.name;
+    else if(G.mode==='tutorial') guesserName=guesser.id==='p1'?'玩家':'教程AI';
     else guesserName=guesser.id===getMyPlayer().id?'我':(G.mode.includes('ai')&&guesser.id==='p2'?'AI':'对方');
     if(selfInflicted){
         messageDisplay.textContent='💥 '+guesserName+' 触发了对手的陷阱！';
@@ -1961,6 +2030,9 @@ function processGuess(guess, isSkillAttack, guesserId){
                 if(G.mode.includes('ai')&&guesser.id==='p2'){
                     setKeypadEnabled(false);
                     setTimeout(aiGuess, 900);
+                } else if(G.mode==='tutorial'&&guesser.id==='p2'){
+                    setKeypadEnabled(false);
+                    setTimeout(aiTurn, 900);
                 } else {
                     setKeypadEnabled(isMyTurn()&&!G.processing);
                 }
@@ -1973,7 +2045,7 @@ function processGuess(guess, isSkillAttack, guesserId){
 }
 
 function afterHitSkillPhase(){
-    if(G.isSkillMode) {
+    if(G.isSkillMode && G.mode!=='tutorial') {
         startRoundSkillSelect();
     } else {
         startNewRound();
@@ -1997,11 +2069,14 @@ function switchTurn(){
             G.playerInput=''; updateInputDisplay();
             renderSkills(); updateTurnIndicator();
             if(G.mode.includes('ai')&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
+            if(G.mode==='tutorial'&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
             syncIfRemote();
             return;
         }
         G.currentPlayer=opponent.id;
         G.processing=false;
+        // 禁猜只约束对手的一个行动回合：轮到设置者的下个回合开始时失效
+        opponent.forbidNumber=null;
         if(G.tideShrinkNext){
             G.tideShrinkNext=false;
             G.low = Math.min(G.low+5, G.high);
@@ -2012,6 +2087,7 @@ function switchTurn(){
         }
         renderSkills(); updateTurnIndicator(); updateRange();
         if(G.mode.includes('ai')&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
+        if(G.mode==='tutorial'&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
         syncIfRemote();
     }
 
@@ -2087,7 +2163,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
     }
 
     const opponent=getOpponentPlayer(user.id);
-    let userName = Privacy.isLocal() ? user.name : (user.id === getMyPlayer().id ? '我' : (G.mode.includes('ai') ? 'AI' : '对方'));
+    let userName = Privacy.isLocal() ? user.name : (user.id === getMyPlayer().id ? '我' : (G.mode.includes('ai') ? 'AI' : (G.mode==='tutorial' ? (user.id==='p1'?'玩家':'教程AI') : '对方')));
 
     function reveal(title, text){
         if(Privacy.isLocal()){
@@ -2101,50 +2177,65 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
                 G.conn.send({type:'private', title:title, text:text});
             }
         } else {
-            if(user.id === 'p1') showCheatToast(title + '：' + text, 5000);
+            if(user.id === 'p1' || G.mode==='tutorial') showCheatToast(title + '：' + text, 5000);
             else if(G.mode.includes('ai')) messageDisplay.textContent = '🤖 AI 使用了 ' + skill.name;
         }
     }
 
-    if(G.mode.includes('ai') && user.id === 'p2'){
-        const autoNumber = Math.floor(Math.random() * (G.high - G.low + 1)) + G.low;
+    // AI（含教程AI/复制来的技能）使用选数类技能时自动选数，不弹窗
+    if(ignoreChecks || (G.mode.includes('ai') && user.id === 'p2')){
+        const autoMid = Math.floor((G.low+G.high)/2) + Math.floor(Math.random()*5) - 2;
+        let autoNumber = Math.max(G.low, Math.min(G.high, autoMid));
         if(skillId === 'verifier'){
-            if(autoNumber === G.bombNumber) messageDisplay.textContent = '🤖 AI 验证成功！';
-            else messageDisplay.textContent = '🤖 AI 验证失败';
+            // 验证器：优先验证候选集里的数字
+            const vc = aiCandidates();
+            const vnum = (vc && vc.length>0) ? vc[Math.floor(Math.random()*vc.length)] : autoNumber;
+            if(aiIsUser(user)) aiBrain().verified[vnum] = (vnum === G.bombNumber);
+            messageDisplay.textContent = '🎯 '+userName+' 悄悄验证了一个数字';
             renderSkills(); updateTurnIndicator(); syncIfRemote();
             return;
         }
         if(skillId === 'trap'){
             user.trappedNumber = autoNumber;
-            messageDisplay.textContent = '🤖 AI 设置了陷阱数字 ' + autoNumber;
+            messageDisplay.textContent = '🪤 '+userName+' 设置了陷阱数字';
             renderSkills(); updateTurnIndicator(); syncIfRemote();
             return;
         }
         if(skillId === 'blackhole'){
             if(applyBlackhole(autoNumber)){
-                messageDisplay.textContent = '🤖 AI 使用了黑洞！范围→' + G.low + '~' + G.high;
+                messageDisplay.textContent = '🕳️ '+userName+' 使用了黑洞！范围→' + G.low + '~' + G.high;
             } else {
                 messageDisplay.textContent = '⚠️ 范围无法再缩小';
+                delete user.cooldowns[skillId];
             }
             renderSkills(); updateTurnIndicator(); syncIfRemote();
             return;
         }
         if(skillId === 'forbid'){
             user.forbidNumber = autoNumber;
-            messageDisplay.textContent = '🤖 AI 设置了禁猜数字 ' + autoNumber;
+            messageDisplay.textContent = '🚷 '+userName+' 设置了禁猜数字';
             renderSkills(); updateTurnIndicator(); syncIfRemote();
             return;
         }
     }
 
     switch(skillId){
-        case 'detect': reveal('📡探测','炸弹是'+(G.bombNumber%2===0?'偶数':'奇数')); break;
-        case 'peek': { const s=String(G.bombNumber); reveal('🔍透视','炸弹的个位是 '+s[s.length-1]); break; }
+        case 'detect': {
+            const even = G.bombNumber%2===0;
+            if(aiIsUser(user)) aiBrain().parity = G.bombNumber%2;
+            reveal('📡探测','炸弹是'+(even?'偶数':'奇数')); break;
+        }
+        case 'peek': {
+            const d = G.bombNumber%10;
+            if(aiIsUser(user)) aiBrain().lastDigit = d;
+            reveal('🔍透视','炸弹的个位是 '+d); break;
+        }
         case 'thermometer': {
             const mid = (G.low + G.high) / 2;
-            const maxDist = (G.high - G.low) / 2;
+            const maxDist = (G.high - G.low) / 2 || 1;
             const dist = Math.abs(G.bombNumber - mid);
             const level = Math.max(1, Math.min(10, Math.round(10 - (dist / maxDist) * 9)));
+            if(aiIsUser(user)) aiBrain().thermo = { level:level, mid:mid, maxDist:maxDist };
             reveal('🌡️温度计','距离等级：'+level+'/10');
             break;
         }
@@ -2152,13 +2243,14 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             const s=String(G.bombNumber);
             let sum=0;
             for(const c of s) sum += parseInt(c);
+            if(aiIsUser(user)) aiBrain().digitSum = sum;
             reveal('➕数字和','炸弹各位数字之和：'+sum);
             break;
         }
         case 'precognition': {
-            const s=String(G.bombNumber);
-            const ten = s.length>1 ? s[0] : '0';
-            reveal('🔮预知','炸弹的十位数是 '+ten);
+            const ten = parseInt(String(G.bombNumber)[0]);
+            if(aiIsUser(user)) aiBrain().tens = ten;
+            reveal('🔮预知','炸弹的首位数字是 '+ten);
             break;
         }
         case 'verifier': {
@@ -2190,7 +2282,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             break;
         }
         case 'rewind': G.low=G.prevLow; G.high=G.prevHigh; updateRange(); messageDisplay.textContent='⏪ '+userName+'回退！范围→'+G.low+'~'+G.high; break;
-        case 'shuffle': G.bombNumber=Math.floor(Math.random()*(G.high-G.low+1))+G.low; messageDisplay.textContent='🔀 '+userName+'洗牌！炸弹位置重置'; break;
+        case 'shuffle': G.bombNumber=Math.floor(Math.random()*(G.high-G.low+1))+G.low; G.aiBrain=null; messageDisplay.textContent='🔀 '+userName+'洗牌！炸弹位置重置'; break;
         case 'move': {
             const dir=Math.random()<0.5?1:-1;
             const old=G.bombNumber;
@@ -2198,6 +2290,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             const dist = emp ? 10 : 5;
             if(emp) user.empower--;
             G.bombNumber=Math.max(G.low,Math.min(G.high,G.bombNumber+dir*dist));
+            if(G.bombNumber!==old) G.aiBrain=null;
             messageDisplay.textContent='🚚 '+userName+'移动！炸弹'+(G.bombNumber>old?'向上':(G.bombNumber<old?'向下':'(已到边界未动)'))+'移动';
             break;
         }
@@ -2205,7 +2298,10 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             const old=G.bombNumber;
             const newBomb = G.low + G.high - G.bombNumber;
             G.bombNumber = Math.max(G.low, Math.min(G.high, newBomb));
-            messageDisplay.textContent='🕳️ '+userName+'虫洞！炸弹从'+old+'跳到'+G.bombNumber;
+            if(G.bombNumber!==old) G.aiBrain=null;
+            messageDisplay.textContent = G.bombNumber===old
+                ? '🌀 '+userName+'虫洞！炸弹在正中央，位置没变'
+                : '🌀 '+userName+'虫洞！炸弹被对称迁移到了另一头';
             break;
         }
         case 'dormant': user.dormant = true; messageDisplay.textContent='💤 '+userName+'休眠！对手猜中不爆炸，你下次攻击+2伤'; break;
@@ -2309,7 +2405,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             showNumberPicker('设置陷阱数字', G.low, G.high, function(num){
                 user.trappedNumber = num;
                 G.processing = false;
-                messageDisplay.textContent='🪤 '+userName+'设置了陷阱数字 '+num;
+                messageDisplay.textContent='🪤 '+userName+'设置了陷阱数字';
                 renderSkills(); updateTurnIndicator(); syncIfRemote();
             }, function(){
                 G.processing = false;
@@ -2324,7 +2420,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             showNumberPicker('设置禁猜数字', G.low, G.high, function(num){
                 user.forbidNumber = num;
                 G.processing = false;
-                messageDisplay.textContent='🚷 '+userName+'设置了禁猜数字 '+num;
+                messageDisplay.textContent='🚷 '+userName+'设置了禁猜数字';
                 renderSkills(); updateTurnIndicator(); syncIfRemote();
             }, function(){
                 G.processing = false;
@@ -2419,7 +2515,6 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             break;
         }
         case 'skip': {
-            // 跳过回合：直接切换到对手，但保留防御buff（护盾、反射）
             messageDisplay.textContent='⏭️ '+userName+' 跳过了回合！';
             G.processing = false;
             renderSkills();
@@ -2441,6 +2536,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             chosen.effect();
             messageDisplay.textContent = chosen.msg;
             renderPlayers();
+            if(getPlayer('p1').hp<=0||getPlayer('p2').hp<=0){ endGame(); return; }
             break;
         }
         case 'gambler': {
@@ -2469,6 +2565,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
                 }
             }
             renderPlayers();
+            if(getPlayer('p1').hp<=0||getPlayer('p2').hp<=0){ endGame(); return; }
             break;
         }
         default: break;
@@ -2487,94 +2584,208 @@ function reduceCooldowns(playerId){
 }
 
 // ========== AI 逻辑 ==========
-function scoreAISkill(ai, human, skill){
-    const range = G.high - G.low + 1;
-    let sc = Math.random() * 10;
-    if(ai.hp <= 2 && ['heal','shield','rebirth'].indexOf(skill.id)>=0) sc += 100;
-    if(skill.id==='double'&&human.hp<=2) sc += 50;
-    if(skill.id==='rampage'&&human.hp<=4) sc += 50;
-    if(range > 30 && ['detect','peek','thermometer','binary','digitsum','precognition'].indexOf(skill.id)>=0) sc += 40;
-    else if(range < 10 && ['double','pierce','lifesteal','anger','rampage'].indexOf(skill.id)>=0) sc += 50;
-    if(['pause','blind','lock','forbid'].indexOf(skill.id)>=0) sc += 30;
-    if(skill.id==='heal' && ai.hp < ai.maxHP) sc += 60;
-    if(skill.id==='bomblet' && human.hp <= 3) sc += 40;
-    if(skill.id==='volley' && (human.shield>0 || human.reflect>0 || human.rebirth)) sc += 80;
-    if(skill.id==='volley' && human.hp <= 4) sc += 40;
-    if(skill.id==='shield' && ai.shield >= 2) sc -= 60;
-    if(skill.id==='disguise' && !canUseDisguise()) sc -= 1000;
-    if(skill.id==='refresh' && Object.keys(ai.cooldowns).some(k=>ai.cooldowns[k]>0)) sc += 70;
-    if(skill.id==='charge' && Object.keys(ai.cooldowns).some(k=>ai.cooldowns[k]>0)) sc += 60;
-    if(skill.id==='skip' && (ai.reflect>0 || ai.shield>0)) sc += 80;
-    if(skill.id==='gambler' && human.hp <= 3 && ai.hp > 1) sc += 60;
-    if(skill.id==='dice') sc += 30;
-    return sc;
-}
+// AI 开局三选一：静态强度评估（连招核心/泛用强技优先）
 function aiChooseSkill(ai, human, options){
-    const scores = options.map(function(skill){
-        return { skill:skill, score:scoreAISkill(ai, human, skill) };
+    const tier = {
+        volley:9, double:8, rampage:8, detect:8, binary:8,
+        verifier:7, digitsum:7, shield:7, reflect:7, heal:7, rebirth:7, allin:7,
+        empower:6, bomblet:6, peek:6, precognition:6, forbid:6, trap:6, pierce:6,
+        dormant:6, pause:6, shuffle:6,
+        blind:5, lock:5, freeze:5, slow:5, disguise:5, web:5, anger:5, lifesteal:5,
+        speed:5, refresh:5, charge:5, move:5, tide:5, wormhole:5, blackhole:5,
+        rewind:4, bet:4, fog:4, lie:4, copy:4, timerewind:4, thermometer:4, scout:4,
+        dice:3, gambler:3, skip:3
+    };
+    let best = options[0], bestSc = -Infinity;
+    options.forEach(s=>{
+        const sc = (tier[s.id]||5) + Math.random()*2;
+        if(sc > bestSc){ bestSc = sc; best = s; }
     });
-    scores.sort(function(a,b){ return b.score-a.score; });
-    return scores[0].skill;
+    return best;
+}
+// AI 大脑：只用公开信息 + 信息技能私有结果做推理（不偷看炸弹）
+function aiIsUser(u){ return u.id==='p2' && (G.mode.includes('ai') || G.mode==='tutorial'); }
+function aiBrain(){
+    if(!G.aiBrain) G.aiBrain={ parity:null, lastDigit:null, digitSum:null, tens:null, thermo:null, verified:{} };
+    return G.aiBrain;
+}
+function aiEffectiveLevel(){ return G.mode==='tutorial' ? Math.min(G.aiLevel, 2) : G.aiLevel; }
+// 根据 AI 已掌握的线索过滤候选炸弹数字；没有任何线索时返回 null（不浪费遍历）
+function aiCandidates(){
+    const b = G.aiBrain;
+    if(!b) return null;
+    const hasClue = b.parity!==null || b.lastDigit!==null || b.digitSum!==null || b.tens!==null || b.thermo || Object.keys(b.verified).length>0;
+    if(!hasClue) return null;
+    const cands = [];
+    for(let n=G.low; n<=G.high; n++){
+        if(b.parity!==null && (n%2)!==b.parity) continue;
+        if(b.lastDigit!==null && (n%10)!==b.lastDigit) continue;
+        if(b.tens!==null && parseInt(String(n)[0])!==b.tens) continue;
+        if(b.digitSum!==null){ let s=0; const str=String(n); for(const c of str) s+=+c; if(s!==b.digitSum) continue; }
+        if(b.thermo){ const d=Math.abs(n-b.thermo.mid); const lv=Math.max(1,Math.min(10,Math.round(10-(d/b.thermo.maxDist)*9))); if(lv!==b.thermo.level) continue; }
+        if(b.verified[n]===false) continue;
+        cands.push(n);
+    }
+    return cands;
+}
+// 验证器曾命中 → AI 确知炸弹
+function aiKnownBomb(){
+    const b = G.aiBrain;
+    if(!b) return null;
+    for(const k in b.verified){ if(b.verified[k]===true) return parseInt(k); }
+    return null;
+}
+
+// AI 回合技能规划：按局势返回一串要连放的技能id（有先后顺序，赋能必须在被强化技能前面）
+function aiPlanSkills(ai, human){
+    const lvl = aiEffectiveLevel();
+    if(!G.isSkillMode || ai.skills.length===0) return [];
+    const ready = id => ai.skills.some(s=>s.id===id) && (ai.cooldowns[id]||0)<=0 && ai.lockedSkill!==id && ai.secondLockedSkill!==id;
+    if(lvl===1){
+        // 简单AI：偶尔乱丢一个不咬人的技能
+        if(Math.random()<0.7) return [];
+        const ok = ai.skills.map(s=>s.id).filter(id=>ready(id)&&['skip','lock','gambler','allin'].indexOf(id)<0);
+        return ok.length ? [ok[Math.floor(Math.random()*ok.length)]] : [];
+    }
+    const plan = [];
+    const range = G.high - G.low + 1;
+    const cands = aiCandidates();
+    const hitChance = (cands && cands.length>0) ? 1/cands.length : 1/range;
+    const humanArmed = !!(human.doubleDamage || human.allinMultiplier || (human.rampageMulti||0)>1 || human.volley>0);
+
+    // 1) 保命优先
+    if(ai.hp<=2){
+        if(ready('heal') && ai.hp<ai.maxHP) plan.push('heal');
+        if(ready('rebirth')) plan.push('rebirth');
+        if(ready('shield')) plan.push('shield');
+    }
+    // 2) 斩杀/爆发：命中概率可观或人类残血时，叠满增伤再猜
+    const estDmg = 1+(ai.doubleDamage||0)+(ai.allinMultiplier||0)+(ai.bombletDamage||0)+(ai.diceBonus||0);
+    const wantsAttack = estDmg>=human.hp || hitChance>=0.2 || human.hp<=2 || aiKnownBomb()!==null;
+    if(wantsAttack){
+        if(lvl===3 && ready('empower') && (ready('double')||ready('rampage')||ready('volley'))) plan.push('empower');
+        if(ready('double')) plan.push('double');
+        if(ready('allin') && ai.hp>=3) plan.push('allin');
+        if(lvl===3 && ready('rampage')) plan.push('rampage');
+        if(ready('bomblet')) plan.push('bomblet');
+    }
+    // 3) 破防：对面有盾/反射/重生 → 连击分段拆；只有盾 → 穿透
+    if(human.shield>0 || human.reflect>0 || human.rebirth || human.hp<=3){
+        if(ready('volley')) plan.push('volley');
+    }
+    if(human.shield>0 && !plan.includes('volley') && ready('pierce')) plan.push('pierce');
+    // 4) 反制对手的武装回合
+    if(humanArmed){
+        if(ready('shield') && !plan.includes('shield')) plan.push('shield');
+        if(ready('reflect')) plan.push('reflect');
+        if(lvl===3 && ready('pause')) plan.push('pause');
+        if(lvl===3 && ready('dormant') && range<=15) plan.push('dormant');
+    }
+    // 5) 信息战：范围还大且线索不足 → 用信息技能（结果进 aiBrain，本回合猜数直接用）
+    const b = G.aiBrain;
+    const clues = b ? (b.parity!==null)+(b.lastDigit!==null)+(b.digitSum!==null)+(b.tens!==null)+(b.thermo?1:0) : 0;
+    if(range>15 && clues<2){
+        if(ready('detect')) plan.push('detect');
+        else if(lvl===3 && ready('digitsum')) plan.push('digitsum');
+        else if(ready('peek')) plan.push('peek');
+        else if(ready('precognition')) plan.push('precognition');
+        else if(ready('thermometer')) plan.push('thermometer');
+    }
+    if(ready('verifier') && cands && cands.length>0 && cands.length<=6) plan.push('verifier');
+    // 6) 范围压缩
+    if(range>40){
+        if(ready('binary')) plan.push('binary');
+        else if(ready('blackhole') && Math.random()<0.5) plan.push('blackhole');
+    }
+    // 7) 干扰/埋雷：范围已小、人类接近时
+    if(range<=12){
+        if(ready('forbid')) plan.push('forbid');
+        else if(ready('trap')) plan.push('trap');
+        if(lvl===3 && ready('blind') && Math.random()<0.4) plan.push('blind');
+    }
+    // 8) 掀桌：范围太小、人类快排完了 → 移动炸弹作废双方线索（困难AI专属）
+    if(lvl===3 && range<=8 && Math.random()<0.35){
+        if(ready('shuffle')) plan.push('shuffle');
+        else if(ready('wormhole')) plan.push('wormhole');
+        else if(ready('move')) plan.push('move');
+    }
+    // 9) 后勤
+    if(ready('refresh') && ['double','allin','rampage','volley'].some(id=>ai.skills.some(s=>s.id===id)&&(ai.cooldowns[id]||0)>0)) plan.push('refresh');
+    if(ready('charge') && Object.keys(ai.cooldowns).some(k=>ai.cooldowns[k]>0) && Math.random()<0.5) plan.push('charge');
+    // 10) 博弈小注
+    if(ready('bet') && range>20 && Math.random()<0.4) plan.push('bet');
+    if(ready('dice') && Math.random()<0.25) plan.push('dice');
+    if(ready('gambler') && ai.hp>=4 && human.hp<=3 && Math.random()<0.5) plan.push('gambler');
+    if(ready('timerewind') && ai.hp<G.roundStartHP.p2 && Math.random()<0.6) plan.push('timerewind');
+
+    return plan.slice(0, lvl===3 ? 3 : 2);
 }
 
 function aiTurn(){
-    if(!G.active||G.processing||G.currentPlayer!=='p2'||!G.mode.includes('ai')) return;
+    if(G.mode==='tutorial'){ tutorialAI(); return; }
+    aiPlayNormal();
+}
+// 通用AI回合（教程模式脚本用完后也走这里）：规划技能连放 → 策略猜数
+function aiPlayNormal(){
+    if(!G.active||G.processing||G.currentPlayer!=='p2') return;
+    if(G.mode!=='tutorial' && !G.mode.includes('ai')) return;
     G.processing=true;
     setKeypadEnabled(false);
     messageDisplay.textContent='🤖 AI思考中...';
     const ai=getPlayer('p2'), human=getPlayer('p1');
-    if(G.isSkillMode && ai.skills.length>0){
-        let chosenSkill = null;
-        let bestScore = -Infinity;
-        for(const skill of ai.skills){
-            const cd = ai.cooldowns[skill.id]||0;
-            if(cd > 0) continue;
-            if(ai.lockedSkill===skill.id||ai.secondLockedSkill===skill.id) continue;
-            const score = scoreAISkill(ai, human, skill);
-            if(score > bestScore){
-                bestScore = score;
-                chosenSkill = skill;
-            }
+    const plan = aiPlanSkills(ai, human);
+    let i = 0;
+    const step = function(){
+        if(!G.active || G.currentPlayer!=='p2') return;
+        if(i>=plan.length){ setTimeout(aiGuess, 500); return; }
+        const id = plan[i++];
+        // 放之前再校验一次（前面的技能可能改变了状态）
+        const usable = ai.skills.some(s=>s.id===id) && (ai.cooldowns[id]||0)<=0 && ai.lockedSkill!==id && ai.secondLockedSkill!==id;
+        if(usable){
+            G.processing=false;
+            useSkill(id, 'p2', true); // ignoreChecks：已预检，且让选数类技能走自动选数
+            G.processing=true;
         }
-        if(chosenSkill && Math.random() < 0.6){
-            useSkill(chosenSkill.id, 'p2');
-            G.processing = false;
-            if(G.active && G.currentPlayer==='p2') setTimeout(aiGuess, 900);
-            return;
-        }
-    }
-    G.processing = false;
-    setTimeout(aiGuess, 900);
+        setTimeout(step, 850);
+    };
+    setTimeout(step, 700);
 }
 
 function aiGuess(){
-    if(!G.active||G.processing||G.currentPlayer!=='p2'||!G.mode.includes('ai')) return;
+    if(!G.active||G.processing||G.currentPlayer!=='p2') return;
+    if(G.mode!=='tutorial' && !G.mode.includes('ai')) return;
     const ai=getPlayer('p2');
-    let guess;
     const range=G.high-G.low+1;
-    if(G.aiLevel===1 || ai.blind || ai.fog) guess=Math.floor(Math.random()*range)+G.low;
-    else if(G.aiLevel===2){
-        const mid=(G.low+G.high)/2;
-        const spread=Math.max(1, Math.floor(range*0.25));
-        const offset=Math.floor(Math.random()*(spread*2+1))-spread;
-        guess=Math.round(mid+offset);
-        guess=Math.max(G.low,Math.min(G.high,guess));
+    const lvl=aiEffectiveLevel();
+    let guess;
+    const known = aiKnownBomb();
+    if(known!==null && !ai.blind && !ai.fog && lvl>=2){
+        guess = known; // 验证器命中过，直接收
+    } else if(lvl===1 || ai.blind || ai.fog){
+        guess = Math.floor(Math.random()*range)+G.low;
     } else {
-        if(Math.random()<0.2) guess=Math.floor(Math.random()*range)+G.low;
-        else {
-            const mid=(G.low+G.high)/2;
-            if((G.low+G.high)%2===0) guess=Math.round(mid);
-            else guess=Math.floor(mid)+(Math.random()<0.5?0:1);
-            if(range>3&&Math.random()<0.3){
-                guess+=(Math.random()<0.5?1:-1);
-                guess=Math.max(G.low,Math.min(G.high,guess));
+        let cands = null;
+        if(lvl===3) cands = aiCandidates();
+        else if(G.aiBrain && Math.random()<0.6) cands = aiCandidates();
+        if(cands && cands.length>0){
+            if(cands.length<=4) guess = cands[Math.floor(Math.random()*cands.length)]; // 候选很少：直接收割
+            else guess = cands[Math.floor(cands.length/2)]; // 中位切割，最大信息量
+            if(lvl===2 && range>4){ // 普通AI带点抖动，不够精准
+                guess += (Math.random()<0.5?-1:1)*Math.floor(Math.random()*3);
+                guess = Math.max(G.low, Math.min(G.high, guess));
+            }
+        } else {
+            const mid = (G.low+G.high)/2;
+            guess = Math.round(mid);
+            if(lvl===2){
+                const spread=Math.max(1, Math.floor(range*0.25));
+                const offset=Math.floor(Math.random()*(spread*2+1))-spread;
+                guess=Math.max(G.low, Math.min(G.high, Math.round(mid+offset)));
+            } else if(range>3 && Math.random()<0.3){
+                guess += (Math.random()<0.5?1:-1);
+                guess = Math.max(G.low, Math.min(G.high, guess));
             }
         }
-    }
-    // AI 避免禁猜数字
-    const defender = getOpponentPlayer('p2');
-    if(defender.forbidNumber !== null && guess === defender.forbidNumber){
-        guess = Math.max(G.low, Math.min(G.high, guess+1));
     }
     G.playerInput=String(guess);
     updateInputDisplay();
@@ -2585,6 +2796,42 @@ function aiGuess(){
         G.processing=false;
         processGuess(guess,false,'p2');
     }, 800);
+}
+
+function tutorialAI(){
+    if(!G.active || G.processing || G.currentPlayer!=='p2') return;
+    const t = G.tutorial;
+    if(!t) return;
+    G.processing = true;
+    setKeypadEnabled(false);
+    if(t.aiScriptQueue.length === 0){
+        // aiScript 是按回合分组的二维数组，执行前展平成一维动作队列
+        t.aiScriptQueue = t.levelData.aiScript.flat();
+        t.currentStepIndex = 0;
+    }
+    if(t.currentStepIndex >= t.aiScriptQueue.length){
+        // 教学脚本执行完毕：切换为正常AI强度（会用技能+策略猜数）
+        G.processing = false;
+        aiPlayNormal();
+        return;
+    }
+    const action = t.aiScriptQueue[t.currentStepIndex];
+    t.currentStepIndex++;
+    if(action.type === 'skill'){
+        // 脚本里的技能若不可用（冷却中/被封锁），跳过该动作继续下一步
+        const aiP = getPlayer('p2');
+        const cdOk = (aiP.cooldowns[action.id]||0) <= 0;
+        const locked = aiP.lockedSkill===action.id || aiP.secondLockedSkill===action.id;
+        const hasSkill = aiP.skills.some(s=>s.id===action.id);
+        G.processing = false;
+        if(cdOk && !locked && hasSkill) useSkill(action.id, 'p2', true);
+        setTimeout(()=>{ if(G.active && G.currentPlayer==='p2') tutorialAI(); }, 800);
+    } else if(action.type === 'guess'){
+        G.processing = false;
+        // 夹取到当前范围，避免脚本数字越界导致无效猜测
+        const n = Math.max(G.low, Math.min(G.high, action.number));
+        processGuess(n, false, 'p2');
+    }
 }
 
 // ========== 键盘事件 ==========
@@ -2760,7 +3007,7 @@ function updateTurnIndicator(){
         turnIndicator.textContent='👇 我的回合';
         turnIndicator.classList.add('turn-me');
     } else {
-        turnIndicator.textContent=G.mode.includes('ai')?'🤖 AI思考中...':'👆 对方回合...';
+        turnIndicator.textContent=G.mode.includes('ai')||G.mode==='tutorial'?'🤖 AI思考中...':'👆 对方回合...';
         turnIndicator.classList.add('turn-opponent');
     }
     let shouldEnable;
@@ -2879,7 +3126,7 @@ function renderOpponentSkills(){
 
 // ========== 界面切换 ==========
 function hideAll(){
-    [mainMenu,normalSubmenu,skillSubmenu,setupOverlay,remoteLobby,remoteWaiting,remoteSetupOverlay].forEach(el=>el.classList.add('hidden'));
+    [mainMenu,setupOverlay,tutorialMenu,remoteLobby,remoteWaiting,remoteSetupOverlay].forEach(el=>el.classList.add('hidden'));
     battleArea.style.display='none';
     skillsBar.style.display='none';
     opponentSkillsBar.style.display='none';
@@ -2900,15 +3147,50 @@ function hideAll(){
     G.skillSelectShown = false;
 }
 function showMainMenu(){ hideAll(); mainMenu.classList.remove('hidden'); if(!G.conn) roomInfo.textContent='未连接'; updateStatsDisplay(); }
-function showNormalSubmenu(){ hideAll(); normalSubmenu.classList.remove('hidden'); }
-function showSkillSubmenu(){ hideAll(); skillSubmenu.classList.remove('hidden'); }
-function showSetup(mode){
+function showSetup(){
     hideAll();
-    G.mode=mode;
-    G.isSkillMode=mode.includes('skill');
     setupOverlay.classList.remove('hidden');
-    aiLevelRow.style.display=mode.includes('ai')?'flex':'none';
-    $('skill-count-row').style.display = G.isSkillMode ? 'flex' : 'none';
+    G.oppType = G.oppType || 'ai';
+    opponentRow.querySelectorAll('.ai-level-btn').forEach(function(x){ x.classList.toggle('active', x.dataset.opp===G.oppType); });
+    aiLevelRow.style.display = G.oppType==='ai' ? 'flex' : 'none';
+    skillCountInput.value = 1;
+}
+function showTutorialMenu(){
+    hideAll();
+    tutorialMenu.classList.remove('hidden');
+    const container = $('tutorial-levels');
+    container.innerHTML = '';
+    TUTORIAL_LEVELS.forEach((lvl, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn small';
+        btn.textContent = `第${lvl.level}关：${lvl.name}`;
+        btn.style.margin = '4px';
+        btn.addEventListener('click', function() {
+            startTutorial(idx);
+        });
+        container.appendChild(btn);
+    });
+}
+function startTutorial(levelIndex) {
+    const levelData = TUTORIAL_LEVELS[levelIndex];
+    G.mode = 'tutorial';
+    G.isSkillMode = levelData.playerSkills.length > 0 || levelData.aiSkills.length > 0;
+    G.skillCount = levelData.playerSkills.length;
+    G.minVal = levelData.min;
+    G.maxVal = levelData.max;
+    getPlayer('p1').maxHP = levelData.playerHP;
+    getPlayer('p2').maxHP = levelData.aiHP;
+    getPlayer('p1').name = '玩家';
+    getPlayer('p2').name = '教程AI';
+    getPlayer('p1').avatar = '🙂';
+    getPlayer('p2').avatar = '🤖';
+    getPlayer('p1').skills = levelData.playerSkills.map(id => getSkillById(id));
+    getPlayer('p2').skills = levelData.aiSkills.map(id => getSkillById(id));
+    G.tutorial = { levelData: levelData, aiScriptQueue: [], currentStepIndex: 0 };
+    resetGameState();
+    showBattleArea();
+    roomInfo.textContent = '🎓 教程关卡 ' + levelData.level;
+    showCheatToast(levelData.hint, 5000);
 }
 function showRemoteLobby(){
     hideAll();
@@ -2951,18 +3233,11 @@ function showBattleArea(){
 }
 
 // ========== 事件绑定 ==========
-$('normal-mode-btn').addEventListener('click',showNormalSubmenu);
-$('skill-mode-btn').addEventListener('click',showSkillSubmenu);
-$('normal-back-btn').addEventListener('click',showMainMenu);
-$('skill-back-btn').addEventListener('click',showMainMenu);
-$('normal-local-btn').addEventListener('click',function(){showSetup('local-normal')});
-$('normal-ai-btn').addEventListener('click',function(){showSetup('ai-normal')});
-$('skill-local-btn').addEventListener('click',function(){showSetup('local-skill')});
-$('skill-ai-btn').addEventListener('click',function(){showSetup('ai-skill')});
-$('normal-remote-btn').addEventListener('click',function(){ G.isSkillMode=false; showRemoteLobby(); });
-$('skill-remote-btn').addEventListener('click',function(){ G.isSkillMode=true; showRemoteLobby(); });
+$('normal-mode-btn').addEventListener('click',showSetup);
+$('tutorial-mode-btn').addEventListener('click',showTutorialMenu);
 $('back-menu-btn1').addEventListener('click',showMainMenu);
 $('back-menu-btn2').addEventListener('click',showMainMenu);
+$('back-menu-btn3').addEventListener('click',showMainMenu);
 aiLevelRow.querySelectorAll('.ai-level-btn').forEach(function(b){
     b.addEventListener('click',function(){
         aiLevelRow.querySelectorAll('.ai-level-btn').forEach(function(x){x.classList.remove('active')});
@@ -2970,11 +3245,100 @@ aiLevelRow.querySelectorAll('.ai-level-btn').forEach(function(b){
         G.aiLevel=parseInt(b.dataset.level);
     });
 });
+opponentRow.querySelectorAll('.ai-level-btn').forEach(function(b){
+    b.addEventListener('click',function(){
+        opponentRow.querySelectorAll('.ai-level-btn').forEach(function(x){x.classList.remove('active')});
+        b.classList.add('active');
+        G.oppType=b.dataset.opp;
+        aiLevelRow.style.display = G.oppType==='ai' ? 'flex' : 'none';
+    });
+});
 $('start-game-btn').addEventListener('click',function(){
+    if(G.oppType==='remote'){ showRemoteLobby(); return; }
     readSetupInputs(false);
-    if(G.isSkillMode){
-        G.skillCount = parseInt(skillCountInput.value) || 1;
-        G.skillCount = Math.max(1, Math.min(3, G.skillCount));
+    G.skillCount = parseInt(skillCountInput.value) || 0;
+    G.skillCount = Math.max(0, Math.min(3, G.skillCount));
+    G.isSkillMode = G.skillCount > 0;
+    G.mode = (G.oppType==='local' ? 'local' : 'ai') + (G.isSkillMode ? '-skill' : '-normal');
+    initGame();
+});
+// 远程对战按钮
+$('create-room-btn').addEventListener('click',function(){
+    G.roomCode=generateRoomCode();
+    G.isHost=true;
+    G.myRole='host';
+    G.remoteReady.host=false;
+    G.remoteReady.guest=false;
+    remoteStartBtn.disabled=true;
+    remoteReadyStatus.textContent='';
+    lobbyMessage.textContent='';
+    setConnStatus('正在创建房间...');
+    createPeer('bomb-' + G.roomCode, function(peerId) {
+        showRemoteWaiting();
+        waitingRoomCode.textContent=G.roomCode;
+        waitingText.textContent='等待对手加入...';
+        copyLinkBtn.style.display='block';
+        lobbyMessage.textContent='';
+        setConnStatus('房间已创建，可分享链接邀请对手');
+        G.peer.on('connection',function(conn){
+            if(G.conn){ try{conn.close();}catch(e){} return; }
+            setupConnection(conn);
+        });
+        G.peer.on('error',function(err){
+            if(err.type==='unavailable-id'){
+                waitingText.textContent='房间码冲突，正在重新生成...';
+                setTimeout(function(){ $('create-room-btn').click(); }, 500);
+            }
+        });
+    }, function(errMsg) {
+        setConnStatus('创建房间失败: ' + errMsg);
+        lobbyMessage.textContent = '❌ 无法创建房间，请检查网络连接';
+    });
+});
+$('join-room-btn').addEventListener('click',function(){
+    const code=joinRoomInput.value.trim().toUpperCase();
+    if(code.length!==6){ lobbyMessage.textContent='请输入6位房间码'; return; }
+    G.roomCode=code;
+    G.isHost=false;
+    G.myRole='guest';
+    G.remoteReady.host=false;
+    G.remoteReady.guest=false;
+    lobbyMessage.textContent='';
+    attemptJoinRoom(code, 0);
+});
+copyLinkBtn.addEventListener('click',function(){
+    const baseUrl = window.location.origin + window.location.pathname;
+    const url=baseUrl+'?room='+G.roomCode;
+    if(navigator.clipboard){
+        navigator.clipboard.writeText(url).then(function(){showCheatToast('📋 链接已复制')}).catch(function(){showCheatToast(url)});
+    } else showCheatToast('复制失败，手动复制: '+url);
+});
+$('cancel-waiting-btn').addEventListener('click',function(){
+    cleanupRemote();
+    showRemoteLobby();
+});
+remoteReadyBtn.addEventListener('click',function(){
+    const name = remoteNameInput.value.trim();
+    if(!name){ showCheatToast('请输入名称'); return; }
+    getMyPlayer().name = name;
+    if(!G.isHost){
+        G.remoteReady.guest = true;
+        remoteReadyStatus.textContent = '✅ 已准备，等待房主开始...';
+        remoteReadyBtn.disabled = true;
+        if(G.conn) G.conn.send({type:'action', action:'ready', name:name});
+    }
+});
+remoteStartBtn.addEventListener('click',function(){
+    if(!G.remoteReady.guest){ showCheatToast('对方尚未准备'); return; }
+    const hostName = remoteNameInput.value.trim() || 'Host';
+    getPlayer('p1').name = hostName;
+    readSetupInputs(true);
+    G.skillCount = parseInt(remoteSkillCountInput.value) || 0;
+    G.skillCount = Math.max(0, Math.min(3, G.skillCount));
+    G.isSkillMode = G.skillCount > 0;
+    G.mode = G.isSkillMode ? 'remote-skill' : 'remote-normal';
+    if(G.conn&&G.conn.open){
+        G.conn.send({type:'start',minVal:G.minVal,maxVal:G.maxVal,isSkillMode:G.isSkillMode,hp:getPlayer('p1').maxHP,skillCount:G.skillCount});
     }
     initGame();
 });
@@ -3011,95 +3375,12 @@ rematchBtn.addEventListener('click',function(){
                 showCheatToast('已发送重赛请求，等待Host确认...');
             }
         }
+    } else if(G.mode==='tutorial'){
+        // 重试本关
+        startTutorial(G.tutorial.levelData.level - 1);
     } else {
         initGame();
     }
-});
-
-$('create-room-btn').addEventListener('click',function(){
-    G.roomCode=generateRoomCode();
-    G.isHost=true;
-    G.myRole='host';
-    G.remoteReady.host=false;
-    G.remoteReady.guest=false;
-    remoteStartBtn.disabled=true;
-    remoteReadyStatus.textContent='';
-    lobbyMessage.textContent='';
-    setConnStatus('正在创建房间...');
-    createPeer('bomb-' + G.roomCode, function(peerId) {
-        showRemoteWaiting();
-        waitingRoomCode.textContent=G.roomCode;
-        waitingText.textContent='等待对手加入...';
-        copyLinkBtn.style.display='block';
-        lobbyMessage.textContent='';
-        setConnStatus('房间已创建，可分享链接邀请对手');
-        G.peer.on('connection',function(conn){
-            if(G.conn){ try{conn.close();}catch(e){} return; }
-            setupConnection(conn);
-        });
-        G.peer.on('error',function(err){
-            if(err.type==='unavailable-id'){
-                waitingText.textContent='房间码冲突，正在重新生成...';
-                setTimeout(function(){ $('create-room-btn').click(); }, 500);
-            }
-        });
-    }, function(errMsg) {
-        setConnStatus('创建房间失败: ' + errMsg);
-        lobbyMessage.textContent = '❌ 无法创建房间，请检查网络连接';
-    });
-});
-
-$('join-room-btn').addEventListener('click',function(){
-    const code=joinRoomInput.value.trim().toUpperCase();
-    if(code.length!==6){ lobbyMessage.textContent='请输入6位房间码'; return; }
-    G.roomCode=code;
-    G.isHost=false;
-    G.myRole='guest';
-    G.remoteReady.host=false;
-    G.remoteReady.guest=false;
-    lobbyMessage.textContent='';
-    attemptJoinRoom(code, 0);
-});
-
-copyLinkBtn.addEventListener('click',function(){
-    const baseUrl = window.location.origin + window.location.pathname;
-    const url=baseUrl+'?room='+G.roomCode;
-    if(navigator.clipboard){
-        navigator.clipboard.writeText(url).then(function(){showCheatToast('📋 链接已复制')}).catch(function(){showCheatToast(url)});
-    } else showCheatToast('复制失败，手动复制: '+url);
-});
-
-$('cancel-waiting-btn').addEventListener('click',function(){
-    cleanupRemote();
-    showRemoteLobby();
-});
-
-remoteReadyBtn.addEventListener('click',function(){
-    const name = remoteNameInput.value.trim();
-    if(!name){ showCheatToast('请输入名称'); return; }
-    getMyPlayer().name = name;
-    if(!G.isHost){
-        G.remoteReady.guest = true;
-        remoteReadyStatus.textContent = '✅ 已准备，等待房主开始...';
-        remoteReadyBtn.disabled = true;
-        if(G.conn) G.conn.send({type:'action', action:'ready', name:name});
-    }
-});
-
-remoteStartBtn.addEventListener('click',function(){
-    if(!G.remoteReady.guest){ showCheatToast('对方尚未准备'); return; }
-    const hostName = remoteNameInput.value.trim() || 'Host';
-    getPlayer('p1').name = hostName;
-    readSetupInputs(true);
-    if(G.isSkillMode){
-        G.skillCount = parseInt(remoteSkillCountInput.value) || 1;
-        G.skillCount = Math.max(1, Math.min(3, G.skillCount));
-    }
-    G.mode=G.isSkillMode?'remote-skill':'remote-normal';
-    if(G.conn&&G.conn.open){
-        G.conn.send({type:'start',minVal:G.minVal,maxVal:G.maxVal,isSkillMode:G.isSkillMode,hp:getPlayer('p1').maxHP,skillCount:G.skillCount});
-    }
-    initGame();
 });
 
 // ========== 全屏 ==========
