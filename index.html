@@ -129,6 +129,14 @@
         #number-select-input { width:180px; margin:15px 0; font-size:1.3rem; letter-spacing:2px; }
         #remote-ready-status { font-size:0.7rem; color:#ccc; margin-top:5px; }
         #stats-display { font-size:0.7rem; color:#aaa; margin-top:2px; }
+    /* ===== 帮助按钮与帮助面板 ===== */
+    .help-btn { position:absolute; top:12px; right:12px; width:34px; height:34px; border-radius:50%; border:1.5px solid rgba(0,240,255,0.5); background:rgba(0,240,255,0.08); color:var(--neon); font-size:1rem; font-weight:900; cursor:pointer; z-index:10; display:flex; align-items:center; justify-content:center; }
+    .help-btn:active { transform:scale(0.9); }
+    #help-overlay { z-index:1600; justify-content:flex-start; }
+    .help-content { flex:1; overflow-y:auto; width:100%; max-width:420px; font-size:0.78rem; line-height:1.7; color:#ddd; padding:4px 6px 12px; -webkit-overflow-scrolling:touch; }
+    .help-content h3 { color:var(--neon); font-size:0.9rem; margin:12px 0 4px; }
+    .help-content p { margin:3px 0; }
+    .help-content b { color:#fff; }
     </style>
 </head>
 <body>
@@ -142,6 +150,7 @@
         </div>
     </div>
     <div id="main-menu" class="overlay">
+        <button class="help-btn" id="help-btn">?</button>
         <div class="overlay-title">选择模式</div>
         <button class="btn" id="normal-mode-btn">🎮 普通模式</button>
         <button class="btn secondary" id="skill-mode-btn">⚡ 技能模式</button>
@@ -320,6 +329,41 @@
             <button class="btn" id="number-select-confirm" style="min-width:100px;margin-top:0;">确认</button>
             <button class="btn secondary" id="number-select-cancel" style="min-width:100px;margin-top:0;">取消</button>
         </div>
+    </div>
+    <div id="help-overlay" class="overlay hidden">
+        <div class="overlay-title">❓ 玩法介绍</div>
+        <div class="help-content">
+            <h3>🎯 游戏目标</h3>
+            <p>双方在一个数字范围内轮流猜数，根据「大了 / 小了」缩小范围。谁猜中<b>炸弹数字</b>，<b>炸弹的主人（防守方）掉血</b>。生命值先归零者输。</p>
+            <h3>📏 基本规则</h3>
+            <p>· 每轮随机生成一个炸弹数字，范围随猜测不断缩小；炸弹爆炸后进入下一轮，双方血量保留。</p>
+            <p>· 猜数字的是进攻方，炸弹在谁那边谁就是防守方——踩中炸弹炸的是防守方，别搞反了。</p>
+            <p>· 技能模式：每轮开始双方各从随机 3 选 1 中挑技能（每人 1~3 个），技能有冷却回合。</p>
+            <h3>🎮 三种对战模式</h3>
+            <p>· 本地双人：同一设备轮流操作，带防偷看换手隐私屏。</p>
+            <p>· AI 对战：简单 / 中等 / 困难三档，AI 会按血量与范围评估技能价值。</p>
+            <p>· 远程对战：创建 6 位房间码或复制邀请链接，支持实时聊天与表情。</p>
+            <h3>⚡ 技能分类（共 37 种）</h3>
+            <p>· 信息类：📡探测(奇偶)、🔍透视(个位)、🌡️温度计(距离)、🎯验证器(中了没)、📡侦察(看对手技能)</p>
+            <p>· 范围类：✂️二分、⏪回退、🔀洗牌、🚚移动、🕳️黑洞、🌊潮汐</p>
+            <p>· 伤害强化：⚡双倍、🔥孤注一掷、💣子母弹、💢愤怒、🌙吸血</p>
+            <p>· 防御类：🛡️护盾、🪞反射、💊治疗、🕊️重生</p>
+            <p>· 干扰控制：🙈致盲、🚫封锁、🕐暂停、🐌缓速、🧊冰封</p>
+            <p>· 心理欺诈：🌫️迷雾、🎭伪装、🤥说谎、🎯押注</p>
+            <p>· 陷阱特殊：🕸️蛛网、🪤陷阱、📋复制、🌟赋能、💤休眠、🕰️时间回溯</p>
+            <h3>🧠 推荐技能组合</h3>
+            <p>· ✂️二分 + 🔥孤注一掷：先把范围压到个位数，再赌 3 倍伤害一击必杀。</p>
+            <p>· 📡探测/🔍透视 + ✂️二分：信息配压缩，两轮就能锁定炸弹。</p>
+            <p>· 🕸️蛛网 + 🙈致盲/🌫️迷雾：把对手困在雷区里瞎猜，步步惊心。</p>
+            <p>· 💤休眠 + 💣子母弹/💢愤怒：故意不炸诱敌深入，下一轮爆发反击。</p>
+            <p>· 🛡️护盾 + 🪞反射：双重保险，反弹对手的致命一击。</p>
+            <p>· 🌟赋能 + ⚡双倍/💊治疗：关键时刻效果翻倍，逆转战局。</p>
+            <h3>💡 小技巧</h3>
+            <p>· 故意猜得离边界近可以少缩小范围「钓鱼」，但也会送给对手信息。</p>
+            <p>· 对手技能栏是公开可见的，盯着冷却规划你的进攻节奏。</p>
+            <p>· 残局血量低时优先选治疗 / 护盾 / 重生；🗡️穿透专克护盾流。</p>
+        </div>
+        <button class="btn" id="help-close-btn">返回</button>
     </div>
     <div id="cheat-toast"></div>
 </div>
@@ -1161,25 +1205,10 @@ function endGame(){
     setKeypadEnabled(false);
     surrenderBtn.style.display='none';
     gameOverBtn.style.display='block';
-    if(G.mode.includes('remote')){
-        if(G.isHost) rematchBtn.style.display='block';
-        else {
-            // Guest 显示请求重赛按钮
-            rematchBtn.style.display='block';
-            rematchBtn.textContent='🔄 请求重赛';
-            rematchBtn.onclick = function(){
-                if(G.conn && G.conn.open) {
-                    G.conn.send({type:'request_rematch'});
-                    rematchBtn.disabled = true;
-                    showCheatToast('已发送重赛请求，等待Host确认...');
-                }
-            };
-        }
-    } else {
-        rematchBtn.style.display='block';
-        rematchBtn.textContent='🔄 再来一局';
-        rematchBtn.onclick = function(){ initGame(); };
-    }
+    // 统一由 rematchBtn 的点击监听器处理，避免 onclick + 监听器双重触发
+    rematchBtn.disabled = false;
+    rematchBtn.style.display='block';
+    rematchBtn.textContent = (G.mode.includes('remote') && !G.isHost) ? '🔄 请求重赛' : '🔄 再来一局';
     renderSkills();
     syncIfRemote();
 }
@@ -1605,8 +1634,8 @@ function processGuess(guess, isSkillAttack, guesserId){
     }
 
     // 冰封触发
-    if(isHit && defender.frozen && !selfInflicted){
-        defender.frozen = false;
+    if(isHit && guesser.frozen && !selfInflicted){
+        guesser.frozen = false;
         messageDisplay.textContent = '🧊 炸弹被冰封，无法引爆！';
         G.playerInput='';
         updateInputDisplay();
@@ -1785,6 +1814,9 @@ function processGuess(guess, isSkillAttack, guesserId){
             } else {
                 updateRange();
             }
+            // 修复：说谎/迷雾的假反馈可能把炸弹挤出范围，这里收回保证游戏可结束
+            if(G.bombNumber < G.low) G.low = G.bombNumber;
+            if(G.bombNumber > G.high) G.high = G.bombNumber;
             const resultText = isHit ? '💥' : (guess < G.bombNumber ? '📈 大了' : '📉 小了');
             addHistory(guesserName + ' 猜 ' + guess + ' → ' + resultText);
             messageDisplay.textContent = '📉 炸弹比 '+guess+' '+highLow;
@@ -1835,14 +1867,18 @@ function processGuess(guess, isSkillAttack, guesserId){
 }
 
 function afterHitSkillPhase(){
-    startNewRound();
+    if(G.isSkillMode) {
+        startRoundSkillSelect();
+    } else {
+        startNewRound();
+    }
 }
 
 function switchTurn(){
     const current=getCurrentPlayer();
     const opponent=getOpponentPlayer(current.id);
     current.blind=false; current.pierce=false; current.speed=false;
-    current.shield=false; current.reflect=false;
+    // 修复：护盾/反射必须在对手回合生效，不能在这里清除（它们会在触发伤害或新一轮开始时清除）
     current.fog=false; current.lie=false;
     current.frozen=false;
     G.playerInput=''; updateInputDisplay();
@@ -2819,6 +2855,10 @@ function checkUrlRoom() {
         }
     } catch(e) {}
 }
+
+// ========== 帮助面板 ==========
+$('help-btn').addEventListener('click', function(){ $('help-overlay').classList.remove('hidden'); });
+$('help-close-btn').addEventListener('click', function(){ $('help-overlay').classList.add('hidden'); });
 
 // ========== 初始化 ==========
 showMainMenu();
