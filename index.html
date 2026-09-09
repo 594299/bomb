@@ -208,6 +208,9 @@
         <div style="font-size:0.65rem;color:#888;margin-top:4px;">主题即时生效并自动保存；默认名称/规则在保存后自动填入开局与开房界面</div>
         <button class="btn" id="settings-save-btn">💾 保存</button>
         <button class="btn secondary" id="settings-back-btn">返回</button>
+        <button class="btn secondary" id="settings-clear-cache-btn" style="border-color:rgba(255,80,80,0.5);color:#ff6666;">🗑️ 清除缓存并刷新</button>
+        <div style="font-size:0.6rem;color:#666;margin-top:4px;" id="version-display"></div>
+        <div style="font-size:0.6rem;color:#666;">遇到卡死/异常时先点上面按钮，强制加载最新代码</div>
     </div>
     <div id="setup-overlay" class="overlay hidden">
         <div class="overlay-title">⚙️ 游戏设置</div>
@@ -562,6 +565,28 @@ let numberPickerCallback = null;
 let numberPickerCancelCallback = null;
 let notifTimeout = null;
 let guestActionTimeout = null;
+let aiWatchdogInterval = null;
+let aiLastProgress = 0;
+
+// ========== AI 看门狗：任何原因导致AI回合停滞超过10秒，强制恢复，杜绝卡死 ==========
+function aiMarkProgress(){ aiLastProgress = Date.now(); }
+function startAiWatchdog(){
+    stopAiWatchdog();
+    aiMarkProgress();
+    aiWatchdogInterval = setInterval(function(){
+        if(!G.active) return;
+        if(!(G.mode.includes('ai')||G.mode==='tutorial')) return;
+        if(G.currentPlayer!=='p2'){ aiMarkProgress(); return; }
+        if(G.pendingSkillSelect || skillSelectPhase){ aiMarkProgress(); return; } // 技能选择阶段不干预
+        if(Date.now()-aiLastProgress < 10000) return;
+        // AI回合10秒无任何进展 → 作废旧执行链（令牌++），强制重新驱动
+        G.aiTurnToken=(G.aiTurnToken||0)+1;
+        G.processing=false;
+        aiMarkProgress();
+        if(G.mode==='tutorial') tutorialAI(); else aiPlayNormal();
+    }, 2000);
+}
+function stopAiWatchdog(){ if(aiWatchdogInterval){ clearInterval(aiWatchdogInterval); aiWatchdogInterval=null; } }
 let guessHistory = [];
 let toastTimer = null;
 
@@ -709,6 +734,7 @@ function applySettings() {
 function showSettings(){
     hideAll();
     $('settings-overlay').classList.remove('hidden');
+    $('version-display').textContent = '版本：' + GAME_VERSION + '（AI看门狗已启用）';
     const s=G.settings;
     $('set-name-input').value=s.name||'';
     $('set-min-input').value=s.minVal; $('set-max-input').value=s.maxVal;
@@ -788,6 +814,7 @@ function clearAllTimers(){
     clearHostTimeout();
     clearGuestActionTimeout();
     clearSkillTimer();
+    stopAiWatchdog();
     if(pingInterval){ clearInterval(pingInterval); pingInterval=null; }
     if(notifTimeout){ clearTimeout(notifTimeout); notifTimeout=null; }
 }
@@ -1497,6 +1524,8 @@ function endGame(){
 
     setKeypadEnabled(false);
     surrenderBtn.style.display='none';
+    turnIndicator.textContent='🏁 游戏结束';
+    turnIndicator.classList.remove('turn-me','turn-opponent');
     gameOverBtn.style.display='block';
     rematchBtn.disabled = false;
     rematchBtn.style.display='block';
@@ -1530,6 +1559,7 @@ function endGame(){
 
 function initGame(){
     resetGameState();
+    startAiWatchdog();
     if(G.mode.includes('remote')&&!G.isHost){
         showBattleArea();
         getPlayer('p1').name='Host'; getPlayer('p1').avatar='🙂';
@@ -1902,6 +1932,7 @@ function showSkillSelectWithOptions(forPlayerId, optionIds, skillCount){
 // ========== 核心游戏逻辑：猜测处理 ==========
 function processGuess(guess, isSkillAttack, guesserId){
     if(!G.active||G.processing) return;
+    aiMarkProgress();
     const guesser=guesserId?getPlayer(guesserId):getCurrentPlayer();
     const defender=getOpponentPlayer(guesser.id);
     if(!isSkillAttack){
@@ -3410,6 +3441,8 @@ function aiTurn(){
 function aiPlayNormal(){
     if(!G.active||G.processing||G.currentPlayer!=='p2') return;
     if(G.mode!=='tutorial' && !G.mode.includes('ai')) return;
+    const token = ++G.aiTurnToken; // 回合令牌：看门狗重启回合后，旧执行链自动失效
+    aiMarkProgress();
     G.processing=true;
     setKeypadEnabled(false);
     messageDisplay.textContent='🤖 AI思考中...';
@@ -3430,14 +3463,15 @@ function aiPlayNormal(){
     let topUpDone = false;
     const used = {};
     const step = function(){
-        if(!G.active || G.currentPlayer!=='p2') return;
+        if(!G.active || G.currentPlayer!=='p2' || token!==G.aiTurnToken) return;
+        aiMarkProgress();
         if(i>=plan.length && !topUpDone){
             topUpDone = true;
             // 信息技能已放完，候选集已收敛——动态追加斩杀/确认技能（真正的“看着线索打”）
             const extra = aiTopUp(ai, human, used);
             if(extra.length) plan.push.apply(plan, extra);
         }
-        if(i>=plan.length){ G.processing=false; setTimeout(aiGuess, 500); return; } // 必须复位processing，否则aiGuess的守卫会拒绝执行导致卡死
+        if(i>=plan.length){ G.processing=false; setTimeout(function(){ if(token===G.aiTurnToken) aiGuess(token); }, 500); return; } // 必须复位processing，否则aiGuess的守卫会拒绝执行导致卡死
         const id = plan[i++];
         // 放之前再校验一次（前面的技能可能改变了状态），同一技能每回合只放一次
         const usable = !used[id] && ai.skills.some(s=>s.id===id) && (ai.cooldowns[id]||0)<=0 && ai.lockedSkill!==id && ai.secondLockedSkill!==id;
@@ -3452,9 +3486,11 @@ function aiPlayNormal(){
     setTimeout(step, 700);
 }
 
-function aiGuess(){
+function aiGuess(token){
+    if(token!==undefined && token!==G.aiTurnToken) return; // 旧执行链的残留调用直接丢弃
     if(!G.active||G.processing||G.currentPlayer!=='p2') return;
     if(G.mode!=='tutorial' && !G.mode.includes('ai')) return;
+    aiMarkProgress();
     const ai=getPlayer('p2');
     const range=G.high-G.low+1;
     const lvl=aiEffectiveLevel();
@@ -3510,6 +3546,8 @@ function aiGuess(){
     messageDisplay.textContent='🤖 AI 输入了 '+guess;
     setTimeout(function(){
         if(!G.active) return;
+        if(token!==undefined && token!==G.aiTurnToken) return;
+        aiMarkProgress();
         G.playerInput='';
         G.processing=false;
         processGuess(guess,false,'p2');
@@ -3520,6 +3558,7 @@ function tutorialAI(){
     if(!G.active || G.processing || G.currentPlayer!=='p2') return;
     const t = G.tutorial;
     if(!t) return;
+    aiMarkProgress();
     G.processing = true;
     setKeypadEnabled(false);
     if(t.aiScriptQueue.length === 0){
@@ -3926,6 +3965,7 @@ function startTutorial(levelIndex) {
     G.tutorial = { levelData: levelData, aiScriptQueue: [], currentStepIndex: 0 };
     G.tutorialNextLevel = null;
     resetGameState();
+    startAiWatchdog();
     showBattleArea();
     G.aiAvatarUrl='https://yunapi.cn/api/sjecytx?r='+Date.now()+Math.floor(Math.random()*100000);
     G.aiAvatarOk=false;
@@ -4196,6 +4236,27 @@ $('settings-save-btn').addEventListener('click', function(){
     saveSettings(); applySettings();
     showCheatToast('✅ 设置已保存');
     showMainMenu();
+});
+// 清除本页所有本地缓存并强制刷新（解决浏览器缓存旧版代码导致的卡死）
+const GAME_VERSION = 'v2026.09.09-watchdog';
+$('settings-clear-cache-btn').addEventListener('click', function(){
+    if(!confirm('将清除本页面的本地缓存（设置/战绩/临时数据）并强制刷新加载最新代码。\n确定继续吗？')) return;
+    try { localStorage.clear(); } catch(e) {}
+    try { sessionStorage.clear(); } catch(e) {}
+    function forceReload(){
+        // 加时间戳参数，强制浏览器重新请求页面本体，绕过HTML缓存
+        const base = location.origin + location.pathname;
+        location.replace(base + '?_t=' + Date.now());
+    }
+    try {
+        if('caches' in window){
+            caches.keys().then(function(keys){ return Promise.all(keys.map(function(k){ return caches.delete(k); })); })
+                .then(forceReload).catch(forceReload);
+            if(navigator.serviceWorker && navigator.serviceWorker.getRegistrations){
+                navigator.serviceWorker.getRegistrations().then(function(rs){ rs.forEach(function(r){ r.unregister(); }); });
+            }
+        } else forceReload();
+    } catch(e) { forceReload(); }
 });
 
 // ========== 初始化 ==========
