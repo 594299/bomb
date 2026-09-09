@@ -555,6 +555,7 @@ const G = {
     skillSelectShown: false,
     roundCount: 0,
     aiAggro: 0, // AI 怒气值：被嘲讽会变得更激进（也更容易赌输自伤）
+    aiTurnToken: 0, // AI回合令牌：必须初始化为数字！若为undefined，++后变NaN，NaN!==NaN恒true会让AI执行链立即中止卡死
     tutorial: null // 教程相关数据
 };
 
@@ -1410,6 +1411,7 @@ function resetGameState(){
     G.tideShrinkNext=false;
     G.aiBrain=null;
     G.aiAggro=0;
+    G.aiTurnToken=0; // 每局重置令牌，杜绝NaN
     G.aiAvatarUrl=null; G.aiAvatarOk=false;
     G.qcStreaks={};
     G.humanIntel=0; G.humanTrap=false; G.humanForbid=false;
@@ -1559,7 +1561,6 @@ function endGame(){
 
 function initGame(){
     resetGameState();
-    startAiWatchdog();
     if(G.mode.includes('remote')&&!G.isHost){
         showBattleArea();
         getPlayer('p1').name='Host'; getPlayer('p1').avatar='🙂';
@@ -1572,6 +1573,7 @@ function initGame(){
         return;
     }
     showBattleArea();
+    startAiWatchdog(); // 必须在showBattleArea之后启动：其内部hideAll→clearAllTimers会stopAiWatchdog，先启动会被误杀
     if(Privacy.isLocal()){
         getPlayer('p1').name='蓝方'; getPlayer('p1').avatar='🔵';
         getPlayer('p2').name='红方'; getPlayer('p2').avatar='🔴';
@@ -3965,8 +3967,8 @@ function startTutorial(levelIndex) {
     G.tutorial = { levelData: levelData, aiScriptQueue: [], currentStepIndex: 0 };
     G.tutorialNextLevel = null;
     resetGameState();
-    startAiWatchdog();
     showBattleArea();
+    startAiWatchdog(); // 必须在showBattleArea之后启动，否则被hideAll→clearAllTimers误杀
     G.aiAvatarUrl='https://yunapi.cn/api/sjecytx?r='+Date.now()+Math.floor(Math.random()*100000);
     G.aiAvatarOk=false;
     renderPlayers();
