@@ -33,7 +33,9 @@
         #fullscreen-btn:active, #chat-toggle-btn:active { transform:scale(0.9); }
         .chat-badge { position:absolute; top:-4px; right:-4px; background:#ff4444; color:#fff; font-size:0.6rem; font-weight:900; border-radius:50%; width:16px; height:16px; display:none; align-items:center; justify-content:center; }
         .chat-badge.show { display:flex; }
-        .overlay { position:absolute; inset:0; background:rgba(0,0,0,0.95); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; padding:20px; }
+        .overlay { position:absolute; inset:0; background:rgba(0,0,0,0.95); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; padding:20px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+        /* 高度不够时内容居中，超出时自动改为顶部对齐并可滚动（防止设置/菜单被裁掉） */
+        .overlay::before, .overlay::after { content:''; margin:auto; flex-shrink:0; }
         .overlay.hidden { display:none; }
         .overlay-title { font-size:1.6rem; font-weight:900; margin-bottom:20px; text-align:center; }
         .btn { padding:14px 40px; border:2px solid var(--neon); border-radius:50px; background:rgba(0,240,255,0.1); color:var(--neon); font-size:1rem; font-weight:700; cursor:pointer; margin-top:12px; min-width:220px; outline:none; }
@@ -240,6 +242,7 @@
         #vn-options.expanded { max-height:42%; overflow-y:auto; -webkit-overflow-scrolling:touch; }
         #vn-options .chat-opt.locked { cursor:default; opacity:0.7; }
         #vn-options .chat-opt.locked:active { transform:none; background:rgba(255,255,255,0.04); }
+        #vn-hero-bar { display:flex; gap:4px; flex-wrap:wrap; padding:6px 10px; border-bottom:1px solid rgba(255,255,255,0.1); justify-content:center; }
         .chat-opt { padding:10px 14px; border:1px solid rgba(0,240,255,0.35); border-radius:10px; background:rgba(0,240,255,0.06); color:#aef6ff; font-size:0.75rem; cursor:pointer; text-align:left; transition:all 0.15s; }
         .chat-opt:active { transform:scale(0.97); background:rgba(0,240,255,0.15); }
         .chat-opt.end { border-color:rgba(255,255,255,0.2); color:#999; background:rgba(255,255,255,0.04); }
@@ -681,6 +684,7 @@
                 <button class="chat-close-btn" id="vn-restart-btn" title="重新开始">🔄</button>
                 <button class="chat-close-btn" id="vn-close">✕</button>
             </div>
+            <div id="vn-hero-bar"></div>
             <div class="chat-messages" id="vn-log"></div>
             <div id="vn-options"></div>
         </div>
@@ -5716,17 +5720,46 @@ e8d2a:{ai:['看到了。','看得清清楚楚。','#她没再回消息。','#因
 e8d2b:{ai:['置顶提醒……','写的什么？','"她随口说的话，都算数。"','……你这个人。','犯规。'],end:'topnote'}
 };
 // ---------- 多结局物语引擎 ----------
+// 结局按「女主:结局id」分别收集：同一棵对话树，16 位女主各自通关，结局可相同
 let vnUnlocked = {};
 try{ vnUnlocked = JSON.parse(localStorage.getItem('bomb_vn_endings')||'{}') || {}; }catch(e){ vnUnlocked = {}; }
+Object.keys(vnUnlocked).forEach(function(k){ // 旧档迁移：无前缀的结局归到默认女主名下
+    if(k.indexOf(':')<0){ vnUnlocked['lili:'+k]=vnUnlocked[k]; delete vnUnlocked[k]; }
+});
 let vnBusy = false;
 function vnSaveEndings(){ try{ localStorage.setItem('bomb_vn_endings', JSON.stringify(vnUnlocked)); }catch(e){} }
-function vnCounts(){ return [Object.keys(vnUnlocked).length, Object.keys(VN_ENDINGS).length]; }
-function vnRefreshTitle(){
-    const c = vnCounts();
-    $('vn-title').textContent = '🌸 多结局物语 · 结局 '+c[0]+'/'+c[1];
-    const mp = $('vn-menu-progress');
-    if(mp) mp.textContent = '🌸 一个清晨 · '+c[1]+' 个结局 · 已收集 '+c[0]+'/'+c[1];
+function vnPerHero(){ return Object.keys(VN_ENDINGS).length; }
+function vnHeroCount(){ return Object.keys(HEROINES).length; }
+function vnTotal(){ return vnPerHero() * vnHeroCount(); }
+function vnDoneAll(){ return Object.keys(vnUnlocked).length; }
+function vnDoneHero(){
+    const p = curHero()+':';
+    return Object.keys(vnUnlocked).filter(function(k){ return k.indexOf(p)===0; }).length;
 }
+function vnRefreshTitle(){
+    $('vn-title').textContent = '🌸 多结局物语 · '+heroDisplayName()+' '+vnDoneHero()+'/'+vnPerHero();
+    const mp = $('vn-menu-progress');
+    if(mp) mp.textContent = '🌸 '+vnHeroCount()+' 位女主 · '+vnTotal()+' 个结局 · 已收集 '+vnDoneAll()+'/'+vnTotal();
+}
+// 16 位女主的专属开场白（同一声"今天怎么起这么早"，十六种味道）
+const VN_HERO_OPEN = {
+    lili:['哼，太阳打西边出来了？','你居然也会早起。'],
+    mimi:['那、那个……','你今天，起得好早呀……'],
+    susu:['哇！你、你已经起来了？','没想到这个点你也在……'],
+    kui:['早呀！','今天怎么起这么早？'],
+    dou:['哇！你起得好早！','是不是要出去玩？'],
+    ye:['哦？凡人，你竟在如此黎明觉醒。','难道你也感受到了命运的召唤？'],
+    jiang:['哎呀，起这么早？','让我猜猜……有什么不可告人的计划吗？'],
+    leng:['早。','这个点醒着，稀有。'],
+    yan:['哟！起这么早！','好！很有精神！'],
+    tang:['早呀。','你醒着的时间，我一秒都不想错过呢。'],
+    duo:['欸——天亮了？','你也醒了呀，好巧哦。'],
+    wan:['这么早？','年轻人，精力不错嘛。'],
+    miao:['喵？','这个点……你也变成猫了吗？'],
+    yu:['早……','我刚下机，你刚起床，绝了。'],
+    bo:['嘀——接收到早起信号。','同步率，百分之百。'],
+    huang:['哦？','能在本王之前醒来的人，你是第一个。']
+};
 function vnAddMsg(who, text){
     const log = $('vn-log');
     const div = document.createElement('div');
@@ -5769,7 +5802,8 @@ function vnGoto(id){
     if(!node) return;
     vnBusy = true;
     vnRenderOptions([]);
-    const lines = (node.ai || []).slice();
+    let lines = (node.ai || []).slice();
+    if(id==='start' && VN_HERO_OPEN[curHero()]) lines = [node.ai[0]].concat(VN_HERO_OPEN[curHero()]);
     let i = 0;
     (function next(){
         if(i >= lines.length){
@@ -5794,14 +5828,15 @@ function vnChoose(o){
 function vnFinish(endId){
     const e = VN_ENDINGS[endId];
     if(!e) return;
-    const isNew = !vnUnlocked[endId];
-    vnUnlocked[endId] = true;
+    const key = curHero() + ':' + endId;
+    const isNew = !vnUnlocked[key];
+    vnUnlocked[key] = true;
     vnSaveEndings();
     vnRefreshTitle();
-    vnAddMsg('sys', (isNew ? '🏆 解锁新结局' : '📖 结局') + '「' + e.name + '」');
+    vnAddMsg('sys', (isNew ? '🏆 解锁新结局' : '📖 结局') + '「' + e.name + '」· ' + heroDisplayName());
     vnAddMsg('narr', e.desc);
-    const c = vnCounts();
-    vnAddMsg('sys', '— 结局图鉴 ' + c[0] + '/' + c[1] + (c[0] >= c[1] ? ' · 🎉 全结局达成！' : '') + ' —');
+    const all = vnDoneAll() >= vnTotal();
+    vnAddMsg('sys', '— ' + heroDisplayName() + ' ' + vnDoneHero() + '/' + vnPerHero() + ' · 全图鉴 ' + vnDoneAll() + '/' + vnTotal() + (all ? ' · 🎉 全结局制霸！' : '') + ' —');
     showCheatToast((isNew ? '🏆 新结局' : '📖 结局') + '「' + e.name + '」', 3000);
     vnRenderOptions([
         {t:'🔄 再走一遍（换条路线）', act:'restart'},
@@ -5811,15 +5846,16 @@ function vnFinish(endId){
 }
 function vnShowGallery(){
     if(vnBusy) return;
-    vnAddMsg('sys', '— 🏆 结局图鉴 —');
+    vnAddMsg('sys', '— 🏆 结局图鉴 · '+heroDisplayName()+' '+vnDoneHero()+'/'+vnPerHero()+' · 全图鉴 '+vnDoneAll()+'/'+vnTotal()+' —');
     const box = $('vn-options');
     box.innerHTML = '';
     box.classList.add('expanded');
+    const key = function(id){ return curHero()+':'+id; };
     Object.keys(VN_ENDINGS).forEach(function(id){
-        const e = VN_ENDINGS[id], got = !!vnUnlocked[id];
+        const e = VN_ENDINGS[id], got = !!vnUnlocked[key(id)];
         const d = document.createElement('div');
         d.className = 'chat-opt' + (got ? '' : ' end locked');
-        d.textContent = got ? ('🏆 ' + e.name + ' — ' + e.desc) : '🔒 ？？？（尚未解锁）';
+        d.textContent = got ? ('🏆 ' + e.name + ' — ' + e.desc) : '🔒 ？？？（'+heroDisplayName()+'线未解锁）';
         box.appendChild(d);
     });
     const back = document.createElement('button');
@@ -5833,9 +5869,36 @@ function vnShowGallery(){
     });
     box.appendChild(back);
 }
+// 女主切换栏：同一棵树，十六种人生；切换后重开一局，结局分开收集
+function buildVnHeroBar(){
+    const bar = $('vn-hero-bar');
+    if(!bar) return;
+    bar.innerHTML = '';
+    Object.keys(HEROINES).forEach(function(id){
+        const h = HEROINES[id];
+        const p = id+':';
+        const done = Object.keys(vnUnlocked).filter(function(k){ return k.indexOf(p)===0; }).length;
+        const b = document.createElement('button');
+        b.className = 'hero-switch-btn' + (id===curHero() ? ' active' : '');
+        b.textContent = h.emoji;
+        b.title = h.name+'（'+h.tag+'）· 结局 '+done+'/'+vnPerHero();
+        b.style.setProperty('--hero-color', h.color);
+        b.addEventListener('click', function(){
+            if(id===curHero() || vnBusy) return;
+            loadRoute(id);
+            buildVnHeroBar();
+            vnRefreshTitle();
+            $('vn-log').innerHTML = '';
+            vnAddMsg('sys', '— 现在是 '+heroDisplayName()+' 的清晨 —');
+            vnGoto('start');
+        });
+        bar.appendChild(b);
+    });
+}
 function openVN(){
     $('vn-overlay').classList.remove('hidden');
     $('vn-log').innerHTML = '';
+    buildVnHeroBar();
     vnRefreshTitle();
     vnAddMsg('sys', '— 与' + heroDisplayName() + '的一个清晨 —');
     vnGoto('start');
