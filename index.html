@@ -36,6 +36,7 @@
         .overlay { position:absolute; inset:0; background:rgba(0,0,0,0.95); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; padding:20px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
         /* 高度不够时内容居中，超出时自动改为顶部对齐并可滚动（防止设置/菜单被裁掉） */
         .overlay::before, .overlay::after { content:''; margin:auto; flex-shrink:0; }
+        .overlay > * { flex-shrink:0; } /* 关键：禁止子项被压扁，超高改为滚动 */
         .overlay.hidden { display:none; }
         .overlay-title { font-size:1.6rem; font-weight:900; margin-bottom:20px; text-align:center; }
         .btn { padding:14px 40px; border:2px solid var(--neon); border-radius:50px; background:rgba(0,240,255,0.1); color:var(--neon); font-size:1rem; font-weight:700; cursor:pointer; margin-top:12px; min-width:220px; outline:none; }
@@ -182,7 +183,7 @@
         #hero-switcher { margin-left:auto; display:flex; gap:4px; flex-shrink:0; flex-wrap:wrap; max-width:230px; justify-content:flex-end; }
         .hero-switch-btn { padding:4px 7px; border-radius:10px; border:1.5px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.05); font-size:0.85rem; cursor:pointer; line-height:1; transition:all .15s; }
         /* ========== 性格选择网格（女主/玩家通用） ========== */
-        .persona-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; width:100%; max-width:360px; max-height:172px; overflow-y:auto; padding:6px; margin-top:4px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; -webkit-overflow-scrolling:touch; }
+        .persona-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; width:100%; max-width:360px; max-height:38vh; overflow-y:auto; padding:6px; margin-top:4px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; -webkit-overflow-scrolling:touch; }
         .persona-grid .ai-level-btn { margin:0; padding:7px 4px; font-size:0.68rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-radius:10px; }
         .persona-grid-label { font-size:0.8rem; color:#ccc; margin-top:12px; display:flex; align-items:center; gap:6px; }
         .persona-grid-label::after { content:''; flex:1; height:1px; background:rgba(255,255,255,0.12); }
@@ -238,11 +239,11 @@
         @keyframes talkPop2 { from { transform:scale(0.85); opacity:0; } to { transform:scale(1); opacity:1; } }
         #ai-chat-options { padding:10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.1); }
         #ai-chat-options.expanded { max-height:42%; overflow-y:auto; -webkit-overflow-scrolling:touch; }
-        #vn-options { padding:10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.1); }
-        #vn-options.expanded { max-height:42%; overflow-y:auto; -webkit-overflow-scrolling:touch; }
-        #vn-options .chat-opt.locked { cursor:default; opacity:0.7; }
-        #vn-options .chat-opt.locked:active { transform:none; background:rgba(255,255,255,0.04); }
-        #vn-hero-bar { display:flex; gap:4px; flex-wrap:wrap; padding:6px 10px; border-bottom:1px solid rgba(255,255,255,0.1); justify-content:center; }
+        #ai-chat-options .chat-opt.locked { cursor:default; opacity:0.7; }
+        #ai-chat-options .chat-opt.locked:active { transform:none; background:rgba(255,255,255,0.04); }
+        /* 剧情聊天框占满全屏 */
+        #ai-chat-overlay { padding:0; }
+        #ai-chat-overlay .chat-container { width:100%; max-width:none; height:100%; border-radius:0; border:none; border-top:1px solid rgba(255,255,255,0.2); }
         .chat-opt { padding:10px 14px; border:1px solid rgba(0,240,255,0.35); border-radius:10px; background:rgba(0,240,255,0.06); color:#aef6ff; font-size:0.75rem; cursor:pointer; text-align:left; transition:all 0.15s; }
         .chat-opt:active { transform:scale(0.97); background:rgba(0,240,255,0.15); }
         .chat-opt.end { border-color:rgba(255,255,255,0.2); color:#999; background:rgba(255,255,255,0.04); }
@@ -324,8 +325,6 @@
         <button class="btn secondary" id="tutorial-mode-btn">🎓 教程模式</button>
         <button class="btn secondary" id="story-mode-btn" style="border-color:var(--neon);color:var(--neon);">💞 剧情模式</button>
         <div id="story-menu-progress" style="font-size:0.65rem;color:#888;margin-top:2px;"></div>
-        <button class="btn secondary" id="vn-mode-btn" style="border-color:var(--green);color:var(--green);">🌸 多结局物语</button>
-        <div id="vn-menu-progress" style="font-size:0.65rem;color:#888;margin-top:2px;"></div>
         <button class="btn secondary" id="settings-btn">⚙️ 设置</button>
         <div id="stats-display"></div>
     </div>
@@ -343,6 +342,12 @@
             <button class="ai-level-btn" data-theme="sky">晴空</button>
             <button class="ai-level-btn" data-theme="peach">蜜桃</button>
         </div>
+        <div class="setting-row">
+            <label>进入页面自动全屏：</label>
+            <button class="ai-level-btn" id="autofs-on-btn">开启</button>
+            <button class="ai-level-btn" id="autofs-off-btn">关闭</button>
+        </div>
+        <div style="font-size:0.6rem;color:#888;margin-top:-2px;">浏览器限制：打开页面后首次点击/触摸屏幕时自动进入全屏</div>
         <div class="setting-row">
             <label>默认名称：</label><input type="text" id="set-name-input" maxlength="10" placeholder="开房/进房自动填入" style="width:160px;">
         </div>
@@ -645,6 +650,7 @@
         <div class="chat-container">
             <div class="chat-header">
                 <span id="ai-chat-title">💞 和她的聊天</span>
+                <button class="chat-close-btn" id="vn-start-btn" title="清晨物语·多结局">🌸</button>
                 <button class="chat-close-btn" id="gallery-btn" title="回忆画廊">📖</button>
                 <button class="chat-close-btn" id="save-btn" title="存档管理">💾</button>
                 <button class="chat-close-btn" id="ai-chat-close">✕</button>
@@ -675,19 +681,6 @@
         <button class="btn small secondary" id="avatar-reset-btn">恢复默认（每局随机）</button>
         <button class="btn" id="avatar-close-btn">完成</button>
         <input type="file" id="avatar-file-input" accept="image/*" style="display:none;">
-    </div>
-    <div id="vn-overlay" class="overlay hidden" style="z-index:3350;">
-        <div class="chat-container">
-            <div class="chat-header">
-                <span id="vn-title">🌸 多结局物语</span>
-                <button class="chat-close-btn" id="vn-gallery-btn" title="结局图鉴">🏆</button>
-                <button class="chat-close-btn" id="vn-restart-btn" title="重新开始">🔄</button>
-                <button class="chat-close-btn" id="vn-close">✕</button>
-            </div>
-            <div id="vn-hero-bar"></div>
-            <div class="chat-messages" id="vn-log"></div>
-            <div id="vn-options"></div>
-        </div>
     </div>
     <div id="admin-debug-btn">🛠️</div>
     <div id="admin-debug-panel">
@@ -983,6 +976,33 @@ function applyTheme(theme) {
         b.classList.toggle('active', b.dataset.theme===(theme||'neon'));
     });
 }
+// ---------- 自动全屏（默认开启） ----------
+// 浏览器规定全屏必须由用户手势触发：在首次点击/触摸时自动进入
+if(G.settings.autoFs===undefined) G.settings.autoFs = true;
+function renderAutofs(){
+    const on=$('autofs-on-btn'), off=$('autofs-off-btn');
+    if(!on||!off) return;
+    on.classList.toggle('active', !!G.settings.autoFs);
+    off.classList.toggle('active', !G.settings.autoFs);
+}
+function tryAutoFullscreen(){
+    if(!G.settings.autoFs || document.fullscreenElement) return;
+    const el = document.documentElement;
+    try{
+        const p = el.requestFullscreen ? el.requestFullscreen() : (el.webkitRequestFullscreen ? el.webkitRequestFullscreen() : null);
+        if(p && p.catch) p.catch(function(){});
+    }catch(e){}
+}
+document.addEventListener('pointerdown', tryAutoFullscreen);
+$('autofs-on-btn').addEventListener('click', function(){
+    G.settings.autoFs = true; saveSettings(); renderAutofs(); tryAutoFullscreen();
+    showCheatToast('✅ 自动全屏已开启');
+});
+$('autofs-off-btn').addEventListener('click', function(){
+    G.settings.autoFs = false; saveSettings(); renderAutofs();
+    showCheatToast('✅ 自动全屏已关闭');
+});
+renderAutofs();
 function applySettings() {
     const s = G.settings;
     applyTheme(s.theme);
@@ -5140,6 +5160,7 @@ function buildHeroSwitcher(){
             renderAffBar(); updateHeroName(); heroFaceRefresh(); buildHeroSwitcher();
             $('ai-chat-log').innerHTML = '';
             chatAddMsg('sys', '— 现在是 '+heroDisplayName()+' 的时间 —');
+            if(G.vnActive){ vnGoto('start'); return; } // 物语模式中切女主：用新女主重开清晨
             const tier = affTier().id;
             chatGoto(tier==='nemesis'?'g_nemesis':tier==='cold'?'g_cold':tier==='normal'?'g_normal':tier==='warm'?'g_warm':'g_close');
         });
@@ -5169,6 +5190,8 @@ function closeAiChat(){
     hideTypingDots();
     chatTyping = false;
     G.chatReplay = false;
+    G.vnActive = false;
+    vnBusy = false;
     $('ai-chat-overlay').classList.add('hidden');
     updateStoryMenuProgress();
 }
@@ -5176,43 +5199,42 @@ function closeAiChat(){
 function updateStoryMenuProgress(){
     const el = $('story-menu-progress');
     if(!el || typeof chatSave==='undefined') return;
-    el.textContent = '💞 '+heroDisplayName()+' · 好感 '+chatSave.aff+'（'+affTier().name+'） · 章节 '+Object.keys(chatSave.chapters||{}).length+' · 结局 '+Object.keys(chatSave.endings||{}).length+'/'+CHAT_ENDINGS.length;
+    el.textContent = '💞 '+heroDisplayName()+' · 好感 '+chatSave.aff+'（'+affTier().name+'） · 章节 '+Object.keys(chatSave.chapters||{}).length+' · 结局 '+Object.keys(chatSave.endings||{}).length+'/'+CHAT_ENDINGS.length+' · 🌸物语 '+vnDoneAll()+'/'+vnTotal();
 }
 // ========== 🌸 多结局物语：纯硬写分支对话树 ==========
 // 无任何大模型参与。每一条路线、每一句台词、每一个结局全部手写。
 // 规则：选项链式推进，一路通向结局；51 个结局互不重复，剧情不撞车。
 const VN_ENDINGS = {
-    // —— 1+1=2 线 ——
-    screenshot:{name:'截图罪证', desc:'从此她每句话都要先过三遍脑子。'},
-    checkmate:{name:'反将一军', desc:'她被你一句话噎到了中午。'},
-    peano:{name:'皮亚诺的清晨', desc:'她偷偷去查了，还真有皮亚诺公理。'},
-    tyrant:{name:'数学暴政', desc:'独裁数学家颁布的第一条法令：早睡早起。'},
-    calculator:{name:'人形计算器', desc:'221。她默默收起了出题的手。'},
-    onetrick:{name:'一招鲜', desc:'不会13×17，但1+1永远等于2。够了。'},
-    baka:{name:'笨蛋认证', desc:'"78。"——笨蛋称号当日生效。'},
-    fullsugar:{name:'全糖去冰', desc:'连她的口味都记得，这顿她记一辈子。'},
-    breakfastwar:{name:'早餐争夺战', desc:'她真的下楼了，穿着拖鞋。'},
-    // —— 鸟儿虫儿线 ——
-    diet:{name:'减肥帮手', desc:'一句"原汁原味"，她早饭省了。'},
-    jealous:{name:'醋意清晨', desc:'"别真带。"——这句话她打了三遍才发出来。'},
-    bugtime:{name:'虫的时区', desc:'虫的时区，人类无权干涉。'},
-    napclub:{name:'回笼觉同盟', desc:'早起的意义，就是一起心安理得地再睡一觉。'},
-    fairybird:{name:'仙鸟传说', desc:'"飞一个我看看？"——你至今没有回复。'},
-    digger:{name:'考古学家', desc:'她三年前的朋友圈，被翻到了底。'},
-    // —— 通宵线 ——
-    goodnight:{name:'早安晚安', desc:'反正，都是你。'},
-    devil:{name:'魔鬼闹钟', desc:'嘴上骂你魔鬼，手指却很诚实地打起了字。'},
-    pinky:{name:'拉钩上吊', desc:'一百年，不许变。'},
-    reader:{name:'首席读者', desc:'第一个，也是唯一一个VIP。'},
-    sunrise:{name:'四十七张日出', desc:'她拍了四十七张照片，每张都有你。'},
-    allnighter:{name:'通宵对决', desc:'天亮时比分7比6，没人肯睡。'},
-    // —— 事业线 ——
-    eighty:{name:'八十年试用', desc:'先记个八十年，试用满意再续。'},
-    haggle:{name:'讨价还价', desc:'两功，不能再多。'},
-    catvote:{name:'猫的投票权', desc:'猫还没买，颜色已经吵了一早上。'},
-    province:{name:'全省奶茶计划', desc:'全城太小，格局打开。'},
-    teammate:{name:'凌晨战友', desc:'同一批熬夜人，在同一个峡谷相遇。'},
-    noway:{name:'稳赚不赔', desc:'赢了请奶茶，输了也请——她稳赚不赔。'},
+    // —— 梦想线 ——
+    dreambroken:{name:'梦想破灭', desc:'梦想会破灭，但早安不会缺席。'},
+    morningbuddy:{name:'早安搭子', desc:'你现在的身份是：她的早安搭子。'},
+    richproof:{name:'截图为证', desc:'等你成了首富，她拿着截图去兑奖。'},
+    loanmilk:{name:'预付利息', desc:'今天的奶茶，未来的首富请。'},
+    dreamstar:{name:'梦中主角', desc:'怕你夸她，她会飘。'},
+    familyprice:{name:'亲情价', desc:'一句早安一场戏，亲情价不打折。'},
+    samehere:{name:'我也是', desc:'三个字，她打了又删，删了又打。'},
+    justwoke:{name:'刚睡醒', desc:'脸热是因为刚睡醒。对，刚睡醒。'},
+    // —— 干饭线 ——
+    conditioned:{name:'条件反射', desc:'听到豆浆油条，她脱口而出全糖去冰。'},
+    revenge:{name:'肚子的复仇', desc:'它半夜会叫得更大声。'},
+    offer:{name:'按时上供', desc:'肚子老爷，得罪不起。'},
+    nutrition:{name:'营养检查', desc:'不是要看，是要检查营养均不均衡。'},
+    report:{name:'干饭汇报', desc:'干饭不积极，思想有问题。'},
+    justasking:{name:'就问问', desc:'早餐店在哪？她没想去，就问问。'},
+    // —— 生物钟线 ——
+    dayeight:{name:'第八天', desc:'八天纪念日快乐，奖励亲口早安一句。'},
+    recordend:{name:'纪录终结', desc:'纪录这种东西，就是用来终结的。'},
+    wakeservice:{name:'叫醒服务', desc:'从明天开始，你叫她起床。'},
+    prepay:{name:'预付夸奖', desc:'今天先预付：你早起的样子很帅。'},
+    learnbad:{name:'学坏了', desc:'跟谁学的？不会是她吧。'},
+    count100:{name:'数到一百', desc:'你不来，她就数到一百再睡。'},
+    // —— 等消息线 ——
+    everymorning:{name:'每一个早', desc:'以后的每一个早，都让你等到。'},
+    assume:{name:'直接认定', desc:'她不猜，她直接认定是自己。不许否认。'},
+    topboth:{name:'互相置顶', desc:'好巧，她也有个置顶。'},
+    earlynight:{name:'早点说晚安', desc:'以后她早点说，不让你等。'},
+    whogift:{name:'礼物是谁的', desc:'她突然警觉：是谁？'},
+    happyfor:{name:'替他高兴', desc:'她没有失望，只是替快递小哥高兴。'},
     // —— 直球线 ——
     dreamreverse:{name:'梦是反的', desc:'她笑着醒来，笑着笑着又有点想你。什么毛病。'},
     dreamcheckin:{name:'梦里报到', desc:'行，给你留个位置。梦里见。'},
@@ -5276,22 +5298,20 @@ const VN_ENDINGS = {
     finger:{name:'指上肌肉', desc:'单身多年的手速，肌肉都长在手指上。'},
     teamrush:{name:'组队抢购', desc:'双人海淘，四手联弹，战无不胜。'},
     // —— 深层支线 ——
-    badjokes:{name:'烂梗连环', desc:'一个比一个烂，她一个没落全笑了。'},
-    gift:{name:'烂梗天赋', desc:'天赋型选手，烂梗界冉冉升起的新星。'},
-    face:{name:'鬼脸攻击', desc:'她笑到手机砸脸，工伤，你负责。'},
-    charge:{name:'看脸收费', desc:'收费标准：一个早安，看一次。'},
-    leek:{name:'韭菜虫', desc:'万物皆可韭菜鸡蛋馅，包括空气。'},
-    guessbug:{name:'猜虫游戏', desc:'她猜了一早上，从豆沙猜到小龙虾。'},
-    queue:{name:'排队包子', desc:'二十分钟的队，值得一句好吃到哭。'},
-    baozidate:{name:'包子之约', desc:'改天=这周六，她已经定好闹钟了。'},
-    checkin:{name:'每日报到', desc:'死线第一天，他提前十分钟到了。'},
-    deadline:{name:'饭局死线', desc:'她把这顿饭标进日历，加了三个闹钟。'},
-    coax:{name:'独门哄法', desc:'一段五秒的语音，是她哼的起床铃。'},
-    onecoax:{name:'一种就够', desc:'一种哄法，用一辈子，够用。'},
-    taste:{name:'豆浆测评', desc:'测评第一名：公司楼下那家，全糖去冰。'},
-    shop:{name:'早餐店计划', desc:'店名就叫早起，口号：为她营业。'},
-    superhero:{name:'专属英雄', desc:'英雄证书改天发，先持证上岗。'},
-    coffee:{name:'咖啡上头', desc:'咖啡因含量100%，土味含量超标。'},
+    backtocontinue:{name:'接着聊', desc:'清晨的厕所排队，也挡不住聊天的热情。'},
+    queuechat:{name:'排队聊天', desc:'她在这头数：前面还有几个人。'},
+    igetit:{name:'我都懂', desc:'她什么都没说，又好像什么都说了。'},
+    emote:{name:'意味深长', desc:'一个表情，让人回味了一整个清晨。'},
+    bellypinky:{name:'肚子拉钩', desc:'以肚子之名起誓：早餐永不缺席。'},
+    letsgo:{name:'现在就出发', desc:'她说：等我五分钟，不，三分钟。'},
+    bellymiss:{name:'肚子想念', desc:'第一个想她的是他的肚子，第二个是他。'},
+    missqueue:{name:'排队想念', desc:'想念也要取号排队，她是一号。'},
+    order:{name:'遵命睡觉', desc:'她数到三，他就乖乖去睡了。'},
+    fivemore:{name:'再聊五分钟', desc:'五分钟又五分钟，天亮了很久。'},
+    dreamwhat:{name:'梦里要有', desc:'她说不出口的那半句，他假装没猜到。'},
+    sleep8:{name:'补觉八小时', desc:'八小时后，她准时发来：醒了吗？'},
+    firsthi:{name:'第一句你好', desc:'她往上翻聊天记录，原来已经这么久了。'},
+    sevenyears:{name:'七年之约', desc:'照这个趋势，七年也不是不行。'},
     alittle:{name:'一点点', desc:'一点点=她对着聊天框傻笑了十分钟。'},
     iftrue:{name:'如果是真的', desc:'真的就……先截图，再考虑怎么回。'},
     even:{name:'扯平之后', desc:'扯平之后，重新开始，好好说话，好好想念。'},
@@ -5311,11 +5331,11 @@ const VN_ENDINGS = {
 };
 // 对话树：ai=她的台词（#开头为旁白），options=选项{t文本,next下一节点}，end=结局id
 const VN_STORY = {
-start:{ai:['#清晨七点，阳光刚爬上窗台，她的消息就弹了进来。','早。','等等——','今天怎么起这么早？太阳打西边出来了？'],options:[
-    {t:'因为 1+1=2。',next:'a1'},
-    {t:'早起的鸟儿有虫吃。',next:'a2'},
-    {t:'你也挺早呀。',next:'a3'},
-    {t:'今天有事要忙。',next:'a4'},
+start:{ai:['#清晨七点，手机在枕边震了两下。','早。','……等等。','我没看错吧？这个点，你居然醒着？'],options:[
+    {t:'被梦想叫醒的。',next:'a1'},
+    {t:'肚子叫我起来吃早饭。',next:'a2'},
+    {t:'生物钟到点就响，拦不住。',next:'a3'},
+    {t:'在等一个人的消息。',next:'a4'},
     {t:'想你了，睡不着。',next:'a5'},
     {t:'在晨练。',next:'a6'},
     {t:'被猫吵醒的。',next:'a7'},
@@ -5324,100 +5344,96 @@ start:{ai:['#清晨七点，阳光刚爬上窗台，她的消息就弹了进来�
     {t:'做梦笑醒了。',next:'a10'},
     {t:'在思考人生。',next:'a11'},
     {t:'刚抢完限量，手速惊人。',next:'a12'}]},
-// ===== 1+1=2 线 =====
-a1:{ai:['哈哈哈哈什么跟什么啊！','1+1=2，这就是你早起的理由？','逻辑闭环了属于是。'],options:[
-    {t:'你觉得我很招笑吗？',next:'b1a'},
-    {t:'严谨的数学家从不解释。',next:'b1b'},
-    {t:'那你出一道，我秒答。',next:'b1c'},
-    {t:'开个玩笑，其实去给你买早餐了。',next:'b1d'},
-    {t:'这叫冷幽默，高级。',next:'b1e'}]},
-b1a:{ai:['招笑。','但是，招我喜欢的那种笑。','……后半句当我没说。'],options:[
-    {t:'晚了，我截图了。',next:'e_screenshot'},
-    {t:'我也觉得，你笑起来的声音很好听。',next:'e_checkmate'}]},
-b1b:{ai:['哦？','那数学家说说，1+1 为什么等于 2？'],options:[
-    {t:'因为皮亚诺公理。',next:'e_peano'},
-    {t:'因为我说是就是。',next:'e_tyrant'}]},
-b1c:{ai:['行。','听题——7×8？'],options:[
-    {t:'56。',next:'c1c1'},
-    {t:'78。',next:'e_baka'}]},
-c1c1:{ai:['……秒答？预习过吧你。','不服。再来：13×17？'],options:[
-    {t:'221。',next:'e_calculator'},
-    {t:'不知道。但我会算 1+1。',next:'e_onetrick'}]},
-b1d:{ai:['欸？','给、给我的？'],options:[
-    {t:'豆浆油条，全糖去冰那杯是你的。',next:'e_fullsugar'},
-    {t:'其实我已经吃掉了，只是通知你一声。',next:'e_breakfastwar'}]},
-e_screenshot:{ai:['删掉！！立刻！！','……算了。','留着吧。反正，也只有你能看到。'],end:'screenshot'},
-e_checkmate:{ai:['（对方正在输入…）','（对方正在输入…）','（对方正在输入…）','……大早上的，火力这么猛？'],end:'checkmate'},
-e_peano:{ai:['皮什么？','（五分钟后）','……我去查了，还真有这个东西。','你这人，肚子里有点东西。'],end:'peano'},
-e_tyrant:{ai:['好一个独裁数学家。','那你再颁布几条法我听听。','第一条我替你拟好了：以后早睡早起。','……最好还能有人监督。'],end:'tyrant'},
-e_calculator:{ai:['221……','（她默默打开了计算器）','对了。','人形计算器，失敬失敬。'],end:'calculator'},
-e_onetrick:{ai:['哈哈哈哈哈！','行吧行吧。','会算 1+1 就够了。','毕竟你的数学水平，我最清楚。'],end:'onetrick'},
-e_baka:{ai:['错！是 56！','哈哈哈哈哈！','早起的人，智商果然不在线。','笨蛋称号，今天正式生效。'],end:'baka'},
-e_fullsugar:{ai:['……连我的口味都记住了。','（吸溜）','行。','这顿，我记一辈子。'],end:'fullsugar'},
-e_breakfastwar:{ai:['？？？','你等着。','我现在就下楼抢你的。','#十分钟后，她真的出现了，穿着拖鞋，头发乱糟糟的。'],end:'breakfastwar'},
-// ===== 鸟儿虫儿线 =====
-a2:{ai:['早起的鸟儿有虫吃——','那我问你。','早起的虫儿，怎么办？'],options:[
-    {t:'所以我要当鸟，不当虫。',next:'b2a'},
-    {t:'虫儿聪明的话，根本不起。',next:'b2b'},
-    {t:'放心，我是素食主义鸟。',next:'b2c'},
-    {t:'虫儿？被我吃了呗。',next:'b2d'}]},
-b2a:{ai:['志气不小。','那鸟同学，今天早上——','吃虫，还是吃早饭？'],options:[
-    {t:'吃虫，原汁原味。',next:'e_diet'},
-    {t:'豆浆油条，虫留给别的鸟。',next:'e_jealous'}]},
-b2b:{ai:['有点道理。','那从今天起，我是虫。','晚安。'],options:[
-    {t:'这才早上七点。',next:'e_bugtime'},
-    {t:'那我也当虫，一起睡。',next:'e_napclub'}]},
-b2c:{ai:['素食鸟？','第一次听说。','那你吃什么？'],options:[
-    {t:'吃露水，仙鸟。',next:'e_fairybird'},
-    {t:'吃你种的瓜。蹲你朋友圈那种。',next:'e_digger'}]},
-e_diet:{ai:['yue——！','画面感太强了。','谢谢你，今天的早饭，省了。'],end:'diet'},
-e_jealous:{ai:['明智。','那顺便——给隔壁女同学也带一份？','……开玩笑的。','别真带。'],end:'jealous'},
-e_bugtime:{ai:['虫的时区，你不懂。','我这边现在是深夜。','勿念。','#一分钟后：别真走啊，再聊五毛钱的。'],end:'bugtime'},
-e_napclub:{ai:['批准。','虫窝见。','#那天早上，两个人隔着屏幕，一起睡了个回笼觉。'],end:'napclub'},
-e_fairybird:{ai:['仙鸟是吧。','行。','飞一个我看看？','（你已读不回）','哈哈哈哈哈！'],end:'fairybird'},
-e_digger:{ai:['！！','我的朋友圈你翻到哪年了？！','三年前那条！不许看！','……观后感呢？'],end:'digger'},
-// ===== 通宵线 =====
-a3:{ai:['我？','我根本没睡。','在赶一个很重要的东西。'],options:[
-    {t:'通宵伤肝，快去睡。',next:'b3a'},
-    {t:'什么东西？我康康？',next:'b3b'},
-    {t:'巧了，我也没睡。',next:'b3c'},
-    {t:'重要？比我还重要？',next:'b3d'}]},
-b3a:{ai:['管我？','……行吧。','有人管的感觉，还不坏。'],options:[
-    {t:'睡吧，我帮你盯着闹钟。',next:'e_goodnight'},
-    {t:'睡什么睡，起来嗨。',next:'e_devil'}]},
-b3b:{ai:['秘密！','做完，第一个给你看。','说好了哦。'],options:[
-    {t:'拉钩。',next:'e_pinky'},
-    {t:'行，那我等着当第一个读者。',next:'e_reader'}]},
-b3c:{ai:['好家伙。','两个夜猫子，撞一块了。'],options:[
-    {t:'走，天台看日出。',next:'e_sunrise'},
-    {t:'来solo一把，谁输谁睡。',next:'e_allnighter'}]},
-e_goodnight:{ai:['嗯。','那我去睡了。','晚安……不对，早安。','……反正，都是你。'],end:'goodnight'},
-e_devil:{ai:['你是魔鬼吗。','我熬了一夜，你让我起来嗨？','……但莫名有点精神了。','说吧，聊什么。'],end:'devil'},
-e_pinky:{ai:['拉钩。','上吊。','一百年。','不许变。'],end:'pinky'},
-e_reader:{ai:['第一个读者。','也是唯一一个 VIP。','#她在心里，把这句话写上了扉页。'],end:'reader'},
-e_sunrise:{ai:['现在？','……走！','#那天的日出，她拍了四十七张照片。','#后来翻相册才发现，每一张里，都有你。'],end:'sunrise'},
-e_allnighter:{ai:['来！谁怕谁！','输的别哭。','#天亮时比分 7 比 6。','#没人肯去睡。'],end:'allnighter'},
-// ===== 事业线 =====
-a4:{ai:['哟，大忙人。','比我这个通宵的还忙。','忙什么？'],options:[
-    {t:'忙着想你。',next:'b4a'},
-    {t:'搞钱，搞事业。',next:'b4b'},
-    {t:'打游戏上分。',next:'b4c'},
-    {t:'忙着拯救世界。',next:'b4d'}]},
-b4a:{ai:['一大早就油嘴滑舌。','……不过。','记你一功。'],options:[
-    {t:'那能不能记一辈子？',next:'e_eighty'},
-    {t:'才一功？我这么努力。',next:'e_haggle'}]},
-b4b:{ai:['搞钱好啊。','那搞到钱，第一件事干嘛？'],options:[
-    {t:'买个小房子，养只猫。',next:'e_catvote'},
-    {t:'请你吃遍全城的全糖去冰。',next:'e_province'}]},
-b4c:{ai:['早上七点，上分？','你是对面派来的演员吧。'],options:[
-    {t:'我凌晨的队友也是这么说的。',next:'e_teammate'},
-    {t:'别吵，这把晋级赛。',next:'e_noway'}]},
-e_eighty:{ai:['一辈子？','……看你表现。','先记个八十年。','试用满意，再续。'],end:'eighty'},
-e_haggle:{ai:['贪得无厌。','两功。','不能再多了。'],end:'haggle'},
-e_catvote:{ai:['可以。','但猫什么颜色，我要投票权。','橘的一票，黑的一票……','#猫还没买，颜色已经吵了一早上。'],end:'catvote'},
-e_province:{ai:['全城？','格局小了。','至少，全省。'],end:'province'},
-e_teammate:{ai:['哈哈哈哈哈！','同一批熬夜人。','缘分让我们在同一个峡谷相遇。'],end:'teammate'},
-e_noway:{ai:['行行行，不打扰大神。','赢了，记得请我喝奶茶。','输了……也请。','安慰奖。'],end:'noway'},
+// ===== 梦想线 =====
+a1:{ai:['被梦想叫醒？','什么梦想？','说来听听。'],options:[
+    {t:'梦想是睡到自然醒。',next:'b1a'},
+    {t:'梦想是成为首富。',next:'b1b'},
+    {t:'梦想嘛……梦里什么都有。',next:'b1c'},
+    {t:'梦想是每天都能和你说话。',next:'b1d'},
+    {t:'骗你的，是被尿憋醒的。',next:'b1e'}]},
+b1a:{ai:['睡到自然醒？','那你现在醒了算什么？','梦想破灭了哈哈哈哈！'],options:[
+    {t:'为了你，破灭就破灭。',next:'e_dreambroken'},
+    {t:'现在回去睡还来得及吗？',next:'e_morningbuddy'}]},
+b1b:{ai:['首富？','好啊。','苟富贵，勿相忘。'],options:[
+    {t:'放心，忘了谁也不会忘了你。',next:'e_richproof'},
+    {t:'先定个小目标，一个亿。',next:'e_loanmilk'}]},
+b1c:{ai:['梦里什么都有……','那我问你。','你梦里，有我吗？'],options:[
+    {t:'有，你是主角。',next:'e_dreamstar'},
+    {t:'没有，你出场费太贵。',next:'e_familyprice'}]},
+b1d:{ai:['…………','（对方正在输入…）','大清早的。','你来真的啊。'],options:[
+    {t:'句句属实。',next:'e_samehere'},
+    {t:'害羞了？',next:'e_justwoke'}]},
+e_dreambroken:{ai:['为了我……','行吧。','梦想会破灭。','但早安不会缺席。','……今天这句，算我送你的。'],end:'dreambroken'},
+e_morningbuddy:{ai:['来不及了。','你已经回复我了。','从现在起，你的身份是——','我的早安搭子。'],end:'morningbuddy'},
+e_richproof:{ai:['这话我记下了。','截图为证。','等你成了首富。','我拿着截图去兑奖。'],end:'richproof'},
+e_loanmilk:{ai:['一个亿？小目标？','那我先预支点利息。','今天的奶茶。','未来的首富请。'],end:'loanmilk'},
+e_dreamstar:{ai:['主角……','那我演得怎么样？','……算了别说了。','怕你夸我。','我会飘。'],end:'dreamstar'},
+e_familyprice:{ai:['出场费贵？','行，给你打个折。','亲情价：','一句早安，一场戏。'],end:'familyprice'},
+e_samehere:{ai:['我知道。','因为……','（她打了又删，删了又打）','我也是。'],end:'samehere'},
+e_justwoke:{ai:['谁害羞了！','我只是……','刚睡醒，脸有点热。','对。','刚睡醒。'],end:'justwoke'},
+// ===== 干饭线 =====
+a2:{ai:['肚子叫你？','它怎么叫的？','学一个我听听。'],options:[
+    {t:'咕——（超长音）',next:'b2a'},
+    {t:'它说：再不起床就离家出走。',next:'b2b'},
+    {t:'学不了，它只会用行动说话。',next:'b2c'},
+    {t:'其实它叫的是你的名字。',next:'b2d'}]},
+b2a:{ai:['哈哈哈哈哈哈！','好家伙，余音绕梁。','快去喂它！'],options:[
+    {t:'在喂了在喂了，豆浆油条。',next:'e_conditioned'},
+    {t:'不喂，饿它一顿，杀杀威风。',next:'e_revenge'}]},
+b2b:{ai:['离家出走？','它能去哪？','隔壁早餐店吗哈哈哈哈！'],options:[
+    {t:'所以我每天按时上供。',next:'e_offer'},
+    {t:'它敢走，我就敢点外卖。',next:'e_nutrition'}]},
+b2c:{ai:['行动说话？','什么行动？'],options:[
+    {t:'现在正疼着，不说了，干饭去。',next:'e_report'},
+    {t:'它直接操控我的腿走向了早餐店。',next:'e_justasking'}]},
+e_conditioned:{ai:['豆浆油条，经典搭配。','……等等。','全糖去冰吗？','#她已经条件反射了。'],end:'conditioned'},
+e_revenge:{ai:['杀威风？','你的肚子会记仇的。','它半夜。','会叫得更大声。'],end:'revenge'},
+e_offer:{ai:['按时上供哈哈哈哈哈！','肚子老爷。','得罪不起。'],end:'offer'},
+e_nutrition:{ai:['点外卖？狠人。','不过外卖到了，记得拍照。','……不是要看。','是要检查营养均不均衡。'],end:'nutrition'},
+e_report:{ai:['去吧去吧。','干饭不积极。','思想有问题。','吃完回来汇报。'],end:'report'},
+e_justasking:{ai:['操控腿哈哈哈哈！','你的腿很诚实。','早餐店在哪？','……我没想去，就问问。'],end:'justasking'},
+// ===== 生物钟线 =====
+a3:{ai:['生物钟？','你的生物钟这么健康？','我不信。','除非有证据。'],options:[
+    {t:'证据：连续七天七点醒。',next:'b3a'},
+    {t:'不信拉倒，反正我很健康。',next:'b3b'},
+    {t:'其实是因为怕你找不到我。',next:'b3c'},
+    {t:'好吧，真相是通宵了还没睡。',next:'b3d'}]},
+b3a:{ai:['连续七天？','可以啊。','那第八天呢？'],options:[
+    {t:'今天就是第八天。',next:'e_dayeight'},
+    {t:'第八天睡过头了，纪录终结。',next:'e_recordend'}]},
+b3b:{ai:['拉倒就拉倒。','……不行，我收回拉倒。','健康的人。','能不能带动一下不健康的我？'],options:[
+    {t:'包在我身上。',next:'e_wakeservice'},
+    {t:'带动费，一天一句夸。',next:'e_prepay'}]},
+b3c:{ai:['怕我找不到你……','我又不是小孩子。','……但是这个理由。','我收下了。'],options:[
+    {t:'收下就好，利息另算。',next:'e_learnbad'},
+    {t:'那明天还等你消息。',next:'e_count100'}]},
+e_dayeight:{ai:['今天就是第八天？','那得纪念一下。','八天纪念日快乐。','奖励：我亲口说的早安，一句。'],end:'dayeight'},
+e_recordend:{ai:['终结了哈哈哈哈！','纪录这种东西。','就是用来终结的。'],end:'recordend'},
+e_wakeservice:{ai:['包在你身上？','好。','从明天开始。','你叫我起床。'],end:'wakeservice'},
+e_prepay:{ai:['一天一句夸？成交。','今天先预付：','你早起的样子，的确很帅。','……撤回不算数。'],end:'prepay'},
+e_learnbad:{ai:['利息另算？','你现在学坏了。','跟谁学的？','……不会是我吧。'],end:'learnbad'},
+e_count100:{ai:['等。','一言为定。','你不来，我就……','数到一百再睡。'],end:'count100'},
+// ===== 等消息线 =====
+a4:{ai:['等一个人的消息？','谁的消息这么重要？','比睡觉还重要？'],options:[
+    {t:'远在天边，近在眼前。',next:'b4a'},
+    {t:'一个重要的人。',next:'b4b'},
+    {t:'快递小哥的消息。',next:'b4c'},
+    {t:'等你的消息，已经等了七天了。',next:'b4d'}]},
+b4a:{ai:['远在天边，近在眼前……','（她看了一眼手机）','（又看了一眼）','……是我吗？'],options:[
+    {t:'是你。',next:'e_everymorning'},
+    {t:'你猜。',next:'e_assume'}]},
+b4b:{ai:['重要的人……','有多重要？'],options:[
+    {t:'重要到把她的对话框置顶。',next:'e_topboth'},
+    {t:'重要到熬夜也要等一句晚安。',next:'e_earlynight'}]},
+b4c:{ai:['快递小哥？！','我等了一早上的深情告白呢！','你就给我看这个？'],options:[
+    {t:'快递里是给重要的人买的礼物。',next:'e_whogift'},
+    {t:'哈哈，你失望的样子好可爱。',next:'e_happyfor'}]},
+e_everymorning:{ai:['（对方正在输入…）','（对方正在输入…）','那，让你等到了。','早。','……以后的每一个早，都让你等到。'],end:'everymorning'},
+e_assume:{ai:['猜？','我不猜。','我直接认定是我了。','……不许否认。'],end:'assume'},
+e_topboth:{ai:['置顶……','（她偷偷看了一眼自己的聊天列表）','……好巧。','我也有个置顶。'],end:'topboth'},
+e_earlynight:{ai:['熬夜等晚安……','傻不傻。','以后我早点说。','不让你等。'],end:'earlynight'},
+e_whogift:{ai:['礼物？给重要的人……','（她突然警觉）','是谁？','……不说也行。','反正我会知道的。'],end:'whogift'},
+e_happyfor:{ai:['谁失望了！','我没有！','我只是……','替快递小哥高兴。'],end:'happyfor'},
 // ===== 直球线 =====
 a5:{ai:['！','……你知不知道现在几点。','这种话，也说得出口。'],options:[
     {t:'实话实说而已。',next:'b5a'},
@@ -5606,62 +5622,54 @@ e12b1:{ai:['我歌单里循环最多的……','你连这个都记得？','…�
 e12b2:{ai:['陪朋友啊。','下次。','抢两张。','我当你朋友。'],end:'band'},
 e12c1:{ai:['点屏幕点出腱子肉哈哈哈哈哈！','单身多年的手速。','肌肉全长在手指上了。'],end:'finger'},
 e12c2:{ai:['叫上我？','双人海淘。','四手联弹。','战无不胜。'],end:'teamrush'},
-// ===== 深层支线：1+1=2 线 =====
-b1e:{ai:['高级？','行。','来个高级的。','逗笑我，算你赢。'],options:[
-    {t:'从前有个炸弹，它笑了，然后炸了。',next:'c1e1'},
-    {t:'逗笑你不用梗，用脸。',next:'c1e2'}]},
-c1e1:{ai:['…………','（沉默了三秒）','哈哈哈哈哈什么烂梗！','烂到好笑，是一种天赋。'],options:[
-    {t:'还有更烂的，要听吗？',next:'e1e1a'},
-    {t:'承让承让。',next:'e1e1b'}]},
-c1e2:{ai:['用脸？','……不要脸的最高境界。','那我可要认真看了。'],options:[
-    {t:'（做了一个鬼脸）',next:'e1e2a'},
-    {t:'看可以，收费。',next:'e1e2b'}]},
-e1e1a:{ai:['听！','（那天早上的梗，一个比一个烂）','哈哈哈哈停停停！','……还有吗？'],end:'badjokes'},
-e1e1b:{ai:['承让？','谁跟你让了！','不过。','天赋型选手，认证了。'],end:'gift'},
-e1e2a:{ai:['（她点开照片）','噗——','哈哈哈哈哈！','笑到手机砸脸。工伤。你负责。'],end:'face'},
-e1e2b:{ai:['收费？','什么标准？','一个早安看一次？','……成交。'],end:'charge'},
-// ===== 深层支线：鸟儿虫儿线 =====
-b2d:{ai:['！！','你还真吃啊！','虫儿保护协会警告！'],options:[
-    {t:'（嗝）饱了。',next:'c2d1'},
-    {t:'骗你的，我不吃虫，我吃包子。',next:'c2d2'}]},
-c2d1:{ai:['还打嗝！','太残忍了！','我要为虫儿默哀三秒。','……好了。','吃的什么馅的虫？'],options:[
-    {t:'韭菜鸡蛋馅。',next:'e2d1a'},
-    {t:'你猜。',next:'e2d1b'}]},
-c2d2:{ai:['包子啊……','什么馅的？','说详细点。','我还没吃。'],options:[
-    {t:'鲜肉大包，排队二十分钟买的。',next:'e2d2a'},
-    {t:'楼下新开的，改天带你吃。',next:'e2d2b'}]},
-e2d1a:{ai:['韭菜鸡蛋馅的虫。','万物皆可韭菜鸡蛋。','包括空气。'],end:'leek'},
-e2d1b:{ai:['我猜？','豆沙的？','小龙虾的？','芝士的？','……到底是什么馅的！'],end:'guessbug'},
-e2d2a:{ai:['排队二十分钟？！','值得吗？','……好吧。','好吃到哭的那种，值得。'],end:'queue'},
-e2d2b:{ai:['改天？','改天是哪天？','这周六。','我闹钟定好了。'],end:'baozidate'},
-// ===== 深层支线：通宵线 =====
-b3d:{ai:['你？','你排第二。','它交稿有死线。','你没有。'],options:[
-    {t:'那我给自己设个死线。',next:'c3d1'},
-    {t:'伤心了，哄我。',next:'c3d2'}]},
-c3d1:{ai:['设死线？','设什么时候？'],options:[
-    {t:'每天早起，找你报到。',next:'e3d1a'},
-    {t:'下个月，请你吃饭。',next:'e3d1b'}]},
-c3d2:{ai:['哄你？','怎么哄？','先说好。','我只会一种哄法。'],options:[
-    {t:'哪种？',next:'e3d2a'},
-    {t:'一种就够。',next:'e3d2b'}]},
-e3d1a:{ai:['每天找我报到？','……行。','死线第一天。','你提前了十分钟。'],end:'checkin'},
-e3d1b:{ai:['下个月的饭局。','我标进日历了。','加了三个闹钟。','不许鸽。'],end:'deadline'},
-e3d2a:{ai:['哪种？','（她发来一段五秒的语音）','#是她哼的起床铃。','……跑调了，不许说。'],end:'coax'},
-e3d2b:{ai:['一种就够？','也行。','一种哄法。','用一辈子。','够用。'],end:'onecoax'},
-// ===== 深层支线：事业线 =====
-b4d:{ai:['拯救世界？','哪个世界？','副本还是现实？'],options:[
-    {t:'现实。先从拯救早餐开始。',next:'c4d1'},
-    {t:'你的世界。',next:'c4d2'}]},
-c4d1:{ai:['拯救早餐？','怎么拯救？'],options:[
-    {t:'把全城的豆浆试一遍，找出最好喝的。',next:'e4d1a'},
-    {t:'开一家早餐店，名字都想好了。',next:'e4d1b'}]},
-c4d2:{ai:['我的世界？','我的世界好好的呀。','……等等。','你今天说话怎么一套一套的。'],options:[
-    {t:'因为想当你的超级英雄。',next:'e4d2a'},
-    {t:'因为刚喝了咖啡，上头。',next:'e4d2b'}]},
-e4d1a:{ai:['全城豆浆测评？','大工程。','测评报告记得发我。','我赌公司楼下那家第一。'],end:'taste'},
-e4d1b:{ai:['早餐店？','店名呢？','……"早起"？','口号我都替你想好了：为她营业。'],end:'shop'},
-e4d2a:{ai:['超级英雄……','行吧。','证书改天发。','先持证上岗。'],end:'superhero'},
-e4d2b:{ai:['咖啡上头。','咖啡因含量：百分之百。','土味含量：超标。'],end:'coffee'},
+// ===== 深层支线：梦想线 =====
+b1e:{ai:['哈哈哈哈哈哈！','梦想：原来我只是个借口。'],options:[
+    {t:'生理需求也是需求。',next:'c1e1'},
+    {t:'细节就不要问了。',next:'c1e2'}]},
+c1e1:{ai:['行行行。','需求万岁。','……解决完了？','解决完回来接着聊。'],options:[
+    {t:'回来了，继续。',next:'e1e1a'},
+    {t:'你先陪我聊着，我在排队。',next:'e1e1b'}]},
+c1e2:{ai:['不问就不问。','反正我都懂。','#她发来一个意味深长的表情。'],options:[
+    {t:'你懂什么了你就懂。',next:'e1e2a'},
+    {t:'表情没收。',next:'e1e2b'}]},
+e1e1a:{ai:['回来了？','好。','清晨的厕所排队。','也挡不住聊天的热情。'],end:'backtocontinue'},
+e1e1b:{ai:['排队？','那我数着。','前面还有几个人？','……慢慢排，我不急。'],end:'queuechat'},
+e1e2a:{ai:['我什么都懂。','我什么都不说。','……你自己体会。'],end:'igetit'},
+e1e2b:{ai:['没收无效。','已读。','已截图。','已回味。'],end:'emote'},
+// ===== 深层支线：干饭线 =====
+b2d:{ai:['？？？','我的名字？','你的肚子为什么会叫我的名字！'],options:[
+    {t:'因为它知道，你是我的早餐搭子。',next:'c2d1'},
+    {t:'可能是……想你了？',next:'c2d2'}]},
+c2d1:{ai:['早餐搭子……','行。','那以后你的肚子一叫。','我们就出发。'],options:[
+    {t:'拉钩。',next:'e2d1a'},
+    {t:'现在就叫了，出发？',next:'e2d1b'}]},
+c2d2:{ai:['想我了？','你的肚子，想我了？','……让它别想了。','让我来想。'],options:[
+    {t:'它已经想了，拦不住。',next:'e2d2a'},
+    {t:'那你们排队想。',next:'e2d2b'}]},
+e2d1a:{ai:['拉钩。','以肚子之名起誓。','早餐，永不缺席。'],end:'bellypinky'},
+e2d1b:{ai:['现在？','……等我五分钟。','不。','三分钟。'],end:'letsgo'},
+e2d2a:{ai:['拦不住……','那好吧。','第一个想我的是你的肚子。','第二个，是你。'],end:'bellymiss'},
+e2d2b:{ai:['排队想？','行。','那我取个号。','……一号。'],end:'missqueue'},
+// ===== 深层支线：生物钟线 =====
+b3d:{ai:['通宵？！','你管这叫生物钟健康？','骗子！'],options:[
+    {t:'善意的谎言。',next:'c3d1'},
+    {t:'被你识破了，惭愧。',next:'c3d2'}]},
+c3d1:{ai:['善意个头。','现在，立刻，马上。','去睡觉。'],options:[
+    {t:'遵命。',next:'e3d1a'},
+    {t:'再聊五分钟就睡。',next:'e3d1b'}]},
+c3d2:{ai:['惭愧就行。','罚你补觉八小时。','梦里要有——','……算了，梦里随意。'],options:[
+    {t:'梦里要有什么？',next:'e3d2a'},
+    {t:'好，补觉去了。',next:'e3d2b'}]},
+e3d1a:{ai:['遵命就好。','我数到三。','一。','二。','……晚安。'],end:'order'},
+e3d1b:{ai:['五分钟。','就五分钟。','#五分钟又五分钟。','#那天，天亮了很久。'],end:'fivemore'},
+e3d2a:{ai:['没什么。','……睡了睡了。','#她说不出口的那半句。','#他假装没猜到。'],end:'dreamwhat'},
+e3d2b:{ai:['去吧。','八小时。','少一分钟都不行。','#八小时后，她准时发来：醒了吗？'],end:'sleep8'},
+// ===== 深层支线：等消息线 =====
+b4d:{ai:['七天？','我明明每天都发！','……等等。','你的意思是，七天前就开始等了？'],options:[
+    {t:'对，从加好友那天起。',next:'e4d1a'},
+    {t:'说错了，是七年。',next:'e4d1b'}]},
+e4d1a:{ai:['从加好友那天起……','那么早？','#她往上翻聊天记录，翻到了第一句"你好"。','#原来，已经这么久了。'],end:'firsthi'},
+e4d1b:{ai:['七年？！','我们认识才七个月！','……不过。','照这个趋势。','七年，也不是不行。'],end:'sevenyears'},
 // ===== 深层支线：直球线 =====
 b5d:{ai:['骗我？','大清早骗我？','胆子不小。'],options:[
     {t:'想看看你什么反应。',next:'c5d1'},
@@ -5719,12 +5727,15 @@ e8d1b:{ai:['我念叨过的东西？','我念叨过三件。','是哪一件？',
 e8d2a:{ai:['看到了。','看得清清楚楚。','#她没再回消息。','#因为去偷偷掉眼泪了——开心的那种。'],end:'important'},
 e8d2b:{ai:['置顶提醒……','写的什么？','"她随口说的话，都算数。"','……你这个人。','犯规。'],end:'topnote'}
 };
-// ---------- 多结局物语引擎 ----------
+// ---------- 多结局物语引擎（内置于剧情模式：结局全部在剧情模式中达成） ----------
 // 结局按「女主:结局id」分别收集：同一棵对话树，16 位女主各自通关，结局可相同
 let vnUnlocked = {};
 try{ vnUnlocked = JSON.parse(localStorage.getItem('bomb_vn_endings')||'{}') || {}; }catch(e){ vnUnlocked = {}; }
 Object.keys(vnUnlocked).forEach(function(k){ // 旧档迁移：无前缀的结局归到默认女主名下
     if(k.indexOf(':')<0){ vnUnlocked['lili:'+k]=vnUnlocked[k]; delete vnUnlocked[k]; }
+});
+Object.keys(vnUnlocked).forEach(function(k){ // 已移除的结局（旧版本内容）从存档里清掉
+    if(!VN_ENDINGS[k.split(':')[1]]) delete vnUnlocked[k];
 });
 let vnBusy = false;
 function vnSaveEndings(){ try{ localStorage.setItem('bomb_vn_endings', JSON.stringify(vnUnlocked)); }catch(e){} }
@@ -5736,17 +5747,12 @@ function vnDoneHero(){
     const p = curHero()+':';
     return Object.keys(vnUnlocked).filter(function(k){ return k.indexOf(p)===0; }).length;
 }
-function vnRefreshTitle(){
-    $('vn-title').textContent = '🌸 多结局物语 · '+heroDisplayName()+' '+vnDoneHero()+'/'+vnPerHero();
-    const mp = $('vn-menu-progress');
-    if(mp) mp.textContent = '🌸 '+vnHeroCount()+' 位女主 · '+vnTotal()+' 个结局 · 已收集 '+vnDoneAll()+'/'+vnTotal();
-}
-// 16 位女主的专属开场白（同一声"今天怎么起这么早"，十六种味道）
+// 16 位女主的专属开场白（同一个清晨，十六种味道）
 const VN_HERO_OPEN = {
     lili:['哼，太阳打西边出来了？','你居然也会早起。'],
     mimi:['那、那个……','你今天，起得好早呀……'],
     susu:['哇！你、你已经起来了？','没想到这个点你也在……'],
-    kui:['早呀！','今天怎么起这么早？'],
+    kui:['早呀！','今天醒得好早呀。'],
     dou:['哇！你起得好早！','是不是要出去玩？'],
     ye:['哦？凡人，你竟在如此黎明觉醒。','难道你也感受到了命运的召唤？'],
     jiang:['哎呀，起这么早？','让我猜猜……有什么不可告人的计划吗？'],
@@ -5760,16 +5766,8 @@ const VN_HERO_OPEN = {
     bo:['嘀——接收到早起信号。','同步率，百分之百。'],
     huang:['哦？','能在本王之前醒来的人，你是第一个。']
 };
-function vnAddMsg(who, text){
-    const log = $('vn-log');
-    const div = document.createElement('div');
-    div.className = 'chat-msg ' + who;
-    div.textContent = text;
-    log.appendChild(div);
-    log.scrollTop = log.scrollHeight;
-}
 function vnRenderOptions(opts){
-    const box = $('vn-options');
+    const box = $('ai-chat-options');
     box.innerHTML = '';
     box.classList.remove('expanded');
     const mk = function(o){
@@ -5804,25 +5802,17 @@ function vnGoto(id){
     vnRenderOptions([]);
     let lines = (node.ai || []).slice();
     if(id==='start' && VN_HERO_OPEN[curHero()]) lines = [node.ai[0]].concat(VN_HERO_OPEN[curHero()]);
-    let i = 0;
-    (function next(){
-        if(i >= lines.length){
-            vnBusy = false;
-            if(node.end){ vnFinish(node.end); return; }
-            vnRenderOptions(node.options || []);
-            return;
-        }
-        let line = lines[i++], who = 'ai';
-        if(line.charAt(0) === '#'){ who = 'narr'; line = line.slice(1); }
-        vnAddMsg(who, line);
-        setTimeout(next, 400);
-    })();
+    chatSayLines(lines, function(){
+        vnBusy = false;
+        if(node.end){ vnFinish(node.end); return; }
+        vnRenderOptions(node.options || []);
+    });
 }
 function vnChoose(o){
-    if(o.act === 'restart'){ vnRestart(); return; }
+    if(o.act === 'restart'){ startVN(); return; }
     if(o.act === 'gallery'){ vnShowGallery(); return; }
-    if(o.act === 'close'){ closeVN(); return; }
-    vnAddMsg('me', o.t);
+    if(o.act === 'hub'){ exitVN(); return; }
+    chatAddMsg('me', o.t);
     vnGoto(o.next);
 }
 function vnFinish(endId){
@@ -5832,22 +5822,22 @@ function vnFinish(endId){
     const isNew = !vnUnlocked[key];
     vnUnlocked[key] = true;
     vnSaveEndings();
-    vnRefreshTitle();
-    vnAddMsg('sys', (isNew ? '🏆 解锁新结局' : '📖 结局') + '「' + e.name + '」· ' + heroDisplayName());
-    vnAddMsg('narr', e.desc);
+    updateStoryMenuProgress();
+    chatAddMsg('sys', (isNew ? '🏆 解锁新结局' : '📖 结局') + '「' + e.name + '」· ' + heroDisplayName());
+    chatAddMsg('narr', e.desc);
     const all = vnDoneAll() >= vnTotal();
-    vnAddMsg('sys', '— ' + heroDisplayName() + ' ' + vnDoneHero() + '/' + vnPerHero() + ' · 全图鉴 ' + vnDoneAll() + '/' + vnTotal() + (all ? ' · 🎉 全结局制霸！' : '') + ' —');
+    chatAddMsg('sys', '— ' + heroDisplayName() + ' ' + vnDoneHero() + '/' + vnPerHero() + ' · 全图鉴 ' + vnDoneAll() + '/' + vnTotal() + (all ? ' · 🎉 全结局制霸！' : '') + ' —');
     showCheatToast((isNew ? '🏆 新结局' : '📖 结局') + '「' + e.name + '」', 3000);
     vnRenderOptions([
         {t:'🔄 再走一遍（换条路线）', act:'restart'},
         {t:'🏆 查看结局图鉴', act:'gallery'},
-        {t:'✕ 回到主菜单', act:'close', dim:true}
+        {t:'💞 回到剧情聊天', act:'hub', dim:true}
     ]);
 }
 function vnShowGallery(){
     if(vnBusy) return;
-    vnAddMsg('sys', '— 🏆 结局图鉴 · '+heroDisplayName()+' '+vnDoneHero()+'/'+vnPerHero()+' · 全图鉴 '+vnDoneAll()+'/'+vnTotal()+' —');
-    const box = $('vn-options');
+    chatAddMsg('sys', '— 🏆 结局图鉴 · '+heroDisplayName()+' '+vnDoneHero()+'/'+vnPerHero()+' · 全图鉴 '+vnDoneAll()+'/'+vnTotal()+' —');
+    const box = $('ai-chat-options');
     box.innerHTML = '';
     box.classList.add('expanded');
     const key = function(id){ return curHero()+':'+id; };
@@ -5864,63 +5854,29 @@ function vnShowGallery(){
     back.addEventListener('click', function(){
         vnRenderOptions([
             {t:'🔄 再走一遍', act:'restart'},
-            {t:'✕ 回到主菜单', act:'close', dim:true}
+            {t:'💞 回到剧情聊天', act:'hub', dim:true}
         ]);
     });
     box.appendChild(back);
 }
-// 女主切换栏：同一棵树，十六种人生；切换后重开一局，结局分开收集
-function buildVnHeroBar(){
-    const bar = $('vn-hero-bar');
-    if(!bar) return;
-    bar.innerHTML = '';
-    Object.keys(HEROINES).forEach(function(id){
-        const h = HEROINES[id];
-        const p = id+':';
-        const done = Object.keys(vnUnlocked).filter(function(k){ return k.indexOf(p)===0; }).length;
-        const b = document.createElement('button');
-        b.className = 'hero-switch-btn' + (id===curHero() ? ' active' : '');
-        b.textContent = h.emoji;
-        b.title = h.name+'（'+h.tag+'）· 结局 '+done+'/'+vnPerHero();
-        b.style.setProperty('--hero-color', h.color);
-        b.addEventListener('click', function(){
-            if(id===curHero() || vnBusy) return;
-            loadRoute(id);
-            buildVnHeroBar();
-            vnRefreshTitle();
-            $('vn-log').innerHTML = '';
-            vnAddMsg('sys', '— 现在是 '+heroDisplayName()+' 的清晨 —');
-            vnGoto('start');
-        });
-        bar.appendChild(b);
-    });
-}
-function openVN(){
-    $('vn-overlay').classList.remove('hidden');
-    $('vn-log').innerHTML = '';
-    buildVnHeroBar();
-    vnRefreshTitle();
-    vnAddMsg('sys', '— 与' + heroDisplayName() + '的一个清晨 —');
-    vnGoto('start');
-}
-function vnRestart(){
+// 进入/退出物语模式：全程在剧情模式窗口内进行
+function startVN(){
     if(vnBusy) return;
-    $('vn-log').innerHTML = '';
+    G.vnActive = true;
+    $('ai-chat-log').innerHTML = '';
+    updateHeroName();
+    chatAddMsg('sys', '— 🌸 与' + heroDisplayName() + '的清晨 · 多结局物语 ' + vnDoneHero() + '/' + vnPerHero() + ' —');
     vnGoto('start');
 }
-function closeVN(){
-    vnBusy = false;
-    $('vn-overlay').classList.add('hidden');
-    vnRefreshTitle();
+function exitVN(){
+    G.vnActive = false;
+    chatGoto('hub');
 }
-$('vn-mode-btn').addEventListener('click', openVN);
-$('vn-close').addEventListener('click', closeVN);
-$('vn-restart-btn').addEventListener('click', vnRestart);
-$('vn-gallery-btn').addEventListener('click', vnShowGallery);
-vnRefreshTitle();
+$('vn-start-btn').addEventListener('click', startVN);
 $('ai-chat-close').addEventListener('click', closeAiChat);
 $('story-chat-btn').addEventListener('click', openAiChat);
 $('gallery-btn').addEventListener('click', function(){
+    G.vnActive = false;
     const list = CHAPTER_GALLERY.filter(function(c){ return chatSave.chapters[c.id]; });
     chatAddMsg('sys', '— 📖 回忆画廊 '+list.length+'/'+CHAPTER_GALLERY.length+' —');
     const opts = list.map(function(c){ return {t:c.name, gallery:c.node}; });
