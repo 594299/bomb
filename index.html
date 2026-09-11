@@ -2035,7 +2035,7 @@ function endGame(){
         if(winner==='p2' && winChain && Math.random()<0.6) aiPlayChain(winChain,'aiWin');
         else if(winner==='p1' && loseChain && Math.random()<0.6) aiPlayChain(loseChain,'aiLose');
         else aiTalk(winner==='p2' ? 'aiWin' : 'aiLose');
-        evalEnding(winner); // 剧情聊天：结算好感度并判定结局
+        if(typeof evalEnding==='function') evalEnding(winner); // 剧情聊天：结算好感度并判定结局（容错：剧情脚本缺失时不拖垮对局结算）
     }
     renderSkills();
     syncIfRemote();
@@ -4878,8 +4878,9 @@ function showBattleArea(){
 if(typeof StoryBind==='function') StoryBind({ $:$, G:G, showCheatToast:showCheatToast, playSound:playSound, dlog:dlog, aiSpeak:aiSpeak, opponentName:opponentName });
 $('normal-mode-btn').addEventListener('click',showSetup);
 $('tutorial-mode-btn').addEventListener('click',showTutorialMenu);
-$('story-mode-btn').addEventListener('click',openStoryChat);
-updateStoryMenuProgress();
+// 容错：剧情脚本缺失时只残剧情按钮，不拖垮后续全部绑定
+if(typeof openStoryChat==='function') $('story-mode-btn').addEventListener('click',openStoryChat);
+if(typeof updateStoryMenuProgress==='function') updateStoryMenuProgress();
 $('back-menu-btn1').addEventListener('click',showMainMenu);
 $('back-menu-btn2').addEventListener('click',showMainMenu);
 $('back-menu-btn3').addEventListener('click',showMainMenu);
