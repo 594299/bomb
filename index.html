@@ -41,6 +41,8 @@
         #fullscreen-btn:active, #chat-toggle-btn:active { transform:scale(0.9); }
         .chat-badge { position:absolute; top:-4px; right:-4px; background:#ff4444; color:#fff; font-size:0.6rem; font-weight:900; border-radius:50%; width:16px; height:16px; display:none; align-items:center; justify-content:center; }
         .chat-badge.show { display:flex; }
+        .chat-report-btn { background:none; border:1px solid rgba(255,100,100,0.3); border-radius:6px; padding:2px 6px; font-size:0.8rem; cursor:pointer; color:#ff6666; line-height:1; }
+        .chat-report-btn:hover { border-color:#ff4444; color:#ff4444; }
         .overlay { position:absolute; inset:0; background:rgba(0,0,0,0.95); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; padding:20px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
         /* 高度不够时内容居中，超出时自动改为顶部对齐并可滚动（防止设置/菜单被裁掉） */
         .overlay::before, .overlay::after { content:''; margin:auto; flex-shrink:0; }
@@ -52,6 +54,7 @@
         .btn:hover { box-shadow:0 0 25px rgba(0,240,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2); transform:translateY(-1px); }
         .btn:active { transform:scale(0.95); }
         .btn.secondary { background:linear-gradient(135deg,rgba(255,136,0,0.15),rgba(255,107,107,0.1)); border-color:var(--orange); color:var(--orange); box-shadow:0 0 15px rgba(255,136,0,0.15); }
+        .btn.danger { background:linear-gradient(135deg,rgba(255,68,68,0.2),rgba(204,0,0,0.15)); border-color:#ff4444; color:#ff6666; box-shadow:0 0 15px rgba(255,68,68,0.2); }
         .btn.small { padding:8px 20px; min-width:auto; font-size:0.8rem; }
         .btn:disabled { opacity:0.4; pointer-events:none; }
         .room-input { width:200px; padding:12px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:10px; color:#fff; font-size:1.5rem; text-align:center; letter-spacing:8px; outline:none; margin-top:15px; text-transform:uppercase; }
@@ -610,7 +613,10 @@
         <div class="chat-container">
             <div class="chat-header">
                 <span>💬 聊天</span>
-                <button class="chat-close-btn" id="chat-close-btn">✕</button>
+                <div style="display:flex;gap:4px;">
+                    <button class="chat-report-btn" id="chat-report-btn" title="举报对方">⚠️</button>
+                    <button class="chat-close-btn" id="chat-close-btn">✕</button>
+                </div>
             </div>
             <div class="chat-messages" id="chat-messages"></div>
             <div class="chat-input-row">
@@ -632,6 +638,31 @@
             <button class="chat-notif-close" id="chat-notif-close">✕</button>
         </div>
         <div class="chat-notif-body" id="chat-notif-body"></div>
+    </div>
+    <!-- 举报弹窗 -->
+    <div id="report-overlay" class="overlay hidden" style="z-index:3200;">
+        <div style="background:rgba(20,20,35,0.98);border:1px solid rgba(255,100,100,0.3);border-radius:16px;padding:24px;max-width:400px;width:90%;">
+            <div class="overlay-title" style="color:#ff6666;">⚠️ 举报用户</div>
+            <div style="margin:12px 0;font-size:0.9rem;color:#aaa;">举报对方：<span id="report-target-name" style="color:#fff;font-weight:bold;"></span></div>
+            <div style="margin:8px 0;">
+                <div style="font-size:0.8rem;color:#888;margin-bottom:6px;">快捷原因：</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;" id="report-quick-reasons">
+                    <button class="btn small report-quick-btn" data-reason="言语辱骂">言语辱骂</button>
+                    <button class="btn small report-quick-btn" data-reason="发送违规内容">发送违规内容</button>
+                    <button class="btn small report-quick-btn" data-reason="恶意刷屏">恶意刷屏</button>
+                    <button class="btn small report-quick-btn" data-reason="作弊行为">作弊行为</button>
+                    <button class="btn small report-quick-btn" data-reason="骚扰行为">骚扰行为</button>
+                </div>
+            </div>
+            <div style="margin:12px 0;">
+                <div style="font-size:0.8rem;color:#888;margin-bottom:6px;">详细描述（可选）：</div>
+                <textarea id="report-reason-input" placeholder="请描述举报原因..." maxlength="200" style="width:100%;min-height:80px;padding:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);border-radius:10px;color:#fff;font-size:0.9rem;outline:none;resize:vertical;"></textarea>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:center;">
+                <button class="btn danger" id="report-submit-btn">提交举报</button>
+                <button class="btn secondary" id="report-cancel-btn">取消</button>
+            </div>
+        </div>
     </div>
     <div id="name-edit-overlay">
         <div class="overlay-title">✏️ 编辑名称</div>
@@ -952,6 +983,10 @@ const privacyHandoff=$('privacy-handoff'), privacySub=$('privacy-sub');
 const chatToggleBtn=$('chat-toggle-btn'), chatOverlay=$('chat-overlay'), chatCloseBtn=$('chat-close-btn');
 const chatMessages=$('chat-messages'), chatInput=$('chat-input'), chatSendBtn=$('chat-send-btn'), chatBadge=$('chat-badge');
 const chatNotification=$('chat-notification'), chatNotifBody=$('chat-notif-body'), chatNotifClose=$('chat-notif-close');
+const chatReportBtn=$('chat-report-btn');
+const reportOverlay=$('report-overlay'), reportTargetName=$('report-target-name');
+const reportReasonInput=$('report-reason-input'), reportSubmitBtn=$('report-submit-btn'), reportCancelBtn=$('report-cancel-btn');
+const reportQuickReasons=$('report-quick-reasons');
 const nameEditOverlay=$('name-edit-overlay'), nameEditInput=$('name-edit-input');
 const numberSelectOverlay=$('number-select-overlay'), numberSelectTitle=$('number-select-title');
 const numberSelectRange=$('number-select-range'), numberSelectInput=$('number-select-input');
@@ -1013,6 +1048,45 @@ function loadCustomWords(){
         return Array.isArray(d) ? d : [];
     }catch(e){ return []; }
 }
+
+// 日志（写入 bomb_admin_logs，与后台日志页共用）
+function addLog(type, msg){
+    try{
+        const logs = JSON.parse(localStorage.getItem('bomb_admin_logs')||'[]');
+        logs.push({ time: new Date().toLocaleString(), type: type, msg: msg });
+        if(logs.length > 500) logs.shift();
+        localStorage.setItem('bomb_admin_logs', JSON.stringify(logs));
+    }catch(e){}
+}
+
+// 举报系统
+G.reports = [];
+
+function submitReport(reporter, reported, reason){
+    const report = {
+        id: 'R' + Date.now() + Math.random().toString(36).slice(2,6),
+        reporter: { name: reporter.name, fingerprint: G.currentUser.fingerprint, ip: G.currentUser.ip },
+        reported: { name: reported.name, fingerprint: reported.fingerprint || 'unknown', ip: reported.ip || 'unknown' },
+        reason: reason,
+        time: new Date().toLocaleString(),
+        status: 'pending' // pending / resolved
+    };
+    G.reports.push(report);
+    saveReports();
+    return report;
+}
+
+function saveReports(){
+    try{ localStorage.setItem('bomb_reports', JSON.stringify(G.reports)); }catch(e){}
+}
+
+function loadReports(){
+    try{
+        const d = JSON.parse(localStorage.getItem('bomb_reports')||'[]');
+        G.reports = Array.isArray(d) ? d : [];
+    }catch(e){ G.reports = []; }
+}
+loadReports();
 
 // 本地敏感词库（兜底，无API Key时使用）
 const LOCAL_BAD_WORDS = ['色情','黄色','裸','性','操','fuck','bitch','nigger','政治敏感','反党','反共','法轮功','自杀','自残','约炮','卖淫','嫖娼','赌博','毒品'];
@@ -1188,13 +1262,14 @@ function getUserIP(callback){
 }
 
 // 封禁数据存储
-G.banData = { bannedFingerprints: [], bannedIPs: [], userRecords: [] };
+G.banData = { bannedFingerprints: [], bannedIPs: [], userRecords: [], banReasons: {} };
 function loadBanData(){
     try{
         const d = JSON.parse(localStorage.getItem('bomb_ban_data')||'{}');
         G.banData.bannedFingerprints = d.bannedFingerprints || [];
         G.banData.bannedIPs = d.bannedIPs || [];
         G.banData.userRecords = d.userRecords || [];
+        G.banData.banReasons = d.banReasons || {};
     }catch(e){}
 }
 function saveBanData(){
@@ -1244,7 +1319,26 @@ function checkBanned(){
     return false;
 }
 function showBanScreen(){
-    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#000;color:#ff4444;font-family:sans-serif;text-align:center;padding:20px;"><div><h1>🚫 访问被拒绝</h1><p style="font-size:1.2rem;margin-top:20px;">您的设备已被封禁，无法访问此网页。</p><p style="color:#888;margin-top:10px;font-size:0.9rem;">如有疑问，请联系管理员。</p></div></div>';
+    const fp = G.currentUser.fingerprint;
+    const info = G.banData.banReasons[fp] || G.banData.banReasons[G.currentUser.ip] || {};
+    const reason = escapeHtml(info.reason || '违反社区规定');
+    const time = escapeHtml(info.time || '未知时间');
+    document.documentElement.style.background = '#000';
+    document.body.innerHTML =
+        '<div style="position:fixed;inset:0;background:radial-gradient(ellipse at center,#15151f 0%,#000 75%);display:flex;align-items:center;justify-content:center;font-family:\'Microsoft YaHei\',sans-serif;overflow:hidden;z-index:99999;">'
+        + '<div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0,transparent 56px,rgba(255,255,255,0.06) 56px,rgba(255,255,255,0.06) 72px);pointer-events:none;"></div>'
+        + '<div style="position:relative;text-align:center;padding:40px 30px;max-width:420px;width:90%;background:rgba(10,10,16,0.92);border:2px solid rgba(255,68,68,0.4);border-radius:16px;box-shadow:0 0 60px rgba(255,0,0,0.15);">'
+        + '<div style="font-size:3rem;">🔒</div>'
+        + '<h1 style="color:#ff4444;font-size:1.8rem;margin:10px 0;letter-spacing:10px;font-weight:900;">小黑屋</h1>'
+        + '<p style="color:#aaa;font-size:0.95rem;margin:10px 0 20px;">你已被关进小黑屋，暂时无法进行游戏</p>'
+        + '<div style="background:rgba(255,68,68,0.08);border:1px solid rgba(255,68,68,0.3);border-radius:10px;padding:14px;text-align:left;">'
+        + '<div style="color:#888;font-size:0.75rem;margin-bottom:4px;">封禁原因</div>'
+        + '<div style="color:#ff8888;font-size:0.95rem;word-break:break-all;">' + reason + '</div>'
+        + '<div style="color:#888;font-size:0.75rem;margin:12px 0 4px;">封禁时间</div>'
+        + '<div style="color:#ccc;font-size:0.85rem;">' + time + '</div>'
+        + '</div>'
+        + '<p style="color:#666;margin-top:18px;font-size:0.8rem;">如有疑问，请联系管理员申诉</p>'
+        + '</div></div>';
 }
 
 // AI房间数量配置（从 localStorage 读取，后台在 haododoya/admin.html 中配置）
@@ -1951,8 +2045,9 @@ function setupConnection(conn){
             }
             // 有密码房间：等 data.type==='password' 验证
         } else {
-            // 客机：发送密码给房主验证
-            conn.send({type:'password', password: G.guestPassword || ''});
+            // 客机：发送密码给房主验证（附带指纹，供举报系统识别）
+            getPlayer('p2').fingerprint = G.currentUser.fingerprint;
+            conn.send({type:'password', password: G.guestPassword || '', fp: G.currentUser.fingerprint});
         }
         startPing();
     }
@@ -1976,7 +2071,9 @@ function setupConnection(conn){
         // 密码验证
         if(data.type==='password' && G.isHost){
             if(!G.roomPassword || data.password === G.roomPassword){
-                conn.send({type:'password_ok'});
+                getPlayer('p1').fingerprint = G.currentUser.fingerprint;
+                getPlayer('p2').fingerprint = data.fp || 'unknown';
+                conn.send({type:'password_ok', fp: G.currentUser.fingerprint});
                 enterRemoteSetup();
             } else {
                 conn.send({type:'password_wrong'});
@@ -1986,6 +2083,7 @@ function setupConnection(conn){
             return;
         }
         if(data.type==='password_ok' && !G.isHost){
+            getPlayer('p1').fingerprint = data.fp || 'unknown';
             enterRemoteSetup();
             return;
         }
@@ -2321,8 +2419,29 @@ function addChatMessage(sender, text, type) {
     chatMessages.appendChild(msg);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
+
+// 聊天频率限制：3秒内最多发5条消息
+const CHAT_LIMIT = { maxCount: 5, windowMs: 3000 };
+let chatTimestamps = [];
+
+function checkChatRateLimit(){
+    const now = Date.now();
+    // 清理过期时间戳
+    chatTimestamps = chatTimestamps.filter(t => now - t < CHAT_LIMIT.windowMs);
+    if(chatTimestamps.length >= CHAT_LIMIT.maxCount){
+        return false; // 超过限制
+    }
+    chatTimestamps.push(now);
+    return true;
+}
+
 function sendChatMessage(text) {
     if (!text || !G.conn || !G.conn.open || !G.mode.includes('remote')) return;
+    // 频率限制
+    if(!checkChatRateLimit()){
+        showCheatToast('⚠️ 发送太频繁，请稍后再试');
+        return;
+    }
     // 聊天内容审核
     const check = moderateTextLocal(text);
     if(check.flagged){ showCheatToast('⚠️ 消息包含违规内容，已拦截'); return; }
@@ -2330,6 +2449,47 @@ function sendChatMessage(text) {
     addChatMessage(myName, text, 'mine');
     G.conn.send({ type: 'chat', senderName: myName, text: text });
 }
+
+// ========== 举报功能 ==========
+let selectedQuickReason = '';
+
+chatReportBtn.addEventListener('click', function(){
+    if(!G.conn || !G.conn.open || !G.mode.includes('remote')){
+        showCheatToast('⚠️ 只有联机对战时才能举报');
+        return;
+    }
+    const opp = getMyOpponent();
+    reportTargetName.textContent = opp.name;
+    reportReasonInput.value = '';
+    selectedQuickReason = '';
+    reportOverlay.classList.remove('hidden');
+});
+
+reportCancelBtn.addEventListener('click', function(){
+    reportOverlay.classList.add('hidden');
+});
+
+reportQuickReasons.querySelectorAll('.report-quick-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+        reportQuickReasons.querySelectorAll('.report-quick-btn').forEach(b => b.style.borderColor = '');
+        this.style.borderColor = '#ff4444';
+        selectedQuickReason = this.dataset.reason;
+    });
+});
+
+reportSubmitBtn.addEventListener('click', function(){
+    const detailReason = reportReasonInput.value.trim();
+    const reason = selectedQuickReason || detailReason || '无具体原因';
+    const fullReason = selectedQuickReason && detailReason ? selectedQuickReason + '：' + detailReason : reason;
+
+    const reporter = getMyPlayer();
+    const reported = getMyOpponent();
+
+    submitReport(reporter, reported, fullReason);
+    reportOverlay.classList.add('hidden');
+    showCheatToast('✅ 举报已提交，管理员会尽快处理');
+    addLog('warn', '用户举报：' + reporter.name + ' 举报 ' + reported.name + '，原因：' + fullReason);
+});
 chatToggleBtn.addEventListener('click', function() {
     chatOverlay.classList.toggle('hidden');
     if (!chatOverlay.classList.contains('hidden')) { unreadChatCount = 0; updateChatBadge(); chatInput.focus(); }

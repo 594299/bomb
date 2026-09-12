@@ -296,6 +296,53 @@
             font-family: monospace;
             font-size: 0.75rem;
         }
+        /* 举报管理 */
+        .report-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 12px;
+            margin: 8px 0;
+            border-left: 3px solid #ffaa00;
+        }
+        .report-item.handled { border-left-color: #44ff44; opacity: 0.75; }
+        .report-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 0.7rem;
+            color: #888;
+            flex-wrap: wrap;
+        }
+        .report-status { font-weight: bold; }
+        .report-status.pending { color: #ffaa00; }
+        .report-status.handled { color: #44ff44; }
+        .report-reason {
+            background: rgba(255,68,68,0.08);
+            border: 1px solid rgba(255,68,68,0.2);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 0.8rem;
+            color: #ffaaaa;
+            margin: 8px 0;
+            word-break: break-all;
+        }
+        .report-parties { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+        .report-party {
+            flex: 1;
+            min-width: 200px;
+            background: rgba(0,0,0,0.25);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 0.7rem;
+            color: #aaa;
+        }
+        .report-party .party-title { font-weight: bold; font-size: 0.78rem; margin-bottom: 4px; }
+        .report-party.reporter .party-title { color: #00f0ff; }
+        .report-party.reported .party-title { color: #ff6666; }
+        .report-party .banned-tag { color: #ff4444; font-weight: bold; }
+        .report-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -318,6 +365,7 @@
                 <button class="tab-btn active" data-tab="dashboard">📊 仪表盘</button>
                 <button class="tab-btn" data-tab="moderation">🛡️ 内容审核</button>
                 <button class="tab-btn" data-tab="users">👥 用户管理</button>
+                <button class="tab-btn" data-tab="reports">📮 举报管理</button>
                 <button class="tab-btn" data-tab="ai-rooms">🤖 AI房间</button>
                 <button class="tab-btn" data-tab="settings">⚙️ 系统设置</button>
                 <button class="tab-btn" data-tab="logs">📝 日志</button>
@@ -352,6 +400,10 @@
                         <div class="stat-card">
                             <div class="stat-value" id="stat-total-games">0</div>
                             <div class="stat-label">总对局数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-pending-reports">0</div>
+                            <div class="stat-label">待处理举报</div>
                         </div>
                     </div>
                 </div>
@@ -427,6 +479,20 @@
                 <div class="section">
                     <div class="section-title">📋 封禁列表</div>
                     <div id="ban-list-container" style="max-height:200px;overflow-y:auto;"></div>
+                </div>
+            </div>
+
+            <!-- 举报管理 -->
+            <div class="tab-content" id="tab-reports">
+                <div class="section">
+                    <div class="section-title">📮 举报管理（待处理 <span id="reports-pending-count">0</span> 条）</div>
+                    <div class="setting-row">
+                        <button class="toggle-btn active" id="reports-filter-all">全部</button>
+                        <button class="toggle-btn" id="reports-filter-pending">待处理</button>
+                        <button class="toggle-btn" id="reports-filter-handled">已处理</button>
+                        <button class="btn small" id="refresh-reports-btn" style="margin-left:auto;">刷新</button>
+                    </div>
+                    <div id="reports-list-container" style="max-height:520px;overflow-y:auto;"></div>
                 </div>
             </div>
 
@@ -552,7 +618,8 @@
             aiRooms: 'bomb_ai_rooms',
             customWords: 'bomb_custom_words',
             logs: 'bomb_admin_logs',
-            settings: 'bomb_admin_settings'
+            settings: 'bomb_admin_settings',
+            reports: 'bomb_reports'
         };
 
         function loadJSON(key, defaultVal){
@@ -642,6 +709,7 @@
                 $('tab-' + btn.dataset.tab).classList.add('active');
                 if(btn.dataset.tab === 'logs') renderLogs();
                 if(btn.dataset.tab === 'dashboard') renderDashboard();
+                if(btn.dataset.tab === 'reports') renderReports();
             });
         });
 
@@ -663,6 +731,7 @@
             renderAvatars();
             renderUserList();
             renderBanList();
+            renderReports();
         }
 
         // ========== 仪表盘 ==========
@@ -677,6 +746,7 @@
             $('stat-approved-avatars').textContent = (modData.approved || []).length;
             $('stat-blocked-avatars').textContent = (modData.blocked || []).length;
             $('stat-total-games').textContent = 'N/A';
+            $('stat-pending-reports').textContent = loadReports().filter(r => r.status !== 'handled').length;
 
             $('dash-mod-status').textContent = modData.enabled !== false ? '✅ 已开启' : '❌ 已关闭';
             $('dash-ai-rooms').textContent = Object.values(aiConfig).reduce((a,b)=>a+b, 0) || 10;
@@ -868,14 +938,15 @@
         }
 
         // ========== 用户管理 ==========
-        let banData = { bannedFingerprints: [], bannedIPs: [], userRecords: [] };
+        let banData = { bannedFingerprints: [], bannedIPs: [], userRecords: [], banReasons: {} };
 
         function loadBanData(){
             const d = loadJSON(STORAGE_KEYS.banData, {});
             banData = {
                 bannedFingerprints: d.bannedFingerprints || [],
                 bannedIPs: d.bannedIPs || [],
-                userRecords: d.userRecords || []
+                userRecords: d.userRecords || [],
+                banReasons: d.banReasons || {}
             };
         }
 
@@ -923,13 +994,17 @@
                     if(isBanned){
                         banData.bannedFingerprints = banData.bannedFingerprints.filter(f => f !== user.fingerprint);
                         banData.bannedIPs = banData.bannedIPs.filter(ip => ip !== user.ip);
+                        delete banData.banReasons[user.fingerprint];
                         showToast('✅ 已解封');
                         addLog('success', '用户已解封：' + user.fingerprint);
                     } else {
+                        const reason = prompt('请输入封禁原因（将展示给被封禁用户）：', '违反社区规定');
+                        if(reason === null) return;
                         banData.bannedFingerprints.push(user.fingerprint);
                         if(user.ip && user.ip !== '未知') banData.bannedIPs.push(user.ip);
+                        banData.banReasons[user.fingerprint] = { reason: reason || '违反社区规定', time: new Date().toLocaleString() };
                         showToast('🚫 已封禁该用户');
-                        addLog('warn', '用户已封禁：' + user.fingerprint + ' (' + user.ip + ')');
+                        addLog('warn', '用户已封禁：' + user.fingerprint + ' (' + user.ip + ')，原因：' + (reason || '违反社区规定'));
                     }
                     saveBanData();
                     renderUserList();
@@ -952,14 +1027,31 @@
 
             banData.bannedFingerprints.forEach(fp => {
                 const user = banData.userRecords.find(u => u.fingerprint === fp);
+                const info = banData.banReasons[fp] || {};
                 const item = document.createElement('div');
                 item.className = 'user-item banned';
                 item.innerHTML = `
                     <div class="user-info">
                         <div class="fp">指纹: ${escapeHtml(fp)}</div>
                         ${user ? '<div class="ip">IP: ' + escapeHtml(user.ip) + '</div>' : ''}
+                        <div class="time" style="color:#ff8888;">原因: ${escapeHtml(info.reason || '未填写')}</div>
+                        ${info.time ? '<div class="time">时间: ' + escapeHtml(info.time) + '</div>' : ''}
                     </div>
                 `;
+                const unbanBtn = document.createElement('button');
+                unbanBtn.textContent = '解封';
+                unbanBtn.className = 'btn small success';
+                unbanBtn.onclick = () => {
+                    banData.bannedFingerprints = banData.bannedFingerprints.filter(f => f !== fp);
+                    if(user) banData.bannedIPs = banData.bannedIPs.filter(ip => ip !== user.ip);
+                    delete banData.banReasons[fp];
+                    saveBanData();
+                    renderUserList();
+                    renderBanList();
+                    showToast('✅ 已解封');
+                    addLog('success', '用户已解封：' + fp);
+                };
+                item.appendChild(unbanBtn);
                 container.appendChild(item);
             });
         }
@@ -970,6 +1062,156 @@
             renderUserList();
             renderBanList();
             showToast('✅ 用户列表已刷新');
+        });
+
+        // ========== 举报管理 ==========
+        let reportsFilter = 'all';
+
+        function loadReports(){
+            const d = loadJSON(STORAGE_KEYS.reports, []);
+            return Array.isArray(d) ? d : [];
+        }
+        function saveReports(list){
+            saveJSON(STORAGE_KEYS.reports, list);
+        }
+        function isFpBanned(fp){
+            return !!fp && fp !== 'unknown' && banData.bannedFingerprints.indexOf(fp) >= 0;
+        }
+
+        function renderReports(){
+            const container = $('reports-list-container');
+            const all = loadReports();
+            $('reports-pending-count').textContent = all.filter(r => r.status !== 'handled').length;
+
+            let list = all.slice().reverse();
+            if(reportsFilter === 'pending') list = list.filter(r => r.status !== 'handled');
+            if(reportsFilter === 'handled') list = list.filter(r => r.status === 'handled');
+
+            container.innerHTML = '';
+            if(list.length === 0){
+                container.innerHTML = '<div style="color:#888;padding:10px;">暂无举报记录</div>';
+                return;
+            }
+
+            list.forEach(report => {
+                const handled = report.status === 'handled';
+                const item = document.createElement('div');
+                item.className = 'report-item' + (handled ? ' handled' : '');
+
+                const head = document.createElement('div');
+                head.className = 'report-head';
+                head.innerHTML = '<span>' + escapeHtml(report.time || '') + '</span>' +
+                    '<span class="report-status ' + (handled ? 'handled' : 'pending') + '">' + (handled ? '✅ 已处理' : '⏳ 待处理') + '</span>';
+                item.appendChild(head);
+
+                const reason = document.createElement('div');
+                reason.className = 'report-reason';
+                reason.textContent = '举报原因：' + (report.reason || '无');
+                item.appendChild(reason);
+
+                const parties = document.createElement('div');
+                parties.className = 'report-parties';
+                parties.appendChild(makePartyCard('📤 举报人', report.reporter || {}, 'reporter'));
+                parties.appendChild(makePartyCard('📥 被举报人', report.reported || {}, 'reported'));
+                item.appendChild(parties);
+
+                const actions = document.createElement('div');
+                actions.className = 'report-actions';
+
+                const banReportedBtn = document.createElement('button');
+                banReportedBtn.className = 'btn small danger';
+                banReportedBtn.textContent = '🚫 封禁被举报人';
+                banReportedBtn.onclick = () => banFromReport(report, 'reported');
+                actions.appendChild(banReportedBtn);
+
+                const banReporterBtn = document.createElement('button');
+                banReporterBtn.className = 'btn small warning';
+                banReporterBtn.textContent = '🚫 封禁举报人';
+                banReporterBtn.onclick = () => banFromReport(report, 'reporter');
+                actions.appendChild(banReporterBtn);
+
+                const toggleBtn = document.createElement('button');
+                toggleBtn.className = 'btn small';
+                toggleBtn.textContent = handled ? '重新打开' : '标记已处理';
+                toggleBtn.onclick = () => {
+                    const all2 = loadReports();
+                    const r = all2.find(x => x.id === report.id);
+                    if(r){ r.status = handled ? 'pending' : 'handled'; saveReports(all2); }
+                    renderReports();
+                };
+                actions.appendChild(toggleBtn);
+
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn small secondary';
+                delBtn.textContent = '删除';
+                delBtn.onclick = () => {
+                    if(!confirm('确定删除这条举报记录吗？')) return;
+                    saveReports(loadReports().filter(x => x.id !== report.id));
+                    renderReports();
+                    addLog('info', '举报记录已删除：' + report.id);
+                };
+                actions.appendChild(delBtn);
+
+                item.appendChild(actions);
+                container.appendChild(item);
+            });
+        }
+
+        function makePartyCard(title, party, kind){
+            const card = document.createElement('div');
+            card.className = 'report-party ' + kind;
+            const banned = isFpBanned(party.fingerprint);
+            card.innerHTML = '<div class="party-title">' + title + '：' + escapeHtml(party.name || '未知') +
+                (banned ? ' <span class="banned-tag">[已封禁]</span>' : '') + '</div>' +
+                '<div>指纹: ' + escapeHtml(party.fingerprint || 'unknown') + '</div>' +
+                '<div style="color:#666;">IP: ' + escapeHtml(party.ip || 'unknown') + '</div>';
+            return card;
+        }
+
+        function banFromReport(report, who){
+            const party = (who === 'reported' ? report.reported : report.reporter) || {};
+            const fp = party.fingerprint;
+            if(!fp || fp === 'unknown'){
+                showToast('❌ 该用户指纹未知，无法封禁');
+                return;
+            }
+            if(isFpBanned(fp)){
+                showToast('⚠️ 该用户已在封禁列表中');
+                return;
+            }
+            const defaultReason = who === 'reported' ? ('被举报：' + (report.reason || '违规行为')) : '恶意举报';
+            const reason = prompt('请输入封禁原因（将展示给被封禁用户）：', defaultReason);
+            if(reason === null) return;
+
+            banData.bannedFingerprints.push(fp);
+            if(party.ip && party.ip !== 'unknown' && party.ip !== '未知') banData.bannedIPs.push(party.ip);
+            banData.banReasons[fp] = { reason: reason || defaultReason, time: new Date().toLocaleString() };
+            saveBanData();
+
+            // 封禁后自动将该举报标记为已处理
+            const all = loadReports();
+            const r = all.find(x => x.id === report.id);
+            if(r){ r.status = 'handled'; saveReports(all); }
+
+            addLog('warn', '管理员封禁' + (who === 'reported' ? '被举报人' : '举报人') + '：' + (party.name || '未知') + ' (' + fp + ')，原因：' + (reason || defaultReason));
+            showToast('🚫 已封禁 ' + (party.name || '该用户'));
+            renderReports();
+            renderUserList();
+            renderBanList();
+        }
+
+        // 筛选按钮
+        [['reports-filter-all','all'],['reports-filter-pending','pending'],['reports-filter-handled','handled']].forEach(pair => {
+            $(pair[0]).addEventListener('click', () => {
+                reportsFilter = pair[1];
+                ['reports-filter-all','reports-filter-pending','reports-filter-handled'].forEach(id => $(id).classList.remove('active'));
+                $(pair[0]).classList.add('active');
+                renderReports();
+            });
+        });
+        $('refresh-reports-btn').addEventListener('click', () => {
+            renderReports();
+            showToast('✅ 举报列表已刷新');
         });
 
         // ========== 系统设置 ==========
