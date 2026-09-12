@@ -71,6 +71,7 @@
         #info-area { display:flex; flex-direction:column; align-items:center; gap:3px; padding:2px 0; }
         #range-display { font-size:0.8rem; font-weight:700; color:var(--neon); background:rgba(0,240,255,0.08); padding:3px 14px; border-radius:15px; }
         #turn-indicator { font-size:0.75rem; font-weight:700; background:rgba(255,255,255,0.06); padding:3px 14px; border-radius:12px; }
+        #turn-timer { font-size:0.62rem; color:#ffcc66; min-height:0.8rem; font-weight:700; }
         #turn-indicator.turn-me { color:var(--blue); border:1px solid var(--blue); }
         #turn-indicator.turn-opponent { color:var(--red); border:1px solid var(--red); }
         #message-display { font-size:0.7rem; color:#bbb; min-height:1rem; text-align:center; max-width:95%; padding:0 5px; }
@@ -334,7 +335,6 @@
         <div class="overlay-title">⚙️ 游戏设置</div>
         <div class="setting-row" id="opponent-row">
             <label>对战对象：</label>
-            <button class="ai-level-btn" data-opp="local">📱 本地双人</button>
             <button class="ai-level-btn active" data-opp="ai">🤖 AI对战</button>
             <button class="ai-level-btn" data-opp="remote">🌐 远程对战</button>
         </div>
@@ -364,7 +364,7 @@
             <h3>📖 先搞懂两种模式</h3>
             <p><b>普通模式</b>（技能数量=0）：没有任何技能，双方只靠「大了/小了」的反馈缩小范围，拼的是推理与心理博弈。</p>
             <p><b>技能模式</b>（技能数量=1~3）：每轮开始双方从随机 3 个技能中选 1 个，直到选满；技能有冷却回合，可以叠加打出组合连招。</p>
-            <p>教程共 24 关：先学单个技能，再学组合连招。观察 AI 每一步的教学批注，通关后有要点总结。</p>
+            <p>教程共 10 关，每关只教一个能直接带上排位的杀招（1-2 分钟毕业）：从中点切割到读心术。观察 AI 每一步的教学批注，通关后有要点总结。</p>
         </div>
         <div class="tutorial-levels" id="tutorial-levels"></div>
         <button class="btn secondary" id="back-menu-btn2">返回</button>
@@ -418,6 +418,7 @@
         <div id="info-area">
             <div id="range-display">范围：1 - 100</div>
             <div id="turn-indicator">等待...</div>
+            <div id="turn-timer"></div>
             <div id="message-display">游戏开始</div>
         </div>
         <div id="history-container"></div>
@@ -613,20 +614,16 @@ const ICE_SERVERS = [
 
 // ========== 技能定义（48个独立技能） ==========
 const ALL_SKILLS = [
-    { id:'detect', name:'📡 探测', desc:'显示炸弹是奇数还是偶数。免费砍掉一半候选，开局最好用', cooldown:3 },
+    { id:'detect', name:'📡 探测', desc:'显示炸弹是几位数。例：42 → "2位数"，7 → "1位数"', cooldown:3 },
     { id:'peek', name:'🔍 透视', desc:'显示炸弹的个位数。例：炸弹42 → “个位是2”', cooldown:3 },
-    { id:'thermometer', name:'🌡️ 温度计', desc:'告诉你猜的位置离炸弹有多近（1~10级，10=贴脸）。免费的“冷热”提示', cooldown:3 },
     { id:'verifier', name:'🎯 验证器', desc:'悄悄验证一个数：只告诉你“中了/没中”，对手看不到结果', cooldown:3 },
     { id:'scout', name:'📡 侦察', desc:'持续2回合看到对手所有技能的冷却状态。使用完全保密，对手不会发现你在侦察', cooldown:3 },
     { id:'digitsum', name:'➕ 数字和', desc:'显示炸弹各位数字加起来是多少。例：42 → 4+2=6', cooldown:3 },
     { id:'precognition', name:'🔮 预知', desc:'显示炸弹的十位数（个位数就显示0）。例：42→4，7→0', cooldown:3 },
     { id:'binary', name:'✂️ 二分', desc:'范围直接砍一半，保留炸弹那半。最强缩圈技。例：1-100炸弹42→1-50', cooldown:3 },
-    { id:'rewind', name:'⏪ 回退', desc:'范围恢复到“你”上一次猜测之前。猜后悔了、被带偏了就用它', cooldown:2 },
-    { id:'shuffle', name:'🔀 洗牌', desc:'炸弹在当前范围内重新随机。对手快猜中时用它掀桌', cooldown:3 },
     { id:'move', name:'🚚 移动', desc:'炸弹随机向上或向下挪5格。对手快锁定时给它挪窝', cooldown:2 },
     { id:'blackhole', name:'🕳️ 黑洞', desc:'选一个数字，范围两端各向它收紧2格。积少成多的缩圈。例：1-100选50→3-98', cooldown:2 },
     { id:'tide', name:'🌊 潮汐', desc:'本轮范围扩大5格，下一轮自动缩回。用来冲淡对手刚拿到的线索', cooldown:3 },
-    { id:'wormhole', name:'🌀 虫洞', desc:'炸弹跳到范围的对称位置。例：1-100里的42 → 59', cooldown:3 },
     { id:'double', name:'⚡ 双倍', desc:'你下一次猜中炸弹伤害×2，多次使用倍率累加，猜错不失效。例：连续用两次，原本1伤害变成4伤害', cooldown:3 },
     { id:'rampage', name:'💥 翻倍', desc:'你下一次猜中炸弹伤害×2，可与其他增伤相乘，多次使用累乘，猜错不失效。例：已有双倍(+2)和孤注一掷(+3)，猜中伤害=(1+2+3)×2=12', cooldown:4 },
     { id:'pierce', name:'🗡️ 穿透', desc:'本回合内你的炸弹伤害无视对手护盾。例：对手有2层护盾，你的3点伤害全部直接扣血', cooldown:3 },
@@ -644,25 +641,21 @@ const ALL_SKILLS = [
     { id:'blind', name:'🙈 致盲', desc:'对手下回合看不到范围，只能凭记忆瞎猜', cooldown:3 },
     { id:'lock', name:'🚫 封锁', desc:'随机封掉对手1个技能，直到本轮炸弹爆炸', cooldown:3 },
     { id:'pause', name:'🕐 暂停', desc:'对手跳过下一回合——你连动两回合，抢轮次神器', cooldown:4 },
-    { id:'slow', name:'🐌 缓速', desc:'对手接下来2次猜错时范围都不缩小——他的猜测零信息，白猜两回', cooldown:3 },
     { id:'freeze', name:'🧊 冰封数字', desc:'1回合内炸弹被冻住：对手猜中也不炸', cooldown:4 },
     { id:'forbid', name:'🚷 禁猜', desc:'禁掉一个数，对手猜它＝白费一回合。例：禁50，对手猜50当轮作废', cooldown:3 },
-    { id:'bet', name:'🎯 押注', desc:'押对手下次猜错：他错你+1血，他中你-1血', cooldown:3 },
     { id:'fog', name:'🌫️ 迷雾', desc:'视野冻结2次：你接下来的2次猜测和范围收缩对手完全看不到（他的视图停在旧范围），之后双方视图重新同步——你白赚信息差', cooldown:3 },
     { id:'disguise', name:'🎭 伪装', desc:'炸弹伪装成另一个数：对手猜中假身不会炸，还会暴露真身', cooldown:3 },
-    { id:'lie', name:'🤥 说谎', desc:'对手下次猜错后，只有他看到的范围朝错误方向假缩（真实范围照常）——他盯着假范围扑空一次后视图才与真相同步', cooldown:3 },
     { id:'copy', name:'📋 复制', desc:'随机偷学对手一个技能并立刻使用。对手越强它越强', cooldown:5 },
     { id:'trap', name:'🪤 陷阱', desc:'埋一个数，对手猜中直接爆炸受1伤。埋在对手最可能猜的位置', cooldown:4 },
     { id:'empower', name:'🌟 赋能', desc:'下一个技能效果翻倍。例：赋能+治疗=回2血，赋能+二分=连砍两刀', cooldown:3 },
     { id:'web', name:'🕸️ 蛛网', desc:'炸弹±3格变雷区，对手踩中受1伤。例：炸弹42，对手猜40也挨炸', cooldown:3 },
-    { id:'timerewind', name:'🕰️ 时间回溯', desc:'双方血量回到本轮开始。白挨打流的后悔药', cooldown:4 },
     { id:'refresh', name:'🔄 刷新', desc:'随机一个冷却中的技能立刻可用', cooldown:5 },
     { id:'charge', name:'🔋 充能', desc:'所有技能的冷却-1回合', cooldown:4 },
     { id:'skip', name:'⏭️ 跳过', desc:'主动跳过本回合（已架的盾/反射保留），引对手先出手', cooldown:3 },
     { id:'dice', name:'🎲 命运骰子', desc:'随机一签：本回合+3伤 / -1伤 / 回1血 / 自伤1 / 无事发生', cooldown:3 },
     { id:'gambler', name:'🃏 赌徒', desc:'抛硬币：50%对手-1血，50%自己-1血', cooldown:3 },
     { id:'swap', name:'🔁 交换', desc:'与对手交换全部技能。冷却状态随技能一起走：换过来的技能该冷却几回合还是几回合', cooldown:3 },
-    { id:'numberslash', name:'⚔️ 数字斩', desc:'接下来3个你的回合，每次猜数随机抽出1或2。3回合后结算：1更多→每两个1对对手造成1伤害；2更多→每两个2治疗你1血。生效期间不进入冷却', cooldown:3 }
+    { id:'numberslash', name:'⚔️ 数字斩', desc:'接下来3个你的回合，每次猜数随机获得0.5攻击或0.5治疗。3回合后结算：攻击更多→每1点攻击对对手直接造成1伤害；治疗更多→每1点治疗回复你1血。生效期间不进入冷却', cooldown:3 }
 ];
 
 // ========== 玩家对象工厂 ==========
@@ -671,9 +664,8 @@ function makePlayer(id) {
         shield:0, reflect:0, rebirth:false, lifesteal:false,
         double:false, pierce:false, anger:false, speed:0,
         skipNext:false, blind:false, lock:false, lockedSkill:null,
-        slow:false, allin:false, bet:false,
+        allin:false,
         fog:false, disguise:false, disguiseNumber:null,
-        lie:false,
         empower:0, frozen:false, bomblet:false,
         skills:[], cooldowns:{}, scoutVision:0,
         trappedNumber:null, dormant:false, web:false,
@@ -681,7 +673,7 @@ function makePlayer(id) {
         allinMultiplier:null, bombletDamage:null, lifestealAmount:1,
         rampageMulti:null, secondLockedSkill:null, volley:0,
         forbidNumber:null, diceBonus:0,
-        slashActive:0, slashDraws:null };
+        slashActive:0, slashAtk:0, slashHeal:0 };
 }
 
 // ========== 全局状态 ==========
@@ -700,7 +692,7 @@ const G = {
     remoteReady: { host:false, guest:false },
     prevLow:1, prevHigh:100,
     roundStartHP: { p1:5, p2:5 },
-    tideShrinkNext:false,
+    tideShrinkNext:false, tideCaster:null,
     requestId:0,
     skillSelectShown: false,
     roundCount: 0,
@@ -718,18 +710,62 @@ let guestActionTimeout = null;
 let guessHistory = [];
 let toastTimer = null;
 
-// 教程关卡数据（快节奏版：小范围+低血量，每关只教一件事，1-3分钟毕业）
+// 教程关卡数据（快节奏版：小范围+低血量+固定炸弹，每关只教一个能直接用在排位的杀招，1-2分钟毕业）
+// bomb=固定炸弹：关卡可复现，脚本与提示才能精确对应；每轮重置后仍为同一颗
 const TUTORIAL_LEVELS = [
-    { level:1, name:'中点切割', min:1, max:50, playerHP:3, aiHP:3, playerSkills:[], aiSkills:[], aiScript:[[{type:'guess', number:25, note:'AI 猜了中点 25——范围未知时猜中点信息量最大'}]], hint:'无技能纯推理局，只有3血。每次都猜范围正中间。', goal:'用二分思维在6次内猜中炸弹', lesson:'猜错不亏：每次猜错都砍掉一半方向。中点猜法是最优策略。' },
-    { level:2, name:'探测缩半', min:1, max:50, playerHP:3, aiHP:3, playerSkills:['detect'], aiSkills:['detect'], aiScript:[[{type:'skill', id:'detect', note:'AI 用📡探测获知奇偶——候选直接减半'},{type:'guess', number:25}]], hint:'先放探测拿奇偶，再只在符合奇偶的数里猜。', goal:'体会"先拿信息再猜数"的节奏', lesson:'信息技能是免费的缩圈：探测一次≈白猜一次还不挨炸。' },
-    { level:3, name:'交集锁定', min:1, max:50, playerHP:3, aiHP:3, playerSkills:['peek','digitsum'], aiSkills:['detect'], aiScript:[[{type:'skill', id:'detect', note:'AI 探测了奇偶'},{type:'guess', number:25}]], hint:'透视拿个位 → 数字和拿和 → 两条线索取交集，候选常常只剩1个！', goal:'亲手用两条线索的交集锁定炸弹', lesson:'单条线索是缩圈，两条独立线索取交集=锁区。' },
-    { level:4, name:'二分砍半', min:1, max:50, playerHP:3, aiHP:3, playerSkills:['binary'], aiSkills:['binary'], aiScript:[[{type:'skill', id:'binary', note:'AI 用✂️二分——范围直接砍半'},{type:'guess', number:25}]], hint:'先二分砍范围，再猜新范围的中点。', goal:'用✂️二分主动压缩范围取胜', lesson:'二分一次=白捡两次猜错的收益，开局最强节奏技。' },
-    { level:5, name:'爆发链顺序', min:1, max:30, playerHP:5, aiHP:8, playerSkills:['double','allin','rampage'], aiSkills:['shield'], aiScript:[[{type:'skill', id:'shield', note:'AI 架起🛡️护盾——防你的爆发，但你的伤害远超1段'},{type:'guess', number:15}]], hint:'按顺序连放：双倍→孤注一掷→翻倍，然后猜！(1+2+3)×2=12伤', goal:'一回合叠满爆发，12伤打穿AI的8血', lesson:'倍率先相加（双倍/孤注/子母弹），翻倍最后整体相乘——顺序决定爆炸力。' },
-    { level:6, name:'连击破防', min:1, max:30, playerHP:5, aiHP:6, playerSkills:['volley'], aiSkills:['shield','reflect'], aiScript:[[{type:'skill', id:'shield', note:'AI 叠了🛡️护盾'},{type:'skill', id:'reflect', note:'还架了🪞反射——但它都只能挡一段！'},{type:'guess', number:15}]], hint:'连击把伤害拆成3段：护盾/反射每次只能挡1段！', goal:'用🔱连击拆穿盾+反的组合防御', lesson:'连击专破防御流：每段独立结算，防得住一段防不住全部。' },
-    { level:7, name:'反制爆发', min:1, max:50, playerHP:3, aiHP:5, playerSkills:['reflect','pause'], aiSkills:['double','allin'], aiScript:[[{type:'skill', id:'double', note:'AI 叠了双倍——它要爆发了！'},{type:'skill', id:'allin', note:'孤注一掷！这发猜中就是数倍伤害'},{type:'guess', number:25}]], hint:'AI满编爆发！反射能弹伤害，暂停能跳过它的回合——看准时机反制！', goal:'在AI的爆发回合活下来并反杀', lesson:'对面叠增伤时，反射/暂停/护盾就是你的反打窗口。活着才有输出。' },
-    { level:8, name:'反情报挪弹', min:1, max:50, playerHP:3, aiHP:3, playerSkills:['move','shuffle'], aiSkills:['detect'], aiScript:[[{type:'skill', id:'detect', note:'AI 探测了奇偶——它的候选已经减半，快挪弹作废它！'},{type:'guess', number:25}]], hint:'对手拿到线索时，移动/洗牌把炸弹挪窝，它的推理成果全部作废。', goal:'在AI逼近时用挪弹把它的线索变成废纸', lesson:'炸弹移动后旧线索全过期——挪弹是逆风翻盘键。' },
-    { level:9, name:'控制三连', min:1, max:50, playerHP:3, aiHP:3, playerSkills:['fog','slow','lie'], aiSkills:['detect','binary'], aiScript:[[{type:'skill', id:'detect', note:'AI 探测了奇偶'},{type:'guess', number:25}]], hint:'迷雾(对手看不到你的收缩)+缓速(2次不缩范围)+说谎(对手的视图假缩)——让AI的推理彻底断档。', goal:'用控制技拖垮AI的收敛节奏取胜', lesson:'控制技的价值=作废对手的回合数+制造信息差。三连控≈白拿三回合。' },
-    { level:10, name:'毕业实战', min:1, max:100, playerHP:5, aiHP:5, playerSkills:['detect','binary','double'], aiSkills:['detect','binary','double'], aiScript:[[]], hint:'无剧本真实对战：信息→压缩→爆发，打出完整击杀链。', goal:'综合运用所学击败AI', lesson:'标准击杀链：先拿信息、再压范围、最后叠增伤一击致命。毕业了！' }
+    { level:1, name:'中点切割', min:1, max:50, bomb:37, playerHP:3, aiHP:3, playerSkills:[], aiSkills:[],
+        aiScript:[[{type:'guess', number:3, note:'AI 贴边瞎猜 3——它把节奏送给你了'}]],
+        hint:'永远猜当前范围的正中间：每一刀都砍掉一半可能。',
+        goal:'用中点猜法在 6 刀内排雷',
+        lesson:'范围未知时，中点猜法就是数学最优解——猜错不亏，每刀都消灭一半方向。' },
+    { level:2, name:'线索制导', min:1, max:50, bomb:34, playerHP:3, aiHP:3, playerSkills:['digitsum'], aiSkills:[],
+        aiScript:[[{type:'guess', number:25, note:'AI 中点猜 25——它的猜测在免费帮你缩范围'}]],
+        hint:'先放数字和！拿到"和"之后，只猜各位相加等于它的数。',
+        goal:'体会线索制导：让每一猜都有依据',
+        lesson:'提示技拿到立刻用——信息不过期，早用早享受。有线索猜线索数，没线索猜中点。' },
+    { level:3, name:'交集锁区', min:1, max:50, bomb:42, playerHP:3, aiHP:3, playerSkills:['detect','peek','digitsum'], aiSkills:['detect'],
+        aiScript:[[{type:'skill', id:'detect', note:'AI 只拿了一条线索就猜了——它还有几十个候选'},{type:'guess', number:25}]],
+        hint:'一回合连放三条线索：位数∩个位∩数字和——取交集，候选只剩 1 个！',
+        goal:'用三条线索的交集点名炸弹',
+        lesson:'单条线索缩圈，两条锁区，三条点名。信息技互不冲突，一回合可以全放。' },
+    { level:4, name:'二分砍半', min:1, max:100, bomb:63, playerHP:3, aiHP:3, playerSkills:['binary'], aiSkills:['binary'],
+        aiScript:[[{type:'skill', id:'binary', note:'AI 二分砍半——范围直接减半'},{type:'guess', number:50}]],
+        hint:'先二分砍范围，再猜新范围的中点。1-100 的大范围，二分一次顶猜错两次。',
+        goal:'用✂️二分压缩大范围取胜',
+        lesson:'范围越大二分越值：开局就砍，砍完再拿线索更精准。' },
+    { level:5, name:'爆发链顺序', min:1, max:30, bomb:22, playerHP:5, aiHP:8, playerSkills:['double','allin','rampage'], aiSkills:[],
+        aiScript:[[{type:'guess', number:15, note:'AI 毫无防备——这是你一击必杀的窗口'}]],
+        hint:'按顺序连放：双倍→孤注一掷→翻倍，然后猜！(1+2+3)×2=12 伤',
+        goal:'一回合叠满爆发，12 伤打穿 AI 的 8 血',
+        lesson:'倍率先相加（双倍/孤注/子母弹），翻倍最后整体相乘——顺序决定爆炸力。' },
+    { level:6, name:'连击破防', min:1, max:30, bomb:22, playerHP:6, aiHP:3, playerSkills:['volley'], aiSkills:['shield','reflect'],
+        aiScript:[[{type:'skill', id:'shield', note:'AI 叠了🛡️护盾'},{type:'skill', id:'reflect', note:'还架了🪞反射——但每层都只能挡一段！'},{type:'guess', number:15}]],
+        hint:'连击把伤害拆成 3 段：护盾/反射每层只能挡 1 段！',
+        goal:'用🔱连击拆穿盾+反的组合防御',
+        lesson:'连击专破防御流：每段独立结算，防得住一段防不住全部。反过来说：单段大伤害会被 1 层盾整个吞掉！' },
+    { level:7, name:'反制爆发', min:1, max:50, bomb:40, playerHP:3, aiHP:5, playerSkills:['reflect','pause'], aiSkills:['double','allin'],
+        aiScript:[[{type:'skill', id:'double', note:'AI 叠了双倍——它要爆发了！'},{type:'skill', id:'allin', note:'孤注一掷！这发猜中就是 6 倍伤害'},{type:'guess', number:25}]],
+        hint:'AI 满编爆发！先架反射（它猜中=它自己吃伤害），或暂停偷走它的回合。',
+        goal:'在 AI 的爆发回合活下来并反杀',
+        lesson:'对面叠增伤时，反射/暂停/护盾就是你的反打窗口。活着才有输出。' },
+    { level:8, name:'读心术', min:1, max:50, bomb:43, playerHP:3, aiHP:3, playerSkills:[], aiSkills:['digitsum'],
+        aiScript:[
+            [{type:'skill', id:'digitsum', note:'AI 悄悄做了什么……它看起来胸有成竹'},{type:'guess', number:25, note:'AI 猜了 25'}],
+            [{type:'guess', number:34, note:'AI 又猜了 34。25、34……它猜的数有什么共同点？'}]
+        ],
+        hint:'你没有技能——但 AI 的行为会出卖它。第一猜猜 45（别挡它的路），然后盯着它猜的数找规律！',
+        goal:'读出 AI 的秘密线索，用它自己的推理打败它',
+        lesson:'拿到线索的人只会猜符合线索的数——行为即广播，读出来=白捡它的技能。反过来：你拿到线索时可以故意猜假规律（装糖），骗会读心的人。' },
+    { level:9, name:'信息差控制', min:1, max:50, bomb:38, playerHP:3, aiHP:3, playerSkills:['fog','blind','pause'], aiSkills:['detect','binary'],
+        aiScript:[[{type:'skill', id:'detect', note:'AI 探测了位数'},{type:'guess', number:25}]],
+        hint:'迷雾(对手看不到你的收缩)+致盲(对手看不到范围)+暂停(偷走它的回合)——让 AI 的推理彻底断档。',
+        goal:'用控制技拖垮 AI 的收敛节奏取胜',
+        lesson:'控制技的价值=作废对手的回合数+制造信息差。三连控≈白拿三回合。' },
+    { level:10, name:'毕业实战', min:1, max:50, playerHP:3, aiHP:3, playerSkills:['detect','binary','double'], aiSkills:['detect','binary','double'],
+        aiScript:[[]],
+        hint:'无剧本真实对战：信息→压缩→爆发，打出完整击杀链。',
+        goal:'综合运用所学击败 AI',
+        lesson:'标准击杀链：先拿信息、再压范围、最后叠增伤一击致命。毕业了！' }
 ];
 
 const $ = id => document.getElementById(id);
@@ -922,10 +958,10 @@ window.addEventListener('unhandledrejection', function(e){ dlog('REJECT', String
 
 // ========== 技能保密清单：这些技能的"使用事实"对对手完全保密（双向适用） ==========
 // 提示类（结果本就私密，使用也保密——否则对手看你的反常猜就能反推线索）；
-// 挪弹类（移动/洗牌/虫洞——对手不知道炸弹动了，旧线索才会变成陷阱）；
-// 其余为暗箱操作类（说谎/复制/刷新/充能/骰子/赌徒/押注），不影响对手当回合决策，无需公告
-const SECRET_SKILLS = new Set(['detect','peek','thermometer','verifier','digitsum','precognition','scout',
-    'move','shuffle','wormhole','lie','copy','refresh','charge','dice','gambler','bet']);
+// 挪弹类（移动——对手不知道炸弹动了，旧线索才会变成陷阱）；
+// 其余为暗箱操作类（复制/刷新/充能/骰子/赌徒），不影响对手当回合决策，无需公告
+const SECRET_SKILLS = new Set(['detect','peek','verifier','digitsum','precognition','scout',
+    'move','copy','refresh','charge','dice','gambler']);
 // AI 使用秘密技能时：消息不上屏、不进日志（玩家端可见性由 buff 栏/血量/范围等公开状态自然体现）
 const _useSkillImpl = useSkill;
 useSkill = function(skillId){
@@ -1074,8 +1110,8 @@ function showCheatToast(msg, duration = 3000){
     cheatToast.classList.add('show');
     toastTimer = setTimeout(() => cheatToast.classList.remove('show'), duration);
 }
-// 牌堆式抽取：一局内 48 个技能洗成牌堆轮流发牌，发完重洗——
-// 保证每个技能最迟在第16次发牌内出现，杜绝"某些技能永远抽不到"
+// 牌堆式抽取：一局内 41 个技能洗成牌堆轮流发牌，发完重洗——
+// 保证每个技能最迟在第14次发牌内出现，杜绝"某些技能永远抽不到"
 function drawSkillOptionIds(count, excludeIds){
     excludeIds = excludeIds || [];
     if(!G.skillDeck) G.skillDeck = [];
@@ -1088,7 +1124,7 @@ function drawSkillOptionIds(count, excludeIds){
         }
         const id = G.skillDeck.shift();
         if(excludeIds.indexOf(id)>=0 || out.indexOf(id)>=0) continue; // 已拥有/本次已发的不进选项，但占用牌堆名额
-        if(id==='detect' && (excludeIds.indexOf('peek')>=0 || out.indexOf('peek')>=0)) continue; // 有透视就不必探测：个位已知=奇偶已知，纯浪费
+        // （探测已改为报位数，与透视的个位不再重复，无需互斥）
         out.push(id);
     }
     return out;
@@ -1123,10 +1159,41 @@ function applyBlackhole(number){
 function clearHostTimeout(){ if(G.hostTimeout){ clearTimeout(G.hostTimeout); G.hostTimeout=null; } }
 function clearGuestActionTimeout(){ if(guestActionTimeout){ clearTimeout(guestActionTimeout); guestActionTimeout=null; } }
 function clearSkillTimer(){ if(G.skillTimer){ clearInterval(G.skillTimer); G.skillTimer=null; } }
+// ========== 远程对战：猜数1分钟限时（超时系统自动猜"下边+1"） ==========
+function clearTurnTimer(){
+    if(G.turnTimer){ clearInterval(G.turnTimer); G.turnTimer=null; }
+    G.turnDeadline=null; G.turnTimerPlayer=null;
+    const tt=$('turn-timer'); if(tt) tt.textContent='';
+}
+function startTurnTimer(){
+    clearTurnTimer();
+    if(!G.active || !G.mode.includes('remote')) return;
+    if(G.pendingSkillSelect || skillSelectPhase) return; // 选技阶段不计时（本来也不能猜）
+    G.turnTimerPlayer = G.currentPlayer;
+    G.turnDeadline = Date.now() + 60000;
+    G.turnTimer = setInterval(function(){
+        if(!G.active || !G.mode.includes('remote')){ clearTurnTimer(); return; }
+        const tt=$('turn-timer');
+        const remain = Math.ceil((G.turnDeadline - Date.now())/1000);
+        if(remain > 0){
+            if(tt) tt.textContent = '⏳ 本回合剩余 '+remain+'s（超时自动猜 边+1）';
+            return;
+        }
+        if(!G.isHost){ if(tt) tt.textContent='⏳ 时间到，等待结算...'; return; } // Guest只显示：由Host强制猜并同步
+        const p = G.turnTimerPlayer;
+        if(G.processing || G.currentPlayer!==p || G.pendingSkillSelect || skillSelectPhase) return; // 结算中，等下一拍
+        clearTurnTimer();
+        const forced = Math.min(G.low+1, G.high); // 下边+1（到底就猜底）
+        showCheatToast('⏳ '+getPlayer(p).name+' 超时！系统自动猜测 '+forced, 3000);
+        dlog('TURN', p+' 猜数超时，系统代猜 '+forced);
+        processGuess(forced, false, p);
+    }, 250);
+}
 function clearAllTimers(){
     clearHostTimeout();
     clearGuestActionTimeout();
     clearSkillTimer();
+    clearTurnTimer();
     stopAiWatchdog();
     if(pingInterval){ clearInterval(pingInterval); pingInterval=null; }
     if(notifTimeout){ clearTimeout(notifTimeout); notifTimeout=null; }
@@ -1591,6 +1658,12 @@ function applySync(state){
         const shouldEnable = G.active && !G.processing && isMyTurn();
         setKeypadEnabled(shouldEnable);
     }
+    // Guest侧的回合倒计时（只显示，强制执行在Host）：回合换人/计时器停了才重启，避免每次同步都重置
+    if(G.active && G.mode.includes('remote')){
+        if(G.turnTimerPlayer!==G.currentPlayer || !G.turnTimer) startTurnTimer();
+    } else if(!G.active){
+        clearTurnTimer();
+    }
 }
 
 // ========== 聊天功能 ==========
@@ -1702,8 +1775,9 @@ function resetGameState(){
     G.pendingSkillSelect=null; G.pendingSkillOptions=null;
     G.pendingSkillCount=G.skillCount; G.pendingRoundOptions=null;
     skillSelectPhase=null; G.hostSkillComplete=null;
-    G.tideShrinkNext=false;
-    G.aiBrain=null; G.aiOppModel=null;
+    G.tideShrinkNext=false; G.tideCaster=null;
+    G.demo=null; // 开新局：旧的技能演示状态一并作废
+    G.aiBrain=null; G.aiOppModel=null; G.aiSoftSkeptic={}; // 适应性防钓记忆也随新局清空
     G.skillDeck=[]; // 每局重洗技能牌堆
     G.aiTurnToken=0; // 每局重置令牌，杜绝NaN
     G.aiAvatarUrl=null; G.aiAvatarOk=false;
@@ -1732,7 +1806,7 @@ function resetGameState(){
         p.allinMultiplier=null; p.bombletDamage=null; p.lifestealAmount=1;
         p.rampageMulti=null; p.secondLockedSkill=null; p.volley=0;
         p.forbidNumber=null; p.diceBonus=0;
-        p.slashActive=0; p.slashDraws=null;
+        p.slashActive=0; p.slashAtk=0; p.slashHeal=0;
         p.prevLow=null; p.prevHigh=null;
         p.view=null; p.lieView=0; p.viewFog=0; p.viewSyncNext=false;
     });
@@ -1754,8 +1828,9 @@ function startNewRound(){
     G.low=G.minVal; G.high=G.maxVal;
     G.prevLow=G.minVal; G.prevHigh=G.maxVal;
     G.bombNumber=Math.floor(Math.random()*(G.maxVal-G.minVal+1))+G.minVal;
+    if(G.mode==='tutorial' && G.tutorial && G.tutorial.levelData.bomb!==undefined) G.bombNumber=G.tutorial.levelData.bomb; // 教程关卡：每轮仍是同一颗固定炸弹，脚本才能精确对应
     G.playerInput=''; G.processing=false;
-    G.tideShrinkNext=false;
+    G.tideShrinkNext=false; G.tideCaster=null;
     G.aiBrain=null; // AI的线索记忆每回合清空
     G.humanGuesses=0; G.humanShrink=0; G.humanSuspicion=0; G.humanGuessSeq=[]; G.humanTrap=false; G.humanForbid=false; // 对手行为观察每回合清空（读人习惯跨回合保留）
     G.roundStartHP = { p1: G.players.p1.hp, p2: G.players.p2.hp };
@@ -1763,7 +1838,7 @@ function startNewRound(){
     G.roundCount++;
     ['p1','p2'].forEach(function(id){
         const p=G.players[id];
-        p.speed=0; p.blind=false; p.bet=false; p.fog=false; p.lie=false; p.slow=false; p.pierce=false; p.frozen=false;
+        p.speed=0; p.blind=false; p.fog=false; p.pierce=false; p.frozen=false;
         p.anger=false; p.rampageMulti=null;
         p.shield=0; p.reflect=0; p.lifesteal=false; p.lifestealAmount=1; p.empower=0;
         p.doubleDamage=null; p.allin=false; p.allinMultiplier=null; p.bombletDamage=null; p.dormantBonus=false;
@@ -1771,8 +1846,8 @@ function startNewRound(){
         p.rebirth = false;
         p.forbidNumber = null;
         p.diceBonus = 0;
-        p.prevLow = null; p.prevHigh = null;
-        p.view=null; p.lieView=0; p.viewFog=0; p.viewSyncNext=false; // 双范围视图每轮重置
+        p.slashActive=0; p.slashAtk=0; p.slashHeal=0; // 数字斩跨回合不保留：炸弹爆炸立即终止，不结算
+        p.view=null; p.viewFog=0; // 双范围视图每轮重置
         // 教程模式：每回合重置冷却
         if(G.mode==='tutorial') p.cooldowns = {};
     });
@@ -1786,6 +1861,7 @@ function startNewRound(){
     dlog('ROUND','第 '+G.roundCount+' 轮开始 bomb='+G.bombNumber+' 先手='+G.currentPlayer);
     messageDisplay.textContent='💥 炸弹重置！第 '+G.roundCount+' 轮';
     renderSkills();
+    renderSlashPanel(); // 清掉上一轮残留的数字斩面板
     updateTurnIndicator();
     if(Privacy.isLocal()){
         Privacy.confirmTurn(getCurrentPlayer().name, function(){
@@ -1795,6 +1871,7 @@ function startNewRound(){
     if(G.mode.includes('ai')&&G.currentPlayer==='p2'&&G.active) setTimeout(aiTurn, 900);
     if(G.mode==='tutorial'&&G.currentPlayer==='p2'&&G.active) setTimeout(aiTurn, 900);
     if(G.mode.includes('ai') && G.roundCount>1 && Math.random()<0.3) setTimeout(function(){ if(G.active) aiTalk('newRound'); }, 1100);
+    startTurnTimer();
     syncIfRemote();
 }
 
@@ -1899,6 +1976,7 @@ function initGame(){
     } else if(G.mode.includes('ai')&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
     else if(G.mode==='tutorial'&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
     if(Privacy.isLocal()) setKeypadEnabled(true);
+    startTurnTimer(); // 远程非选技开局：从第1回合就计时（选技阶段内部守卫会拦截）
     syncIfRemote();
 }
 
@@ -2199,6 +2277,7 @@ function showSkillSelectWithOptions(forPlayerId, optionIds, skillCount){
 // ========== 核心游戏逻辑：猜测处理 ==========
 function processGuess(guess, isSkillAttack, guesserId){
     if(!G.active||G.processing){ dlog('GUESS','被守卫拦截 guess='+guess+' active='+G.active+' processing='+G.processing); return; }
+    clearTurnTimer(); // 本回合已出手：计时结束（换回合/新轮时重启）
     aiMarkProgress();
     dlog('GUESS', (guesserId||G.currentPlayer)+' 猜 '+guess+(isSkillAttack?'(技能攻击)':''));
     const guesser=guesserId?getPlayer(guesserId):getCurrentPlayer();
@@ -2235,9 +2314,9 @@ function processGuess(guess, isSkillAttack, guesserId){
         }
     }
 
-    // 数字斩：生效期间每一次真实猜数都抽一个1或2（技能攻击不算）
+    // 数字斩：生效期间每一次真实猜数都随机获得0.5攻击或0.5治疗（技能攻击不算）
     if(!isSkillAttack && guesser.slashActive>0){
-        guesser.slashDraws.push(Math.random()<0.5?1:2);
+        if(Math.random()<0.5) guesser.slashAtk=(guesser.slashAtk||0)+0.5; else guesser.slashHeal=(guesser.slashHeal||0)+0.5;
         renderSlashPanel();
     }
     let isHit=(guess===G.bombNumber)||isSkillAttack;
@@ -2468,8 +2547,8 @@ function processGuess(guess, isSkillAttack, guesserId){
             }
             if(defenderRebirthed) hitMsg+=' 🕊️ '+defender.name+' 重生！以3血复活';
             if(guesserRebirthed) hitMsg+=' 🕊️ '+guesserName+' 重生！以3血复活';
-            // 数字斩×连击联动：数字斩生效期间猜中炸弹，额外多抽1签（命中=加速攒签）
-            if(guesser.slashActive>0 && !isSkillAttack){ guesser.slashDraws.push(Math.random()<0.5?1:2); hitMsg+=' ⚔️数字斩命中加抽1签！'; renderSlashPanel(); }
+            // 数字斩联动：生效期间猜中炸弹，额外多积0.5攻击或治疗（命中=加速积攒）
+            if(guesser.slashActive>0 && !isSkillAttack){ if(Math.random()<0.5) guesser.slashAtk=(guesser.slashAtk||0)+0.5; else guesser.slashHeal=(guesser.slashHeal||0)+0.5; hitMsg+=' ⚔️数字斩命中加积0.5！'; renderSlashPanel(); }
             if(landedDamage>0){
                 const targetArea = Privacy.isLocal() ? (defender.id==='p1'?'me':'opponent') : (defender.id===getMyPlayer().id?'me':'opponent');
                 showExplosion(targetArea);
@@ -2521,7 +2600,9 @@ function processGuess(guess, isSkillAttack, guesserId){
                 guesser.slow--;
                 messageDisplay.textContent='🐌 缓速！范围未缩小'+(guesser.slow>0?'（还剩'+guesser.slow+'次）':'');
             } else {
-                if(guess<G.bombNumber) G.low=guess+1; else G.high=guess-1;
+                // 钳制在真实范围内：被迷雾冻结视野的人可能猜出真实范围外的数——
+                // 反馈照样诚实，但真实范围绝不因此被撑大
+                if(guess<G.bombNumber) G.low=Math.max(G.low, guess+1); else G.high=Math.min(G.high, guess-1);
             }
             // ② 猜测者自己的视图
             if(lieApplied){
@@ -2657,6 +2738,7 @@ function switchTurn(){
             renderSkills(); updateTurnIndicator();
             if(G.mode.includes('ai')&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
             if(G.mode==='tutorial'&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
+            startTurnTimer();
             syncIfRemote();
             return;
         }
@@ -2671,12 +2753,22 @@ function switchTurn(){
             G.high = Math.max(G.high-5, G.low);
             if(G.bombNumber < G.low) G.low = G.bombNumber;
             if(G.bombNumber > G.high) G.high = G.bombNumber;
-            syncViews(); // 潮汐回缩是公开范围变化：双方视图同步
+            // 潮汐回缩：只把对手的视图同步回真实范围，施放者的视图始终保持自己的窄视野
+            if(G.tideCaster){
+                const ov = getView(G.tideCaster==='p1'?'p2':'p1');
+                ov.low = G.low; ov.high = G.high;
+                const cv = getView(G.tideCaster);
+                cv.low = Math.max(cv.low, G.low); cv.high = Math.min(cv.high, G.high);
+                G.tideCaster = null;
+            } else {
+                syncViews();
+            }
             updateRange();
         }
         renderSkills(); updateTurnIndicator(); updateRange();
         if(G.mode.includes('ai')&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
         if(G.mode==='tutorial'&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
+        startTurnTimer();
         syncIfRemote();
     }
 
@@ -2753,6 +2845,11 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
     if(skill.cooldown === -1){
         user.cooldowns[skillId] = 0;
         if(skillId === 'rebirth'){
+            if(user.rebirth){ // 已挂重生：不重复播报也不浪费动作
+                messageDisplay.textContent='🕊️ 重生已挂上，无需重复使用';
+                renderSkills(); updateTurnIndicator(); syncIfRemote();
+                return;
+            }
             user.rebirth = true;
             messageDisplay.textContent='🕊️ '+user.name+'重生！死亡以3血复活';
             renderSkills(); updateTurnIndicator(); syncIfRemote();
@@ -2840,26 +2937,16 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
 
     switch(skillId){
         case 'detect': {
-            const even = G.bombNumber%2===0;
-            if(aiIsUser(user)) aiBrain().parity = G.bombNumber%2;
-            dlog('SKILL', user.id+' 探测结果：'+(even?'偶数':'奇数')+'（仅'+user.id+'可见）');
-            reveal('📡探测','炸弹是'+(even?'偶数':'奇数')); break;
+            const digs = String(G.bombNumber).length;
+            if(aiIsUser(user)) aiBrain().digits = digs;
+            dlog('SKILL', user.id+' 探测结果：'+digs+'位数（仅'+user.id+'可见）');
+            reveal('📡探测','炸弹是 '+digs+' 位数'); break;
         }
         case 'peek': {
             const d = G.bombNumber%10;
             if(aiIsUser(user)) aiBrain().lastDigit = d;
             dlog('SKILL', user.id+' 透视结果：个位是'+d+'（仅'+user.id+'可见）');
             reveal('🔍透视','炸弹的个位是 '+d); break;
-        }
-        case 'thermometer': {
-            const mid = (G.low + G.high) / 2;
-            const maxDist = (G.high - G.low) / 2 || 1;
-            const dist = Math.abs(G.bombNumber - mid);
-            const level = Math.max(1, Math.min(10, Math.round(10 - (dist / maxDist) * 9)));
-            if(aiIsUser(user)) aiBrain().thermo = { level:level, mid:mid, maxDist:maxDist, low:G.low, high:G.high };
-            dlog('SKILL', user.id+' 温度计结果：'+level+'/10（仅'+user.id+'可见）');
-            reveal('🌡️温度计','距离等级：'+level+'/10');
-            break;
         }
         case 'digitsum': {
             const s=String(G.bombNumber);
@@ -2906,22 +2993,6 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             messageDisplay.textContent='✂️ '+userName+'二分！范围→'+G.low+'~'+G.high;
             break;
         }
-        case 'rewind': {
-            if(user.prevLow===undefined || user.prevLow===null){ messageDisplay.textContent='⚠️ 你还没有猜过，无法回退'; delete user.cooldowns[skillId]; renderSkills(); return; }
-            // 钳制到合法范围且必含炸弹（期间炸弹可能被移动/洗牌过）
-            G.low=Math.max(G.minVal, Math.min(user.prevLow, G.bombNumber));
-            G.high=Math.min(G.maxVal, Math.max(user.prevHigh, G.bombNumber));
-            syncViews(); // 回退是公开范围变化：双方视图同步
-            updateRange(); messageDisplay.textContent='⏪ '+userName+'回退！范围→'+G.low+'~'+G.high; break;
-        }
-        case 'shuffle': {
-            G.bombNumber=Math.floor(Math.random()*(G.high-G.low+1))+G.low;
-            // 洗牌是秘密行动：只有 AI 自己洗牌时它才知道该废弃旧线索；
-            // 玩家洗牌 AI 毫不知情——它的线索悄悄失效，变成它的坟墓
-            if(user.id==='p2') aiWipeValueClues();
-            secretSkillMsg(user, '🔀 '+userName+'洗牌！炸弹位置重置');
-            break;
-        }
         case 'move': {
             const dir=Math.random()<0.5?1:-1;
             const old=G.bombNumber;
@@ -2933,18 +3004,6 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             // 玩家挪的 AI 毫不知情——它的旧线索全部悄悄失效，除非重新用提示类技能侦察
             if(G.bombNumber!==old && user.id==='p2') aiTrackBombShift(n=>Math.max(G.low,Math.min(G.high,n+dir*dist)), '移动'+(dir>0?'上':'下')+dist, false);
             secretSkillMsg(user, '🚚 '+userName+'移动！炸弹'+(G.bombNumber>old?'向上':(G.bombNumber<old?'向下':'(已到边界未动)'))+'移动');
-            break;
-        }
-        case 'wormhole': {
-            const old=G.bombNumber;
-            const newBomb = G.low + G.high - G.bombNumber;
-            G.bombNumber = Math.max(G.low, Math.min(G.high, newBomb));
-            // 虫洞也是秘密行动：只有 AI 自己穿的虫洞它才镜像候选集；
-            // 玩家穿的虫洞 AI 不知情——旧候选一个都不动，变成它的坟墓
-            if(G.bombNumber!==old && user.id==='p2') aiTrackBombShift(n=>G.low+G.high-n, '虫洞镜像', false);
-            secretSkillMsg(user, G.bombNumber===old
-                ? '🌀 '+userName+'虫洞！炸弹在正中央，位置没变'
-                : '🌀 '+userName+'虫洞！炸弹被对称迁移到了另一头');
             break;
         }
         case 'dormant': user.dormant = true; messageDisplay.textContent='💤 '+userName+'休眠！对手猜中不爆炸，你下次攻击+2伤'; break;
@@ -3006,7 +3065,6 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             break;
         }
         case 'pause': opponent.skipNext=true; messageDisplay.textContent='🕐 '+userName+'暂停！对手跳过下次行动'; break;
-        case 'slow': opponent.slow=2; messageDisplay.textContent='🐌 '+userName+'缓速！对手接下来2次猜错范围都不缩小'; break;
         case 'allin': {
             const emp = user.empower;
             if(emp) user.empower--;
@@ -3015,7 +3073,6 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             messageDisplay.textContent='🔥 '+userName+'孤注一掷！猜中倍率+'+(emp?6:3)+'（当前总倍率+'+user.allinMultiplier+'），错自伤1';
             break;
         }
-        case 'bet': user.bet=true; messageDisplay.textContent='🎯 '+userName+'押注！押对手猜错'; break;
         case 'fog': opponent.viewFog=2; messageDisplay.textContent='🌫️ '+userName+'迷雾！对手视野冻结：你接下来2次猜测和收缩他完全看不到'; break;
         case 'disguise': {
             if(!canUseDisguise()){
@@ -3036,7 +3093,6 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             messageDisplay.textContent='🎭 '+userName+'伪装！炸弹看起来变了';
             break;
         }
-        case 'lie': opponent.lieView=1; messageDisplay.textContent='🤥 '+userName+'说谎！对手下次看到的范围收缩将是假的'; break;
         case 'copy': {
             if(opponent.skills.length === 0){ messageDisplay.textContent='⚠️ 对手没有技能可复制'; delete user.cooldowns[skillId]; renderSkills(); return; }
             const availableSkills = opponent.skills.filter(s => s.id !== 'copy' && !['verifier','trap','blackhole','forbid'].includes(s.id));
@@ -3098,8 +3154,9 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
         }
         case 'numberslash': {
             user.slashActive = 3;
-            user.slashDraws = [];
-            messageDisplay.textContent='⚔️ '+userName+'数字斩启动！接下来3回合，每次猜数都会抽出1或2';
+            user.slashAtk = 0;
+            user.slashHeal = 0;
+            messageDisplay.textContent='⚔️ '+userName+'数字斩启动！接下来3回合，每次猜数随机积0.5攻击或0.5治疗';
             renderSlashPanel();
             break;
         }
@@ -3144,16 +3201,12 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             G.low = Math.max(G.minVal, G.low - expandAmount);
             G.high = Math.min(G.maxVal, G.high + expandAmount);
             G.tideShrinkNext = true;
-            syncViews(); // 潮汐是公开范围变化：双方视图同步
+            G.tideCaster = user.id;
+            // 潮汐只淹对手：只有对手的视图被扩大冲淡线索，自己仍盯着原来的窄范围
+            const ov = getView(opponent.id);
+            ov.low = G.low; ov.high = G.high;
             updateRange();
-            messageDisplay.textContent='🌊 '+userName+'潮汐！范围扩大'+expandAmount+'，下回合缩小';
-            break;
-        }
-        case 'timerewind': {
-            G.players.p1.hp = Math.min(G.players.p1.maxHP, G.roundStartHP.p1);
-            G.players.p2.hp = Math.min(G.players.p2.maxHP, G.roundStartHP.p2);
-            renderPlayers();
-            messageDisplay.textContent='🕰️ '+userName+'时间回溯！双方生命回到回合开始';
+            messageDisplay.textContent='🌊 '+userName+'潮汐！对手视野中的范围扩大'+expandAmount+'格，下回合缩回（自己不受影响）';
             break;
         }
         case 'refresh': {
@@ -3249,43 +3302,44 @@ function reduceCooldowns(playerId){
     if(p.scoutVision>0) p.scoutVision--; // 侦察视野随自己的回合消耗
     renderSkills();
 }
-// 数字斩结算：1多→每两个1对对手造成1伤害；2多→每两个2治疗自己1血；结算后技能才正式进冷却（可被刷新）
+// 数字斩结算：攻击多→每1点攻击对对手直接造成1伤害；治疗多→每1点治疗回复自己1血；结算后技能才正式进冷却（可被刷新）
 function resolveSlash(p){
-    const draws = p.slashDraws || [];
-    const c1 = draws.filter(d=>d===1).length, c2 = draws.filter(d=>d===2).length;
-    p.slashDraws = null;
+    const atk = p.slashAtk||0, heal = p.slashHeal||0;
+    p.slashAtk = 0; p.slashHeal = 0;
     p.cooldowns['numberslash'] = 3;
     const opp = getOpponentPlayer(p.id);
-    let msg = '⚔️ 数字斩结算 ['+draws.join(' ')+']：';
-    if(c1>c2){
-        const dmg = Math.floor(c1/2);
+    let msg = '⚔️ 数字斩结算（攻击'+atk+' / 治疗'+heal+'）：';
+    if(atk>heal){
+        const dmg = Math.round(atk);
         if(dmg>0){
             opp.hp -= dmg;
-            msg += '1更多，对'+(opp.name||'对手')+'造成'+dmg+'点伤害！';
+            msg += '攻击更多，对'+(opp.name||'对手')+'直接造成'+dmg+'点伤害！';
             if(opp.hp<=0 && opp.rebirth){ opp.hp=3; opp.rebirth=false; opp.skills=opp.skills.filter(s=>s.id!=='rebirth'); msg+=' 🕊️ 对手重生！以3血复活'; }
-        } else msg += '1更多但不足两个，无事发生';
-    } else if(c2>c1){
-        const heal = Math.floor(c2/2);
-        if(heal>0){ p.hp = Math.min(p.maxHP, p.hp+heal); msg += '2更多，回复'+heal+'点生命！'; }
-        else msg += '2更多但不足两个，无事发生';
-    } else msg += '1与2持平，无事发生';
+        } else msg += '攻击太少，无事发生';
+    } else if(heal>atk){
+        const h = Math.round(heal);
+        if(h>0){ p.hp = Math.min(p.maxHP, p.hp+h); msg += '治疗更多，回复'+h+'点生命！'; }
+        else msg += '治疗太少，无事发生';
+    } else msg += '攻击与治疗持平，无事发生';
     messageDisplay.textContent = msg;
     renderPlayers(); renderSlashPanel(); renderSkills();
     if(getPlayer('p1').hp<=0 || getPlayer('p2').hp<=0){ endGame(); return; }
     syncIfRemote();
 }
-// 数字斩面板：双方的抽签进度都公开可见
+// 数字斩面板：双方的积攒进度都公开可见
 function renderSlashPanel(){
     const el = $('slash-panel');
     if(!el) return;
     const parts = [];
-    ['p1','p2'].forEach(id=>{
-        const p = getPlayer(id);
-        if(p && p.slashActive>0){
-            const label = G.mode.includes('ai') ? (id==='p1'?'你':'AI') : (Privacy.isLocal() ? (p.name||id) : (id===getMyPlayer().id?'你':(p.name||'对手')));
-            parts.push('⚔️ '+label+'的数字斩 ['+(p.slashDraws||[]).join(' ')+'] 剩'+p.slashActive+'回合');
-        }
-    });
+    if(G.active){
+        ['p1','p2'].forEach(id=>{
+            const p = getPlayer(id);
+            if(p && p.slashActive>0){
+                const label = G.mode.includes('ai') ? (id==='p1'?'你':'AI') : (Privacy.isLocal() ? (p.name||id) : (id===getMyPlayer().id?'你':(p.name||'对手')));
+                parts.push('⚔️ '+label+'的数字斩 [攻'+(p.slashAtk||0)+'/疗'+(p.slashHeal||0)+'] 剩'+p.slashActive+'回合');
+            }
+        });
+    }
     if(parts.length){ el.textContent = parts.join(' ｜ '); el.classList.remove('hidden'); }
     else el.classList.add('hidden');
 }
@@ -3516,11 +3570,12 @@ function renderLives(container, hp, maxHP, color){
     }
 }
 function updateRange(){
-    const cur=getCurrentPlayer();
-    const v=getView(cur.id);
-    if(cur.blind){
+    // 范围显示永远基于"本地玩家自己的视角"：对手被致盲/迷雾只影响他自己，轮到对手行动时不挡你的屏幕
+    const me=getMyPlayer();
+    const v=getView(me.id);
+    if(me.blind){
         rangeDisplay.textContent='🙈 范围被遮蔽'+(G.lastFeedback?' · 上次提示：'+G.lastFeedback:'...');
-    } else if(cur.viewFog>0){
+    } else if(me.viewFog>0){
         rangeDisplay.textContent='范围：'+v.low+' - '+v.high+' 🌫️（视野被迷雾冻结）';
     } else {
         rangeDisplay.textContent='范围：'+v.low+' - '+v.high;
@@ -3532,6 +3587,12 @@ function updateInputDisplay(){
 }
 function updateTurnIndicator(){
     turnIndicator.classList.remove('turn-me','turn-opponent');
+    if(G.demo){ // 技能演示中：锁键盘，回合指示换成演示标题（观众只看不动手）
+        turnIndicator.textContent='🎬 演示中：'+G.demo.skillName;
+        setKeypadEnabled(false);
+        renderSkills();
+        return;
+    }
     rotateFor(G.currentPlayer);
     const cur=getCurrentPlayer(), me=getMyPlayer();
     if(Privacy.isLocal()){
@@ -3701,6 +3762,7 @@ function showSetup(){
     hideAll();
     setupOverlay.classList.remove('hidden');
     G.oppType = G.oppType || G.settings.oppType || 'ai';
+    if(G.oppType==='local') G.oppType='ai'; // 本地双人已下线：旧存档兜底切回AI
     G.aiLevel = Math.min(G.aiLevel || G.settings.aiLevel || 1, 4);
     opponentRow.querySelectorAll('.ai-level-btn').forEach(function(x){ x.classList.toggle('active', x.dataset.opp===G.oppType); });
     aiLevelRow.querySelectorAll('.ai-level-btn').forEach(function(x){ x.classList.toggle('active', parseInt(x.dataset.level)===G.aiLevel); });
@@ -3741,6 +3803,9 @@ function startTutorial(levelIndex) {
     G.tutorial = { levelData: levelData, aiScriptQueue: [], currentStepIndex: 0 };
     G.tutorialNextLevel = null;
     resetGameState();
+    // 教程体验可复现：固定玩家先手（随机先手若是AI会没人触发它的回合，得干等看门狗10秒）+固定炸弹
+    G.currentPlayer='p1';
+    if(levelData.bomb!==undefined){ G.bombNumber=levelData.bomb; syncViews(); }
     showBattleArea();
     startAiWatchdog(); // 必须在showBattleArea之后启动，否则被hideAll→clearAllTimers误杀
     G.aiAvatarUrl='https://yunapi.cn/api/sjecytx?r='+Date.now()+Math.floor(Math.random()*100000);
@@ -3825,7 +3890,7 @@ $('start-game-btn').addEventListener('click',function(){
     G.skillCount = parseInt(skillCountInput.value) || 0;
     G.skillCount = Math.max(0, Math.min(3, G.skillCount));
     G.isSkillMode = G.skillCount > 0;
-    G.mode = (G.oppType==='local' ? 'local' : 'ai') + (G.isSkillMode ? '-skill' : '-normal');
+    G.mode = 'ai' + (G.isSkillMode ? '-skill' : '-normal');
     // 记住本次设置，下次免填
     G.settings.minVal=G.minVal; G.settings.maxVal=G.maxVal; G.settings.hp=getPlayer('p1').maxHP;
     G.settings.skillCount=G.skillCount; G.settings.oppType=G.oppType; G.settings.aiLevel=G.aiLevel;
@@ -3935,6 +4000,7 @@ surrenderBtn.addEventListener('click',function(){
     syncIfRemote();
 });
 gameOverBtn.addEventListener('click',function(){
+    G.demo=null; // 退出技能演示
     if(G.mode.includes('remote')){ cleanupRemote(); }
     showMainMenu();
 });
@@ -4000,22 +4066,18 @@ function checkUrlRoom() {
 $('help-btn').addEventListener('click', function(){ $('help-overlay').classList.remove('hidden'); });
 // 技能详细示例：用途拆解 + 对局实例（图鉴里点"详细"展开）
 const SKILL_EXAMPLES = {
-    detect:'<b>用途：</b>开局第一信息技，免费把候选砍半。<br><b>例：</b>1-100探测得"偶数"，候选100→50，等于白猜一次还不挨炸。配合透视（个位）可快速锁到个位数候选。',
-    peek:'<b>用途：</b>拿炸弹个位，线索交集的核心件。<br><b>例：</b>炸弹42→个位2，候选剩2,12,…,92共10个；再叠数字和=6 → 只剩42。注意：已知个位后探测（奇偶）零信息。',
-    thermometer:'<b>用途：</b>范围类线索，告诉你离中点远近。<br><b>例：</b>范围1-100得8级→炸弹离50很近，候选集中40-60。范围一动就过期，必须先压缩范围再用。',
+    detect:'<b>用途：</b>开局第一信息技，直接报炸弹是几位数。<br><b>例：</b>1-100探测得"2位数"，候选砍掉1-9只剩10-99；范围1-50时得"1位数"→只剩1-9。和透视（个位）/预知（十位）取交集快速锁区。',
+    peek:'<b>用途：</b>拿炸弹个位，线索交集的核心件。<br><b>例：</b>炸弹42→个位2，候选剩2,12,…,92共10个；再叠数字和=6 → 只剩42。',
     verifier:'<b>用途：</b>终盘确认技，结果只有你知道。<br><b>例：</b>候选≤6时优先验证你最怀疑的那个数——中了直接确知，没中也能排除关键嫌疑点。AI拿到确认后会立刻围绕结果重算，同理你也是。',
     scout:'<b>用途：</b>使用完全保密，看对手冷却2回合。<br><b>例：</b>看到他二分/验证器冷却已好→他下回合可能锁区，你该挪弹或抢攻；都在冷却→放心叠爆发。',
     digitsum:'<b>用途：</b>拿各位数字之和，交集组合王。<br><b>例：</b>42→4+2=6。透视（个位2)∩数字和（6)→只剩42，两条线索从50个候选直接锁到1个。',
     precognition:'<b>用途：</b>拿十位数字。<br><b>例：</b>42→4；7→0。范围横跨多个十位时价值高；若范围已缩到21-29，十位恒为2=零信息，别浪费。',
     binary:'<b>用途：</b>最强缩圈，范围直接砍半保住炸弹那半。<br><b>例：</b>1-100炸弹42→1-50；赋能后连砍两刀→1-25。先二分再拿线索，线索不会因范围变化而过期。',
-    rewind:'<b>用途：</b>范围回到你上一次猜之前，猜后悔药。<br><b>例：</b>被对手潮汐/黑洞带进小范围赌博区，一按重开到自己舒适的位置。',
-    shuffle:'<b>用途：</b>掀桌：炸弹在当前范围重随机。<br><b>例：</b>对手连猜带缩快锁死了→洗牌作废他全部推理。代价：你自己的线索也一起作废。',
-    move:'<b>用途：</b>阴招之王：炸弹秘密±5格（赋能±10），对手毫不知情。<br><b>例：</b>对手刚探测完奇偶→你挪5格，奇偶可能翻转，他抱着过期线索自信猜错。',
+    move:'<b>用途：</b>阴招之王：炸弹秘密±5格（赋能±10），对手毫不知情。<br><b>例：</b>对手刚探测完位数→你挪5格，位数可能变化，他抱着过期线索自信猜错。',
     blackhole:'<b>用途：</b>稳健缩圈：选一点，范围两端各收2格。<br><b>例：</b>1-100选50→3-98。二分冷却时的替代缩圈手，积少成多。',
-    tide:'<b>用途：</b>反斩杀：范围临时扩5格，下轮自动缩回。<br><b>例：</b>范围只剩6、对手下回合可能命中→潮汐稀释到11，他的命中率立刻跳水，帮你渡过危险回合。',
-    wormhole:'<b>用途：</b>炸弹跳到范围对称位置。<br><b>例：</b>1-100里的42→59；中点不动。对手把范围锁在一边时，一发跳到另一头作废他的收敛。',
+    tide:'<b>用途：</b>反斩杀：只把对手的视野扩大5格（赋能10格），下回合退潮——你自己的视野和真实范围纹丝不动。<br><b>例：</b>范围只剩6、对手下回合可能命中→潮汐把他的视野稀释到11，他的命中率立刻跳水，你的收敛丝毫不受影响。',
     double:'<b>用途：</b>核心增伤：倍率+2，猜错不失效，可叠加。<br><b>例：</b>叠两次双倍，原本1伤害变×4。没事干的回合先存一层，给未来的斩杀存利息。',
-    rampage:'<b>用途：</b>总伤×2，乘算最后结算，永远放增伤链最后。<br><b>例：</b>（基础1+双倍2+孤注3）×2=12。顺序：倍率先相加，翻倍最后乘。',
+    rampage:'<b>用途：</b>总伤×2，乘算最后结算，可多次累乘，永远放增伤链最后。<br><b>例：</b>（基础1+双倍2+孤注3）×2=12。顺序：倍率先相加，翻倍最后乘。越早叠越赚。',
     pierce:'<b>用途：</b>本回合伤害无视护盾。<br><b>例：</b>对手叠2层盾，你的3伤全部直接扣血。只对护盾有效；对反射/重生要用连击。',
     lifesteal:'<b>用途：</b>猜中回血，可叠加，猜错不失效。<br><b>例：</b>用两次后猜中一次回2血。持久局滚雪球，残血反打核心。',
     anger:'<b>用途：</b>本轮每损失2血伤害+1，残血反杀件。<br><b>例：</b>已掉4血→伤害+2。编斩杀链时放在增伤件之前用，本回合就生效。',
@@ -4031,34 +4093,290 @@ const SKILL_EXAMPLES = {
     blind:'<b>用途：</b>对手下回合看不到范围，凭记忆乱猜。<br><b>例：</b>对手刚算完收敛路径→致盲让他变瞎子。联动：瞎子踩陷阱伤害+1，先致盲看他乱撞。',
     lock:'<b>用途：</b>随机封对手1个技能直到本轮炸弹爆炸。<br><b>例：</b>对手信息技多→封到验证器/二分血赚；他技能少时别浪费。',
     pause:'<b>用途：</b>对手跳过下回合=你连动两回合。<br><b>例：</b>终局抢先手：你先收敛到候选2，暂停他→你连猜两次直接收。对手爆发回合前用=废掉蓄势。',
-    slow:'<b>用途：</b>对手接下来2次猜错时真实范围都不缩——他的猜测零信息，纯纯白猜。<br><b>例：</b>范围只剩8时挂上：他猜错两次范围还是8格，你的收敛不受任何影响。',
     freeze:'<b>用途：</b>1回合内对手猜中也不炸。<br><b>例：</b>对手双倍+孤注一掷+翻倍全叠满→冰封一发，他的斩杀回合变哑炮，增益还得等下回合。',
     forbid:'<b>用途：</b>禁一个数，对手猜到=白费一回合。<br><b>例：</b>禁中点：人类十有八九猜中点，拦截率最高。AI会读你的习惯改埋四分位。',
-    bet:'<b>用途：</b>押对手下次猜错：他错你+1血，他中你-1血。<br><b>例：</b>范围还很大时对手命中率<5%，押注近乎白赚；范围小了千万别押。',
     fog:'<b>用途：</b>视野冻结2次：你接下来的2次猜测和范围收缩，对手的视图完全看不到——他还停在旧范围里。<br><b>例：</b>范围100-200：你猜150（你的视图→150-200），对手还是100-200；他猜125→他变成125-200，你已经150-200领先一步；雾散后双方同步。信息差就是节奏差。',
     disguise:'<b>用途：</b>炸弹伪装成另一个数：对手猜中假身不炸，还会暴露真身。<br><b>例：</b>残血被斩杀链锁定→伪装，他的必中变空炮；假身被踩后真身归位。',
-    lie:'<b>用途：</b>视图欺诈：对手下次猜错后，只有他看到的范围朝错误方向假缩（真实范围照常），可以假到不含炸弹。<br><b>例：</b>炸弹42，对手猜50→真实范围1-49，但他的视图显示51-100——他在幻影区再扑空一次，视图才跳回真相。专骗只看范围的人。',
     copy:'<b>用途：</b>随机偷学对手一个技能并立刻使用。<br><b>例：</b>对手有双倍/连击/反射→复制等于白用一次他的核心件；他技能池越深越值，空池时是废牌。',
     trap:'<b>用途：</b>埋一个数，对手猜到直接炸1伤。<br><b>例：</b>埋中点拦截率最高。联动：先致盲，瞎子踩雷伤害+1=2伤。',
     empower:'<b>用途：</b>下一个技能效果翻倍，顺序组合的灵魂。<br><b>例：</b>赋能+二分=连砍两刀；赋能+连击=5段破防；赋能+移动=±10格。永远放在要被强化的技能前面。',
     web:'<b>用途：</b>炸弹±3格变雷区，对手踩中受1伤。<br><b>例：</b>范围只剩10时，雷区覆盖7格≈70%拦截率。小范围防守利器。',
-    timerewind:'<b>用途：</b>双方血量回到本轮开始。<br><b>例：</b>对手爆发回合前用=白接一套连招；自己白挨打时按一下，时光倒流。',
     refresh:'<b>用途：</b>随机一个冷却中的技能立刻可用。<br><b>例：</b>双倍刚用完→刷新→本回合再叠一次双倍。配高价值技能=一回合两层爆发。',
     charge:'<b>用途：</b>所有技能冷却-1回合。<br><b>例：</b>越早放收益越大——首轮放等于每个技能都快一回合，残局放基本没感觉。',
     skip:'<b>用途：</b>主动跳过本回合（已架的盾/反射保留）。<br><b>例：</b>反射+跳过=经典诱攻；被冰封时跳过等冰化；对手休眠设伏时跳过让它白埋。',
     dice:'<b>用途：</b>随机一签：+3伤/-1伤/回血/自伤/无事。<br><b>例：</b>+3伤只在本回合有效——攻击回合用才不浪费；残血也可以赌一口回血。',
     gambler:'<b>用途：</b>抛硬币：50%对手-1血，50%自己-1血。<br><b>例：</b>期望为零的方差币——逆风落后时它是翻盘币，顺风领先时碰它=送翻盘。',
     swap:'<b>用途：</b>与对手交换全部技能，冷却随技能走。<br><b>例：</b>对手牌面明显比你强（他有连击+验证器你只有骰子）→一换局势反转。换前先在图上掂量两边牌价。',
-    numberslash:'<b>用途：</b>3回合每次猜数抽1或2，结算时1多→每两个1打对手1伤，2多→每两个2回你1血。<br><b>联动：</b>生效期间猜中炸弹额外多抽1签——配连击边斩杀边攒签，命中越多结算越狠。'
+    numberslash:'<b>用途：</b>3回合内每次猜数随机攒0.5攻击或0.5治疗；结算时攻击多→每点攻击直接打对手1伤，治疗多→每点治疗回自己1血。<br><b>联动：</b>生效期间猜中炸弹额外+0.5——配加速/连击边斩杀边攒点，命中越多结算越狠。炸弹爆炸立即终止不结算。'
 };
+// ========== 技能演示：打开一个对局，自动放技能，一步步展示它有什么用 ==========
+// 步骤类型：{say}解说 {use:技能id,pick:选数} 放技能 {guess:数字|'bomb',who:'p1'|'p2'} 猜数
+//          {setBomb:n} 锁定炸弹 {hp:[a,b]} 调血 {buff:{who,field,val}} 调状态 {t:ms} 本步时长
+const SKILL_DEMOS = {
+    detect:{ bomb:42, script:[
+        {use:'detect', t:2000},
+        {say:'📡 只有你能看到结果：炸弹是 2 位数——候选立刻砍掉 1-9，只剩 10-50', t:3000},
+        {guess:'bomb', say:'💥 跟着线索猜直接命中！信息技=不挨炸的免费缩圈', t:3800}]},
+    peek:{ bomb:37, script:[
+        {use:'peek', t:2000},
+        {say:'🔍 个位是 7：候选只剩 7、17、27、37、47 五个', t:2800},
+        {guess:'bomb', say:'💥 个位∩范围，候选直接打一折', t:3800}]},
+    verifier:{ bomb:33, script:[
+        {use:'verifier', pick:33, t:2400},
+        {say:'🎯 中了！结果只有你一个人知道——对手还以为你在盲猜', t:3000},
+        {guess:'bomb', say:'💥 确认之后直接收割', t:3800}]},
+    scout:{ bomb:25, p2skills:['double','digitsum'], script:[
+        {use:'scout', t:2000},
+        {say:'🕵️ 接下来 2 回合，对手每个技能的冷却都在你眼里（看对面技能栏）', t:3200},
+        {say:'冷却全透明=对手的进攻节奏任你读，而且侦察本身完全保密', t:3200}]},
+    digitsum:{ bomb:28, script:[
+        {use:'digitsum', t:2000},
+        {say:'➕ 各位相加：2+8=10。和其他线索取交集，威力翻倍', t:2800},
+        {guess:'bomb', say:'💥 单条线索缩圈，两条线索锁区', t:3800}]},
+    precognition:{ bomb:46, script:[
+        {use:'precognition', t:2000},
+        {say:'🔮 十位是 4：候选只剩 40-49 这十个数', t:2800},
+        {guess:'bomb', say:'💥 十位一锁，范围再大也只剩一小段', t:3800}]},
+    binary:{ bomb:37, script:[
+        {use:'binary', t:2000},
+        {say:'✂️ 范围直接砍半保住炸弹那半：1-50 → 26-50', t:2800},
+        {guess:'bomb', say:'💥 最强缩圈：先压缩再拿线索，线索更精准', t:3800}]},
+    blackhole:{ bomb:30, script:[
+        {use:'blackhole', pick:25, t:2400},
+        {say:'🕳️ 以 25 为心，范围两端各收 2 格：1-50 → 3-48', t:3000},
+        {guess:'bomb', say:'💥 二分冷却时的稳定缩圈手，积少成多', t:3800}]},
+    tide:{ min:1, max:100, bomb:60, script:[
+        {guess:50, say:'先正常猜，把范围缩到 51-100……', t:2800},
+        {guess:80, say:'再缩到 51-79——眼看要锁区了，对手压力很大？不，是你该防守了', t:2800},
+        {use:'tide', t:2000},
+        {say:'🌊 潮汐！只有对手的视野被灌成 46-84，你的视野仍是 51-79——他的命中率当场跳水', t:3600},
+        {guess:70, who:'p2', say:'对手在被稀释的视野里乱枪打鸟；下回合退潮，你的优势分毫不损', t:3200}]},
+    double:{ bomb:30, script:[
+        {use:'double', t:2000},
+        {say:'⚡ 倍率+2，猜错也不失效——没把握的回合先存着', t:2800},
+        {guess:'bomb', say:'💥 1+2=3 伤！存款到期，连本带利', t:3800}]},
+    rampage:{ bomb:30, script:[
+        {use:'rampage', t:2000},
+        {say:'💥 总伤×2，乘在最后结算；可以多次累乘，越早叠越赚', t:2800},
+        {guess:'bomb', say:'💥 1×2=2 伤。叠两次就是×4，别等确知炸弹才放', t:3800}]},
+    pierce:{ bomb:30, script:[
+        {buff:{who:'p2', field:'shield', val:1}, say:'对手架起了 1 层盾……', t:2400},
+        {use:'pierce', t:2000},
+        {say:'🗡️ 穿透：本回合伤害无视护盾', t:2400},
+        {guess:'bomb', say:'💥 盾成摆设，伤害全额扣血！', t:3800}]},
+    lifesteal:{ bomb:30, hp:[3,5], script:[
+        {use:'lifesteal', t:2000},
+        {say:'🩸 吸血挂上：猜中就回血，猜错不失效，可叠加', t:2800},
+        {guess:'bomb', say:'💥 命中！打掉对手 1 血，自己回 1 血（3→4）', t:3800}]},
+    anger:{ bomb:30, hp:[2,5], script:[
+        {use:'anger', t:2000},
+        {say:'😡 已掉 3 血 → 本轮伤害+1。血越少，刀越狠', t:2800},
+        {guess:'bomb', say:'💥 1+1=2 伤，残血反打的核心件', t:3800}]},
+    allin:{ bomb:30, script:[
+        {use:'allin', t:2000},
+        {say:'🔥 倍率+3！但猜错自伤 1——没把握千万别开', t:2800},
+        {guess:'bomb', say:'💥 1+3=4 伤，赌赢就是一发入魂', t:3800}]},
+    bomblet:{ bomb:30, script:[
+        {use:'bomblet', t:2000},
+        {say:'💣 子母弹：猜中额外+2 伤，可叠加，猜错不失效', t:2800},
+        {guess:'bomb', say:'💥 1+2=3 伤，又一笔到期存款', t:3800}]},
+    volley:{ bomb:30, maxhp:[5,6], script:[
+        {buff:{who:'p2', field:'shield', val:1}, say:'对手架了 1 层盾，普通攻击会被全挡……', t:2600},
+        {use:'volley', t:2000},
+        {say:'🔱 连击：伤害拆成 3 段逐段结算', t:2400},
+        {guess:'bomb', say:'💥 盾只挡得住第 1 段，后 2 段照穿！盾/反/重生局的唯一答案', t:4000}]},
+    dormant:{ bomb:30, script:[
+        {use:'dormant', t:2000},
+        {say:'💤 设伏完成：对手下次猜中不炸……', t:2600},
+        {guess:'bomb', who:'p2', say:'💤 对手的命中被休眠整个吞掉！你的下次攻击+2', t:3200},
+        {guess:'bomb', say:'💥 1+2=3 伤——埋伏连本带利收回来', t:3800}]},
+    shield:{ bomb:30, script:[
+        {use:'shield', t:2000},
+        {say:'🛡️ 1 层盾=挡 1 段伤害，可叠加', t:2600},
+        {guess:'bomb', who:'p2', say:'🛡️ 对手的命中被盾挡住，0 伤害！', t:3600}]},
+    reflect:{ bomb:30, script:[
+        {use:'reflect', t:2000},
+        {say:'🪞 反射架好：下一段打你的伤害原路弹回', t:2600},
+        {guess:'bomb', who:'p2', say:'🪞 对手吃掉了自己的 1 伤！爆发越高弹得越爽', t:3600}]},
+    heal:{ bomb:30, hp:[3,5], script:[
+        {use:'heal', say:'💊 立即回 1 血（3→4）。满血前用了不亏，死回合的免费存款', t:3200}]},
+    rebirth:{ bomb:30, hp:[1,5], script:[
+        {use:'rebirth', t:2000},
+        {say:'🕊️ 重生挂上：死亡时以 3 血复活一次（你只剩 1 血了……）', t:3000},
+        {guess:'bomb', who:'p2', say:'🕊️ 被击杀……但 3 血站了起来！等于白捡一条命', t:4000}]},
+    speed:{ bomb:30, script:[
+        {use:'speed', t:2000},
+        {say:'🏃 本回合猜错可再猜一次', t:2200},
+        {guess:20, say:'猜错……但回合没结束！', t:2800},
+        {guess:'bomb', say:'💥 续猜命中！终局候选≤2 时买加速=本回合必杀', t:3800}]},
+    blind:{ bomb:30, script:[
+        {use:'blind', t:2000},
+        {say:'🙈 对手下回合完全看不到范围，只能凭记忆乱猜', t:2800},
+        {guess:10, who:'p2', say:'对手盲猜 10——它根本不知道范围已经缩走了（联动：瞎子踩陷阱伤害+1）', t:3400}]},
+    lock:{ bomb:30, p2skills:['double','digitsum'], script:[
+        {use:'lock', say:'🚫 随机封掉对手一个技能直到本轮结束——它的爆发链当场断一节', t:3600}]},
+    pause:{ bomb:30, script:[
+        {use:'pause', t:2000},
+        {say:'🕐 对手跳过下回合=你连动两回合', t:2400},
+        {guess:10, say:'你猜完……还是你的回合！', t:2800},
+        {guess:'bomb', say:'💥 连动收割！终局抢先手、废掉对手蓄势回合的神器', t:3800}]},
+    freeze:{ bomb:30, script:[
+        {use:'freeze', t:2000},
+        {say:'❄️ 1 回合内，对手猜中也不炸', t:2400},
+        {guess:'bomb', who:'p2', say:'❄️ 命中被冰封吞掉——它的斩杀回合变哑炮', t:3600}]},
+    forbid:{ bomb:40, script:[
+        {use:'forbid', pick:25, say:'🚷 禁猜 25（中点）：对手猜到就白费一回合', t:2800},
+        {guess:25, who:'p2', say:'🚷 对手正好踩禁——这一回合白给！人类十有八九猜中点', t:3400}]},
+    fog:{ bomb:40, script:[
+        {use:'fog', t:2000},
+        {say:'🌫️ 你接下来的 2 次猜测和收缩，对手完全看不到', t:2800},
+        {guess:30, say:'你的视野缩到 31-50，对手的视野还停在 1-50——信息差就是节奏差', t:3200},
+        {guess:20, who:'p2', say:'对手拿着旧地图猜数，天然慢你一步；雾散后双方才同步', t:3200}]},
+    disguise:{ bomb:25, script:[
+        {use:'disguise', t:2000},
+        {say:'🎭 炸弹换了个假身——对手踩中假身不炸，还会暴露真身', t:3000},
+        {guess:'bomb', who:'p2', say:'🎭 对手踩中假身！真身归位，它白忙一回合', t:3600}]},
+    copy:{ bomb:30, p2skills:['double'], script:[
+        {use:'copy', t:2400},
+        {say:'📋 对手只有双倍 → 必偷双倍并立刻使用（当前倍率+2）', t:2800},
+        {guess:'bomb', say:'💥 用对手的刀砍对手：1+2=3 伤', t:3800}]},
+    trap:{ bomb:40, script:[
+        {use:'trap', pick:25, say:'🪤 在 25 埋雷（中点拦截率最高），埋雷不花回合', t:2800},
+        {guess:25, who:'p2', say:'💥 对手踩雷 -1 血！白赚的拦截', t:3600}]},
+    empower:{ bomb:30, maxhp:[5,6], script:[
+        {use:'empower', t:2000},
+        {say:'✨ 赋能挂上：下一个技能效果翻倍——永远放在要强化的技能前面', t:3000},
+        {use:'double', say:'⚡ 双倍被赋能：倍率+4 而不是+2！', t:2400},
+        {guess:'bomb', say:'💥 1+4=5 伤！顺序组合的灵魂', t:3800}]},
+    web:{ bomb:40, script:[
+        {use:'web', t:2000},
+        {say:'🕸️ 炸弹±3 全变雷区：37-43 踩中就炸', t:2800},
+        {guess:42, who:'p2', say:'💥 对手踩进雷区 -1 血！范围越小覆盖率越高', t:3600}]},
+    refresh:{ bomb:30, maxhp:[5,6], p1skills:['refresh','double'], script:[
+        {use:'double', say:'先用双倍（进冷却 2 回合）', t:2400},
+        {use:'refresh', say:'🔄 随机刷新一个冷却中的技能——只有双倍在冷却，必刷它', t:2800},
+        {use:'double', say:'⚡ 再叠一层！当前倍率+4', t:2400},
+        {guess:'bomb', say:'💥 1+4=5 伤，刷新=一回合两层爆发', t:3800}]},
+    charge:{ bomb:37, p1skills:['charge','binary'], script:[
+        {use:'binary', say:'先用二分（进冷却 4 回合）', t:2400},
+        {use:'charge', say:'⚡ 充能：所有技能冷却-1——越早放收益越大，首轮放等于每个技能都快一回合', t:3400},
+        {guess:'bomb', say:'💥 后勤技能不直接伤人，但让核心件转得更快', t:3800}]},
+    skip:{ bomb:30, script:[
+        {use:'skip', t:2000},
+        {say:'⏭️ 主动跳过本回合——已架的盾/反射都会保留', t:2800},
+        {guess:10, who:'p2', say:'对手行动完，轮次回到你手里。配反射=经典诱攻，被冰封时也能拖时间', t:3400}]},
+    dice:{ bomb:30, script:[
+        {use:'dice', say:'🎲 随机一签：+3伤/-1伤/回血/自伤/无事——+3伤只在本回合有效，攻击回合用才不浪费', t:3600},
+        {guess:'bomb', say:'💥 顺手一猜收工（抽到攻击签就是血赚）', t:3800}]},
+    gambler:{ bomb:30, script:[
+        {use:'gambler', say:'🪙 抛硬币：50% 对手 -1 血，50% 自己 -1 血。期望为零——只有逆风落后才值得开', t:3600}]},
+    swap:{ bomb:30, p2skills:['double','volley','verifier'], script:[
+        {use:'swap', t:2400},
+        {say:'🔀 全部技能互换！你手里的小牌换成对手的豪华阵容（冷却随技能走）', t:3200},
+        {use:'double', say:'⚡ 顺手用刚换来的双倍叠一层', t:2400},
+        {guess:'bomb', say:'💥 1+2=3 伤——换前掂量两边牌价，对手牌面明显更强时一换定局', t:3800}]},
+    numberslash:{ bomb:40, script:[
+        {use:'numberslash', t:2000},
+        {say:'⚔️ 接下来 3 回合，你的每次猜数随机攒 0.5 攻击或 0.5 治疗', t:3000},
+        {guess:10, say:'+0.5（攻/疗随机，看右上角面板）……', t:2800},
+        {guess:15, who:'p2', t:2600},
+        {guess:20, say:'继续攒……', t:2600},
+        {guess:25, who:'p2', t:2600},
+        {guess:30, say:'3 回合到，结算！', t:2800},
+        {say:'⚔️ 结算：攻击多→每点攻击直接打对手 1 伤；治疗多→每点治疗回自己 1 血。注意：炸弹爆炸会立即终止数字斩，不结算', t:4200}]}
+};
+function startSkillDemo(skillId){
+    const def = SKILL_DEMOS[skillId];
+    const sk = getSkillById(skillId);
+    if(!def || !sk) return;
+    G.mode='tutorial';
+    G.isSkillMode = true;
+    G.skillCount = 0;
+    G.minVal = def.min||1; G.maxVal = def.max||50;
+    getPlayer('p1').maxHP = def.maxhp?def.maxhp[0]:5; // maxhp=血条上限；hp=开场当前血量（演示残血场景用）
+    getPlayer('p2').maxHP = def.maxhp?def.maxhp[1]:5;
+    getPlayer('p1').name='你'; getPlayer('p2').name='演示AI';
+    getPlayer('p1').avatar='🙂'; getPlayer('p2').avatar='🤖';
+    getPlayer('p1').skills = (def.p1skills||[skillId]).map(getSkillById).filter(s=>s);
+    getPlayer('p2').skills = (def.p2skills||[]).map(getSkillById).filter(s=>s);
+    G.tutorial = { levelData:{ level:'演', name:sk.name, min:G.minVal, max:G.maxVal,
+        playerHP:getPlayer('p1').maxHP, aiHP:getPlayer('p2').maxHP,
+        playerSkills:[], aiSkills:[], aiScript:[], hint:'', goal:'', lesson:'' }, aiScriptQueue:[], currentStepIndex:0 };
+    G.tutorialNextLevel = null;
+    resetGameState(); // 注意：resetGameState会清G.demo，之后才能设置
+    showBattleArea();
+    startAiWatchdog();
+    G.aiAvatarUrl=null; G.aiAvatarOk=false;
+    G.bombNumber = def.bomb || 25; // 固定炸弹：演示可复现
+    G.currentPlayer = 'p1';
+    if(def.hp){ getPlayer('p1').hp=def.hp[0]; getPlayer('p2').hp=def.hp[1]; }
+    syncViews();
+    renderPlayers(); updateRange(); updateInputDisplay();
+    roomInfo.textContent = '🎬 技能演示：'+sk.name;
+    messageDisplay.textContent = '🎬 演示开始：'+sk.name+' —— '+sk.desc;
+    surrenderBtn.style.display='none';
+    rematchBtn.style.display='none';
+    gameOverBtn.style.display='block'; // 随时可退出（返回主菜单）
+    G.demo = { script: def.script.slice(), idx:0, skillName:sk.name };
+    setKeypadEnabled(false);
+    updateTurnIndicator();
+    showCheatToast('🎬 '+sk.name+'：'+sk.desc, 4200);
+    setTimeout(demoStep, 2200);
+}
+function demoStep(){
+    if(!G.demo || !G.active) return;
+    if(battleArea.style.display!=='flex'){ G.demo=null; return; } // 已退回菜单：终止演示
+    setKeypadEnabled(false);
+    const s = G.demo.script[G.demo.idx++];
+    if(!s){
+        const name = G.demo.skillName;
+        G.demo = null;
+        showCheatToast('🎬 演示结束：'+name+' 的用法就是这样——实战中灵活运用！', 5000);
+        messageDisplay.textContent='🎬 演示结束。点"返回主菜单"退出，或留在这局自由对局练练手';
+        G.processing = false;
+        updateTurnIndicator();
+        if(G.currentPlayer==='p2') setTimeout(aiTurn, 1200); // 演示若停在AI回合：接管过来变成自由对局
+        return;
+    }
+    const next = s.t || 2400;
+    if(s.say) showCheatToast(s.say, Math.min(next+600, 5200));
+    if(s.setBomb!==undefined) G.bombNumber = s.setBomb;
+    if(s.hp){ getPlayer('p1').hp=s.hp[0]; getPlayer('p2').hp=s.hp[1]; renderPlayers(); }
+    if(s.buff){ getPlayer(s.buff.who)[s.buff.field]=s.buff.val; renderPlayers(); }
+    if(s.use){
+        G.processing=false;
+        useSkill(s.use, s.who||'p1', true);
+        if(s.pick!==undefined){
+            setTimeout(function(){ // 选数类技能：自动填入并确认
+                if(numberPickerCallback){ numberSelectInput.value=s.pick; numberSelectConfirm.click(); }
+                G.processing=true;
+            }, 400);
+        } else {
+            G.processing=true;
+        }
+    } else if(s.guess!==undefined){
+        G.processing=false;
+        const n = s.guess==='bomb' ? G.bombNumber : s.guess;
+        processGuess(n, s.skillAttack||false, s.who||'p1');
+    }
+    setTimeout(demoStep, next);
+}
 $('codex-btn').addEventListener('click', function(){
     $('codex-list').innerHTML = ALL_SKILLS.map(function(s){
         return '<p style="margin:6px 0 0;">· <b>'+s.name+'</b>（'+(s.cooldown<0?'被动触发':'冷却'+s.cooldown+'回合')+'）：'+s.desc
-            + ' <span class="codex-more" data-sid="'+s.id+'">详细</span></p>'
+            + ' <span class="codex-more" data-sid="'+s.id+'">详细</span>'
+            + (SKILL_DEMOS[s.id] ? ' <span class="codex-demo" data-sid="'+s.id+'" style="color:#ffcc66;cursor:pointer;font-size:0.68rem;border:1px solid rgba(255,200,80,0.45);border-radius:8px;padding:1px 7px;margin-left:4px;white-space:nowrap;user-select:none;">▶演示</span>' : '')
+            + '</p>'
             + '<div class="codex-detail hidden" id="codex-'+s.id+'">'+(SKILL_EXAMPLES[s.id]||'暂无示例')+'</div>';
     }).join('');
     $('codex-list').querySelectorAll('.codex-more').forEach(function(el){
         el.addEventListener('click', function(){ $('codex-'+el.dataset.sid).classList.toggle('hidden'); });
+    });
+    $('codex-list').querySelectorAll('.codex-demo').forEach(function(el){
+        el.addEventListener('click', function(){
+            $('codex-overlay').classList.add('hidden');
+            startSkillDemo(el.dataset.sid);
+        });
     });
     $('codex-overlay').classList.remove('hidden');
 });
@@ -4113,6 +4431,7 @@ $('settings-clear-cache-btn').addEventListener('click', function(){
 applySettings();
 G.aiLevel = Math.min(G.settings.aiLevel || 1, 4);
 if(G.settings.oppType) G.oppType = G.settings.oppType;
+if(G.oppType==='local') G.oppType='ai'; // 本地双人已下线：旧存档兜底切回AI
 showMainMenu();
 checkUrlRoom();
 updateStatsDisplay();

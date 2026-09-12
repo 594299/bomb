@@ -11,13 +11,12 @@ const AI_TUNE = {
     staleThreshold: 2.5,// 情报污染检测（SPRT思想）：线索制导猜测累计期望命中到此值仍颗粒无收 → 情报已过期，全部废弃
     // 技能牌面价值表：选技评分（aiChooseSkill）与交换估值（aiPlanSkills第9段）共用同一张表
     skillTier: {
-        volley:9, double:8, rampage:8, detect:8, binary:8, verifier:8, digitsum:8,
+        volley:9, double:8, rampage:8, binary:8, verifier:8, digitsum:8,
         shield:7, reflect:7, heal:7, rebirth:7, allin:7, empower:7, pause:7, peek:7, precognition:7,
-        bomblet:6, forbid:6, trap:6, pierce:6, dormant:6, shuffle:6, speed:6, freeze:6, scout:6, numberslash:6,
-        blind:5, lock:5, disguise:5, web:5, anger:5, lifesteal:5, thermometer:5,
-        refresh:5, charge:5, move:5, tide:5, wormhole:5, blackhole:5,
-        slow:6, fog:6, lie:6, // 控制三兄弟加强后升值：缓速2次/迷雾3次/说谎进攻型
-        rewind:4, bet:4, copy:4, timerewind:4, swap:4,
+        bomblet:6, forbid:6, trap:6, pierce:6, dormant:6, speed:6, freeze:6, scout:6, numberslash:6, detect:6, fog:6,
+        blind:5, lock:5, disguise:5, web:5, anger:5, lifesteal:5,
+        refresh:5, charge:5, move:5, tide:5, blackhole:5,
+        copy:4, swap:4,
         dice:3, gambler:3, skip:4
     }
 };
@@ -42,11 +41,11 @@ function aiHandleContradiction(){
 // AI 大脑：只用公开信息 + 信息技能私有结果做推理（不偷看炸弹）
 function aiIsUser(u){ return u.id==='p2' && (G.mode.includes('ai') || G.mode==='tutorial'); }
 function aiBrain(){
-    if(!G.aiBrain) G.aiBrain={ parity:null, lastDigit:null, digitSum:null, tens:null, thermo:null, verified:{}, candSet:null, stash:null, soft:null };
+    if(!G.aiBrain) G.aiBrain={ parity:null, lastDigit:null, digitSum:null, tens:null, digits:null, thermo:null, verified:{}, candSet:null, stash:null, soft:null };
     return G.aiBrain;
 }
-function aiEmptySoft(){ return { lastDigit:null, tens:null, digitSum:null, parity:null }; }
-function aiEffectiveLevel(){ return G.mode==='tutorial' ? Math.min(G.aiLevel, 2) : G.aiLevel; }
+function aiEmptySoft(){ return { lastDigit:null, tens:null, digitSum:null, parity:null, digits:null }; }
+function aiEffectiveLevel(){ return G.mode==='tutorial' ? 2 : G.aiLevel; } // 教程AI恒为普通强度：教学表现与玩家的存档难度设置无关，关卡体验可复现
 function aiDigitSum(n){ let s=0; const st=String(n); for(const c of st) s+=+c; return s; }
 function aiMatchFeatureSet(n, feat){
     if(!feat) return true;
@@ -54,6 +53,7 @@ function aiMatchFeatureSet(n, feat){
     if(feat.tens!==null && Math.floor(n/10)%10!==feat.tens) return false;
     if(feat.digitSum!==null && aiDigitSum(n)!==feat.digitSum) return false;
     if(feat.parity!==null && n%2!==feat.parity) return false;
+    if(feat.digits!==undefined && feat.digits!==null && String(n).length!==feat.digits) return false;
     return true;
 }
 function aiOpponentModel(){
@@ -98,13 +98,14 @@ function aiObserveHumanGuess(guess, prevLow, prevHigh, newLow, newHigh){
         if(pool.indexOf(guess)>=0) m.softAligned++;
         else m.softBroken++;
     }
+    // （soft.digits 已并入 aiMatchFeatureSet，池子自动带上位数过滤）
     m.recent.push({ guess:guess, low:prevLow, high:prevHigh, pos:pos });
     if(m.recent.length>8) m.recent.shift();
 }
 function aiInferHumanBombPool(low, high){
     const b = G.aiBrain;
     const soft = (b && b.soft) ? b.soft : null;
-    const hasSoft = soft && (soft.lastDigit!==null || soft.tens!==null || soft.digitSum!==null || soft.parity!==null);
+    const hasSoft = soft && (soft.lastDigit!==null || soft.tens!==null || soft.digitSum!==null || soft.parity!==null || soft.digits!==null);
     if(!hasSoft) return null;
     const out = [];
     for(let n=low; n<=high; n++){
@@ -218,12 +219,12 @@ function aiCandidates(hardOnly){
     const b = G.aiBrain;
     if(!b) return null;
     // 线索签名：拿到新硬线索/候选集烘焙变化 → 污染计数清零（新情报重新获得信任）
-    const sig = [b.parity,b.lastDigit,b.digitSum,b.tens,b.thermo?b.thermo.level:'',b.candSet?b.candSet.length:''].join('|');
+    const sig = [b.parity,b.lastDigit,b.digitSum,b.tens,b.digits,b.thermo?b.thermo.level:'',b.candSet?b.candSet.length:''].join('|');
     if(b.clueSig!==sig){ b.clueSig=sig; b.staleScore=0; }
     const hasCandSet = b.candSet && b.candSet.length>0;
     const soft = (!hardOnly && b.soft) ? b.soft : null;
-    const hasSoft = soft && (soft.lastDigit!==null || soft.tens!==null || soft.digitSum!==null || soft.parity!==null);
-    const hasClue = hasCandSet || hasSoft || b.parity!==null || b.lastDigit!==null || b.digitSum!==null || b.tens!==null || b.thermo || Object.keys(b.verified).length>0;
+    const hasSoft = soft && (soft.lastDigit!==null || soft.tens!==null || soft.digitSum!==null || soft.parity!==null || soft.digits!==null);
+    const hasClue = hasCandSet || hasSoft || b.parity!==null || b.lastDigit!==null || b.digitSum!==null || b.tens!==null || b.digits!==null || b.thermo || Object.keys(b.verified).length>0;
     if(!hasClue) return null;
     const cands = [];
     for(let n=_aiRLo(); n<=_aiRHi(); n++){
@@ -232,6 +233,7 @@ function aiCandidates(hardOnly){
         if(b.lastDigit!==null && (n%10)!==b.lastDigit) continue;
         if(b.tens!==null && Math.floor(n/10)%10!==b.tens) continue;
         if(b.digitSum!==null){ let s=0; const str=String(n); for(const c of str) s+=+c; if(s!==b.digitSum) continue; }
+        if(b.digits!==null && String(n).length!==b.digits) continue; // 探测：炸弹是几位数
         if(b.thermo && b.thermo.low===_aiRLo() && b.thermo.high===_aiRHi()){ const d=Math.abs(n-b.thermo.mid); const lv=Math.max(1,Math.min(10,Math.round(10-(d/b.thermo.maxDist)*9))); if(lv!==b.thermo.level) continue; }
         if(b.verified[n]===false) continue;
         cands.push(n);
@@ -243,6 +245,7 @@ function aiCandidates(hardOnly){
             if(soft.tens!==null && Math.floor(n/10)%10!==soft.tens) return false;
             if(soft.digitSum!==null){ let s=0; const str=String(n); for(const c of str) s+=+c; if(s!==soft.digitSum) return false; }
             if(soft.parity!==null && n%2!==soft.parity) return false;
+            if(soft.digits!==null && String(n).length!==soft.digits) return false;
             return true;
         });
         if(fs.length>0) return fs;
@@ -259,22 +262,26 @@ function aiCandidates(hardOnly){
 function aiMinePatterns(guess){
     if(!G.mode.includes('ai')) return;
     const lvl = aiEffectiveLevel();
-    if(lvl<3) return; // 困难起才会读猜测流
+    if(lvl<2) return; // 普通起就会读猜测流（宁可被钓也要跟猜——钓我两轮最多猜偏，真线索不跟=白送）
     const b = G.aiBrain;
     if(!b) return;
     if(!b.soft) b.soft = aiEmptySoft();
     const s = b.soft;
     const seq = G.humanGuessSeq || [];
-    // 已确认的软线索被新猜测打破 → 当场作废
-    if(s.lastDigit!==null && guess%10!==s.lastDigit){ s.lastDigit=null; dlog('AI','软线索[个位]被打破，丢弃'); }
-    if(s.tens!==null && Math.floor(guess/10)%10!==s.tens){ s.tens=null; dlog('AI','软线索[十位]被打破，丢弃'); }
-    if(s.digitSum!==null && aiDigitSum(guess)!==s.digitSum){ s.digitSum=null; dlog('AI','软线索[数字和]被打破，丢弃'); }
-    if(s.parity!==null && guess%2!==s.parity){ s.parity=null; dlog('AI','软线索[奇偶]被打破，丢弃'); }
-    // 确认新软线索：连续N次猜中同一特征才采信（N按巧合率定）；确认=对手在线索驱动，威胁拉满
+    // 已确认的软线索被新猜测打破 → 当场作废；同一特征被骗过一次，下次要多1次一致性才再采信（适应性防钓，跨回合记忆）
+    G.aiSoftSkeptic = G.aiSoftSkeptic||{};
+    const broke = attr => { G.aiSoftSkeptic[attr]=(G.aiSoftSkeptic[attr]||0)+1; dlog('AI','软线索['+attr+']被打破，丢弃（该特征今后需多1次确认）'); };
+    if(s.lastDigit!==null && guess%10!==s.lastDigit){ s.lastDigit=null; broke('lastDigit'); }
+    if(s.tens!==null && Math.floor(guess/10)%10!==s.tens){ s.tens=null; broke('tens'); }
+    if(s.digitSum!==null && aiDigitSum(guess)!==s.digitSum){ s.digitSum=null; broke('digitSum'); }
+    if(s.parity!==null && guess%2!==s.parity){ s.parity=null; broke('parity'); }
+    if(s.digits!==null && String(guess).length!==s.digits){ s.digits=null; broke('digits'); }
+    // 确认新软线索：连续N次猜中同一特征才采信（N按巧合率定+被钓追加）；确认=对手在线索驱动，威胁拉满
     const confirm = (attr, val, need) => {
+        need += Math.min(1, G.aiSoftSkeptic[attr]||0); // 被钓过一次：确认门槛+1
         if(s[attr]!==null || seq.length<need) return;
         const tail = seq.slice(-need);
-        const f = attr==='lastDigit' ? (n=>n%10) : attr==='tens' ? (n=>Math.floor(n/10)%10) : attr==='digitSum' ? aiDigitSum : (n=>n%2);
+        const f = attr==='lastDigit' ? (n=>n%10) : attr==='tens' ? (n=>Math.floor(n/10)%10) : attr==='digitSum' ? aiDigitSum : attr==='digits' ? (n=>String(n).length) : (n=>n%2);
         if(!tail.every(n=>f(n)===val)) return;
         s[attr]=val;
         G.humanSuspicion=(G.humanSuspicion||0)+2;
@@ -282,8 +289,9 @@ function aiMinePatterns(guess){
     };
     confirm('lastDigit', guess%10, 2); // 连续2次同个位，巧合率~1%
     if(Math.floor(_aiRLo()/10)!==Math.floor(_aiRHi()/10)) confirm('tens', Math.floor(guess/10)%10, 2); // 范围横跨十位才有意义
-    if(lvl>=4){ // 大师才做弱信号模式
-        confirm('digitSum', aiDigitSum(guess), 3); // 数字和巧合率不低，要3次
+    if(String(_aiRLo()).length!==String(_aiRHi()).length) confirm('digits', String(guess).length, 2); // 范围横跨位数边界才有意义（读出对手的探测）
+    if(lvl>=3){ // 困难起做弱信号模式：不管是不是装糖，先跟了再说
+        confirm('digitSum', aiDigitSum(guess), 2); // 数字和连续2次一致就跟（装糖代价=最多被骗两轮，真线索不跟=整局白给）
         confirm('parity', guess%2, 3);       // 奇偶巧合率50%，要3次
     }
 }
@@ -299,7 +307,7 @@ function aiKnownBomb(){
 function aiWipeValueClues(){
     if(!G.aiBrain) return;
     const b = G.aiBrain;
-    G.aiBrain = { parity:null, lastDigit:null, digitSum:null, tens:null, thermo:null, verified:{}, candSet:null, stash:b.stash||null, soft:null }; // 洗牌/矛盾清空时软线索一起丢（炸弹已随机换位）
+    G.aiBrain = { parity:null, lastDigit:null, digitSum:null, tens:null, digits:null, thermo:null, verified:{}, candSet:null, stash:b.stash||null, soft:null }; // 移位/矛盾清空时软线索一起丢（炸弹已换位）
 }
 // 炸弹被 AI 已知的手段移位（自己挪的；或对手用公开播报的虫洞）——
 // AI 把已有线索烘焙成显式候选集并整体迁移到新位置，而不是清空记忆当瞎子
@@ -315,7 +323,7 @@ function aiTrackBombShift(mapFn, tag, isHumanMove){
         if(m>=G.minVal && m<=G.maxVal && !seen[m]){ seen[m]=1; out.push(m); }
     });
     if(out.length===0){ aiWipeValueClues(); return; } // 理论到不了这（移位钳制在范围内），兜底
-    G.aiBrain = { parity:null, lastDigit:null, digitSum:null, tens:null, thermo:null, verified:{}, candSet:out, stash:b.stash||null, soft:null }; // 自己挪的弹：软线索描述的是旧位置，丢弃后重新挖
+    G.aiBrain = { parity:null, lastDigit:null, digitSum:null, tens:null, digits:null, thermo:null, verified:{}, candSet:out, stash:b.stash||null, soft:null }; // 自己挪的弹：软线索描述的是旧位置，丢弃后重新挖
     dlog('AI', tag+'：候选集迁移 '+cands.length+'→'+out.length+(out.length<=8?' ['+out.join(',')+']':''));
     // 追踪成功且候选不多 → 按人格嘲讽一句（只暗示"我跟上了"，不泄露具体候选）
     if(isHumanMove && out.length<=8 && G.mode.includes('ai') && Math.random()<0.4){
@@ -327,12 +335,12 @@ function aiTrackBombShift(mapFn, tag, isHumanMove){
 function aiStashBrain(){
     const b = G.aiBrain;
     if(!b) return;
-    const hasClue = b.parity!==null || b.lastDigit!==null || b.digitSum!==null || b.tens!==null || b.thermo
+    const hasClue = b.parity!==null || b.lastDigit!==null || b.digitSum!==null || b.tens!==null || b.digits!==null || b.thermo
         || (b.candSet && b.candSet.length>0) || Object.keys(b.verified).length>0;
     const stash = hasClue
-        ? { parity:b.parity, lastDigit:b.lastDigit, digitSum:b.digitSum, tens:b.tens, thermo:b.thermo, verified:b.verified, candSet:b.candSet, soft:b.soft||null }
+        ? { parity:b.parity, lastDigit:b.lastDigit, digitSum:b.digitSum, tens:b.tens, digits:b.digits, thermo:b.thermo, verified:b.verified, candSet:b.candSet, soft:b.soft||null }
         : (b.stash || null);
-    G.aiBrain = { parity:null, lastDigit:null, digitSum:null, tens:null, thermo:null, verified:{}, candSet:null, stash:stash, soft:b.soft||null };
+    G.aiBrain = { parity:null, lastDigit:null, digitSum:null, tens:null, digits:null, thermo:null, verified:{}, candSet:null, stash:stash, soft:b.soft||null };
     if(stash) dlog('AI','对手伪装：真身线索已暂存，等识破后取回');
 }
 // 伪装被识破=真身归位：取回暂存的旧线索（它们描述的正是真身），立刻恢复全部推理
@@ -340,7 +348,7 @@ function aiRestoreBrain(){
     const b = G.aiBrain;
     if(!b || !b.stash){ aiWipeValueClues(); return; }
     const s = b.stash;
-    G.aiBrain = { parity:s.parity, lastDigit:s.lastDigit, digitSum:s.digitSum, tens:s.tens, thermo:s.thermo, verified:s.verified||{}, candSet:s.candSet||null, stash:null, soft:s.soft||null };
+    G.aiBrain = { parity:s.parity, lastDigit:s.lastDigit, digitSum:s.digitSum, tens:s.tens, digits:(s.digits!==undefined?s.digits:null), thermo:s.thermo, verified:s.verified||{}, candSet:s.candSet||null, stash:null, soft:s.soft||null };
     dlog('AI','伪装识破，取回暂存线索恢复推理');
 }
 
@@ -361,7 +369,7 @@ function aiWeightedCands(){
     const hard = aiCandidates(true);
     if(hard && hard.length===0) return hard; // 硬线索矛盾：交给调用方走清空重推
     const soft = (b && b.soft) ? b.soft : null;
-    const hasSoft = soft && (soft.lastDigit!==null || soft.tens!==null || soft.digitSum!==null || soft.parity!==null);
+    const hasSoft = soft && (soft.lastDigit!==null || soft.tens!==null || soft.digitSum!==null || soft.parity!==null || soft.digits!==null);
     if(!hard && !hasSoft) return null;
     let pool = hard;
     if(!pool){ pool = []; for(let n=_aiRLo(); n<=_aiRHi(); n++) pool.push(n); }
@@ -374,6 +382,7 @@ function aiWeightedCands(){
             if(soft.tens!==null && Math.floor(n/10)%10===soft.tens) w*=W;
             if(soft.digitSum!==null && aiDigitSum(n)===soft.digitSum) w*=W;
             if(soft.parity!==null && n%2===soft.parity) w*=W;
+            if(soft.digits!==null && String(n).length===soft.digits) w*=W;
         }
         if(w>1) boosted++;
         return { n:n, w:w };

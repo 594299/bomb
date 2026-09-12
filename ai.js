@@ -133,6 +133,7 @@ function aiGuess(token){
 }
 
 function tutorialAI(){
+    if(G.demo) return; // 技能演示：双方都由演示脚本驱动，AI不自主行动
     if(!G.active || G.processing || G.currentPlayer!=='p2') return;
     const t = G.tutorial;
     if(!t) return;

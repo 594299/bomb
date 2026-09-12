@@ -15,7 +15,7 @@ function aiChooseSkill(ai, human, options){
         if((owned.includes('double')||owned.includes('allin')) && ['rampage','volley','refresh','empower','speed','bomblet'].includes(s.id)) sc += 2;
         // 信息协同：已有信息技时优先验证器/二分
         if((owned.includes('detect')||owned.includes('peek')||owned.includes('digitsum')) && ['verifier','binary'].includes(s.id)) sc += 1.5;
-        if(owned.includes('peek') && s.id==='detect') sc -= 3; // 有透视再拿探测=白费一个格子
+        if((owned.includes('precognition')||owned.includes('peek')) && s.id==='detect') sc -= 1; // 探测只报位数，信息密度低于透视/预知，有它们时优先级靠后
         // 残血优先保命件
         if(ai.hp<=2 && ['heal','shield','reflect','rebirth'].includes(s.id)) sc += 2;
         // 反射+跳过连招协同：有反射才值得拿跳过
@@ -25,8 +25,8 @@ function aiChooseSkill(ai, human, options){
         if((human.shield>0||human.reflect>0||human.rebirth) && ['volley','pierce'].includes(s.id)) sc += 2;
         // 针对选技（counter-pick）：对手技能列表公开——他信息技多，挪弹三件套升值；他控制多，保险件升值
         const humanHas = id => human.skills.some(x=>x.id===id);
-        if(['detect','peek','digitsum','precognition','verifier','thermometer'].some(humanHas) && ['move','shuffle','wormhole','fog','tide'].includes(s.id)) sc += 2;
-        if(['pause','freeze','blind','lock','slow'].some(humanHas) && ['speed','dormant','rebirth'].includes(s.id)) sc += 1;
+        if(['detect','peek','digitsum','precognition','verifier'].some(humanHas) && ['move','fog','tide'].includes(s.id)) sc += 2;
+        if(['pause','freeze','blind','lock'].some(humanHas) && ['speed','dormant','rebirth'].includes(s.id)) sc += 1;
         if(human.skills.length>=5 && s.id==='copy') sc += 2; // 对手技能池越深，复制越值
         if(sc > bestSc){ bestSc = sc; best = s; }
     });
@@ -67,11 +67,10 @@ function aiEstimatePlannedCandCount(candCount, range, plan){
     const applyFactor = f => { out = Math.max(1, Math.min(range, Math.ceil(out * f))); };
     if(plan.includes('binary')) applyFactor(range<=4 ? 0.5 : 0.55);
     if(plan.includes('blackhole')) applyFactor(0.72);
-    if(plan.includes('detect')) applyFactor(0.58);
+    if(plan.includes('detect')) applyFactor(0.75); // 探测只报位数：过滤力弱于奇偶时代
     if(plan.includes('peek')) applyFactor(0.24);
     if(plan.includes('digitsum')) applyFactor(0.38);
     if(plan.includes('precognition')) applyFactor(0.34);
-    if(plan.includes('thermometer')) applyFactor(0.62);
     if(plan.includes('verifier') && out>1) out--;
     return Math.max(1, Math.min(range, out));
 }
@@ -323,7 +322,7 @@ function aiPlanSkills(ai, human){
     const inDanger = ai.hp<=2 || (humanArmed && humanCanHit && ai.hp<=4) || (humanCanHit && humanMaxDmg>=ai.hp && range<=12);
     if(inDanger){
         if(ai.hp<ai.maxHP && ready('heal')) push('heal');
-        if(ready('rebirth')) push('rebirth');
+        if(ready('rebirth') && !ai.rebirth) push('rebirth');
         if(ready('shield')) push('shield');
         if(lvl>=3 && ready('reflect')) push('reflect');
     }
@@ -347,8 +346,6 @@ function aiPlanSkills(ai, human){
     if(lvl>=3 && humanThreat>=2 && known===null && (!cands || candCount>5) && Math.random()<(lvl>=4?1:0.85)){
         // 移动是秘密的：对手不知道炸弹挪了窝，会继续抱着过期的线索自信地猜错——首选阴招
         if(ready('move')) push('move');
-        else if(ready('shuffle')) push('shuffle');
-        else if(ready('wormhole')) push('wormhole');
         if(lvl>=4 && ready('disguise')) push('disguise');
         if(ready('blind')) push('blind');       // 致盲：他这回合变瞎子，刚算的推理用不上
         if(lvl>=4 && ready('fog')) push('fog'); // 迷雾：反馈反转，他的范围判断被自己误导
@@ -364,10 +361,9 @@ function aiPlanSkills(ai, human){
         if(ready('blind')) push('blind');
     }
 
-    // 3) 范围压缩（先于信息技能：压缩后的范围更小，线索过滤更精准；
-    //    且温度计是范围类线索，若先拿线索再二分，线索会立刻过期——顺序必须压缩→信息）
+    // 3) 范围压缩（先于信息技能：压缩后的范围更小，线索过滤更精准）
     //    有信息技跟进时中等范围也值得二分：压缩+线索一套连招直接锁区
-    const infoFollow = ['detect','digitsum','peek','precognition','thermometer','verifier'].some(id=>ready(id));
+    const infoFollow = ['detect','digitsum','peek','precognition','verifier'].some(id=>ready(id));
     if(range>40 || (lvl>=4 && range>10) || (lvl>=3 && range>16 && infoFollow)){
         if(lvl>=3 && ready('empower') && ready('binary') && !plan.includes('empower')) push('empower'); // 赋能要在二分前面：赋能二分=连砍两刀
         if(ready('binary')) push('binary');
@@ -376,23 +372,21 @@ function aiPlanSkills(ai, human){
     // 小范围二分=直接收敛：范围2→1必中，范围3-4→砍半锁定
     if(lvl>=3 && ready('binary') && range>1 && range<=4 && !plan.includes('binary')) push('binary');
 
-    // 4) 信息战（核心）：压缩后立刻拿线索——信息技能结果写入 aiBrain，本回合猜数直接用
-    //    多条线索自动组合取交集：奇偶∩个位∩数字和∩首位∩温度计∩验证记录 → 候选集
+    // 4) 信息战（核心）：提示类技能拿到就用——哪怕被对面侦察到冷却，信息也是净赚；
+    //    线索不过期（炸弹挪不动了），早拿早享受交集过滤，攒着不用才是纯亏
     const b = G.aiBrain;
-    const clueCount = b ? ((b.parity!==null?1:0)+(b.lastDigit!==null?1:0)+(b.digitSum!==null?1:0)+(b.tens!==null?1:0)+(b.thermo?1:0)) : 0;
-    const anyInfoReady = ['detect','digitsum','peek','precognition','thermometer'].some(id=>ready(id));
-    // 提示类技能优先：只要候选还没收窄到斩杀线、且线索没拿满，就先拿信息再谈其他
-    // （按候选数 candCount 判断而非范围：已有线索时范围可能还很大但候选已很少，反之亦然）
+    const clueCount = b ? ((b.parity!==null?1:0)+(b.lastDigit!==null?1:0)+(b.digitSum!==null?1:0)+(b.tens!==null?1:0)+(b.digits!==null?1:0)+(b.thermo?1:0)) : 0;
+    const anyInfoReady = ['detect','digitsum','peek','precognition'].some(id=>ready(id));
+    // 只要范围还没锁死、线索没拿满，信息技能就直接放（不再等候选变少——候选少时线索同样是确认器）
+    // infoWanted=false 的另一层含义：信息技能全在冷却时，不得按"候选将减半"的幻影概率估算斩杀
     const infoWanted = anyInfoReady && range>2
-        && clueCount<(lvl>=4?4:(lvl===3?3:2))
-        && candCount>(lvl>=4?3:(lvl===3?6:10)); // 信息技能全在冷却时，不得按"候选将减半"的幻影概率估算斩杀
+        && clueCount<(lvl>=4?4:(lvl===3?3:2));
     if(infoWanted){
-        // 不互斥：大师一回合可同时拿 探测+透视+数字和，交集后候选常常只剩个位数
-        if(ready('detect') && !(b && b.lastDigit!==null)) push('detect'); // 已知个位=已知奇偶，探测零信息量不拿
-        if(lvl>=3 && ready('digitsum')) push('digitsum');
-        if(ready('peek')) push('peek');
-        if(lvl>=3 && ready('precognition')) push('precognition');
-        if(lvl>=3 && ready('thermometer')) push('thermometer');
+        // 不互斥：一回合可同时拿 探测+透视+数字和，交集后候选常常只剩个位数；已知的线索不重复拿
+        if(ready('detect') && !(b && b.digits!==null)) push('detect'); // 已知位数，探测零信息量不拿
+        if(ready('digitsum') && !(b && b.digitSum!==null)) push('digitsum');
+        if(ready('peek') && !(b && b.lastDigit!==null)) push('peek');
+        if(ready('precognition') && !(b && b.tens!==null)) push('precognition');
     }
     // 验证器：候选较少时验证“当前最值得怀疑”的数字——中了立刻确知，没中也能排除最优猜点
     if(ready('verifier') && candCount>1 && candCount<=(lvl>=4?14:(lvl>=3?6:3))) push('verifier');
@@ -412,8 +406,6 @@ function aiPlanSkills(ai, human){
     if(lvl>=3 && (oppHitProb>=0.2 || (humanCanHit && humanMaxDmg>=ai.hp && oppHitProb>=0.12) || range<=8+humanThreat*2)){
         if(known===null && (oppHitProb>=0.34 || (humanCanHit && humanMaxDmg>=ai.hp && oppHitProb>=0.2))){
             if(ready('move')) push('move');
-            else if(ready('shuffle')) push('shuffle');
-            else if(ready('wormhole')) push('wormhole');
         }
         if(ready('pause')) push('pause');
         if(lvl>=4 && ready('freeze')) push('freeze');
@@ -439,8 +431,14 @@ function aiPlanSkills(ai, human){
     const volleySegs = (humanDefensed && ready('volley')) ? (plan.includes('empower')?5:3) : 1;
     const effDmg = defLayers>0 ? Math.max(1,Math.round(estDmg/volleySegs))*Math.max(0,volleySegs-Math.min(defLayers,volleySegs)) : estDmg;
     const canLethal = effDmg >= human.hp + (human.rebirth?2:0);
+    // 读人成果（软线索）：没有硬线索时给斩杀估算一个保守口径——软候选按1.5倍计入（约6折信任），
+    // 体现"宁可被钓也要会跟注，但不下全部身家"；硬线索照旧全信
+    const softCands = (cands===null && lvl>=3) ? aiCandidates(false) : null;
     // 命中概率按“放完信息技能后候选数约减半”乐观估计
     let estCand = infoWanted ? Math.max(1, Math.floor(candCount/2)) : candCount;
+    if(!infoWanted && cands===null && softCands && softCands.length>0 && softCands.length<candCount){
+        estCand = Math.max(1, Math.ceil(softCands.length*1.5));
+    }
     // 计划里的小范围二分=直接收敛：范围2→1必中，范围3-4→砍半锁定，斩杀估算必须计入
     if(plan.includes('binary') && range<=4) estCand = Math.min(estCand, Math.max(1, Math.ceil(range/2)));
     const estHit = 1 / estCand;
@@ -479,15 +477,11 @@ function aiPlanSkills(ai, human){
             if(ready('web')) push('web');
             if(ready('blind') && Math.random()<0.5) push('blind');
             if(ready('fog') && Math.random()<0.4) push('fog');
-            if(ready('slow') && Math.random()<0.4) push('slow');
-            if(ready('rewind') && Math.random()<0.45) push('rewind');
         }
         // 掀桌只在自己没有线索优势时（否则作废的是自己的推理成果）；对手情报多时必掀
         // 移动优先：秘密挪窝，对手的过期线索会变成他的坟墓
         if((Math.random()<(lvl>=4?0.6:0.35) || humanThreat>=2) && (!cands || candCount>8)){
             if(ready('move')) push('move');
-            else if(ready('shuffle')) push('shuffle');
-            else if(ready('wormhole')) push('wormhole');
         }
     } else if(range<=12){
         if(ready('forbid')) push('forbid');
@@ -503,19 +497,13 @@ function aiPlanSkills(ai, human){
         if(ready('tide') && humanThreat>=1 && range<=24) push('tide');
         // 封锁：对手有信息/缩圈技能待命 → 随机封一个，拖慢他的推理节奏
         if(ready('lock') && humanThreat>=1 && human.skills.length>0 && !plan.includes('lock')) push('lock');
-        // 缓速：范围已小 → 对手猜错也不缩范围，拖住他的收敛速度
-        if(ready('slow') && range<=10 && !plan.includes('slow')) push('slow');
-        // 蛛网：范围越小雷区覆盖率越高，小范围防守利器（盲猜区±3全变雷）
-        if(ready('web') && range<=14 && !plan.includes('web')) push('web');
-        // 禁猜/陷阱：即使对手没逼近，小范围时埋在中点也有不错的拦截率
-        if(range<=8 && !plan.includes('forbid') && !plan.includes('trap')){
+        // 蛛网：范围越小雷区覆盖率越高，小范围防守利器（盲猜区±3全变雷）——但别等缩到个位数才埋，中小范围就铺
+        if(ready('web') && range<=18 && !plan.includes('web')) push('web');
+        // 禁猜/陷阱：即使对手没逼近，中小范围时埋在中点也有不错的拦截率
+        if(range<=12 && !plan.includes('forbid') && !plan.includes('trap')){
             if(ready('forbid')) push('forbid');
             else if(ready('trap')) push('trap');
         }
-        // 回退：被迫进入赌博区（范围小但没线索）→ 重开到自己上次猜之前，拒绝赌命
-        if(lvl>=4 && ready('rewind') && range<=6 && candCount>2 && ai.prevLow!==undefined && ai.prevLow!==null) push('rewind');
-        // 说谎（进攻型）：对手下条反馈必假、范围不动——他收敛越凶，这口假信息越毒
-        if(ready('lie') && (humanThreat>=2 || oppHitProb>=0.12) && Math.random()<0.6) push('lie');
         // 穿透：已叠了伤且对手有盾 → 独立补穿透，不绑死斩杀链
         if(ready('pierce') && human.shield>0 && !plan.includes('pierce')
             && (plan.includes('double')||plan.includes('allin')||plan.includes('rampage')||plan.includes('bomblet'))) push('pierce');
@@ -534,20 +522,20 @@ function aiPlanSkills(ai, human){
     // 7) 后勤续航
     if(ready('refresh') && ['double','allin','rampage','volley'].some(id=>ai.skills.some(s=>s.id===id)&&(ai.cooldowns[id]||0)>0)) push('refresh');
     if(ready('charge') && Object.keys(ai.cooldowns).some(k=>ai.cooldowns[k]>0) && Math.random()<0.6) push('charge');
-    if(ready('timerewind') && ai.hp<G.roundStartHP.p2 && human.hp>=G.roundStartHP.p1) push('timerewind'); // 回溯也会奶对手，对手没掉血才用
+    if(ready('rebirth') && !ai.rebirth) push('rebirth'); // 重生=免费保险：拿到就挂上，别等残血（挂了的不重复挂）
     if(lvl>=3 && ready('anger') && (ai.maxHP-ai.hp)>=4) push('anger');
 
-    // 7.5) 死回合埋伏笔：双倍/子母弹/吸血"猜错不失效"=永不过期的存款——
-    //      这回合没事干就提前叠一层，给未来的斩杀存利息（范围大时对手也懒得为它掀桌）
-    if(plan.length===0 && lvl>=2 && !ai.frozen && !human.dormant && range>12){ // 对手休眠设伏时增益会打进陷阱，不存款
+    // 7.5) 存款回合：双倍/子母弹/狂暴/吸血"猜错不失效"=本回合内不过期的存款——
+    //      翻倍可以多次累乘，越早叠越赚；炸弹已挪不动（洗牌/虫洞已删），叠了不怕被掀桌
+    if(!willing && lvl>=2 && !ai.frozen && !human.dormant){ // 对手休眠设伏时增益会打进陷阱，不存款
         if(ready('double')) push('double');
-        else if(lvl>=3 && ready('bomblet')) push('bomblet');
-        else if(lvl>=4 && ready('lifesteal')) push('lifesteal');
-        else if(ready('heal') && ai.hp<ai.maxHP) push('heal'); // 满血前治疗也是白赚的存款
+        if(ready('bomblet')) push('bomblet');
+        if(lvl>=3 && ready('rampage')) push('rampage'); // 翻倍多次累乘：没事干就叠，别等确知炸弹才放
+        if(lvl>=3 && ready('lifesteal') && ai.hp<ai.maxHP) push('lifesteal');
+        if(ready('heal') && ai.hp<ai.maxHP) push('heal'); // 满血前治疗也是白赚的存款
     }
 
     // 8) 博弈小注
-    if(ready('bet') && oppHitProb<0.1 && Math.random()<0.5) push('bet'); // 押对手猜错：他命中概率越低越值（不再拍range>20）
     if(ready('dice') && (willing || ai.hp<=Math.ceil(ai.maxHP/2)) && Math.random()<0.5) push('dice'); // +3伤配攻击回合才不浪费；残血赌回血
     if(ready('gambler') && G.aiBehind && human.hp>ai.hp && Math.random()<0.6) push('gambler'); // EV=0的方差币：逆风翻盘才开，顺风开赌=送翻盘
 
@@ -558,18 +546,17 @@ function aiPlanSkills(ai, human){
         const add = (id, score) => { if(score>=1.5 && ready(id) && !plan.includes(id)) ev.push([score, id]); };
         if(candCount>3 && !infoWanted){ // 信息技：候选还多时，一条线索≈把候选砍一个数量级
             add('binary', Math.log2(range));
-            add('detect', candCount>=8 ? 2.5 : 0);
+            add('detect', candCount>=8 ? 2.0 : 0);
             add('peek', candCount>=6 ? 2.2 : 0);
             add('digitsum', candCount>=6 ? 2.2 : 0);
             add('precognition', candCount>=6 ? 2.0 : 0);
-            add('thermometer', candCount>=10 ? 1.5 : 0);
         }
         // 控制技：对手下回合期望伤害越高越值
         add('pause', oppDmgExp>=0.5 ? oppDmgExp*4 : 0);
         add('freeze', lvl>=4 && oppDmgExp>=0.5 ? oppDmgExp*3 : 0);
         add('blind', oppHitProb>=0.2 ? 1.5 : 0);
-        add('slow', range<=10 && oppHitProb>=0.15 ? 1.6 : 0);
         add('numberslash', ai.slashActive>0 ? 0 : 2.0); // 数字斩：3回合≈1点期望收益，白捡的（生效中不重复用）
+        add('speed', ai.slashActive>0 && candCount<=6 ? 1.8 : 0); // 数字斩生效中：每多一次出手=多0.5攻/疗，买续猜加速积攒
         // 交换：对手技能池按牌面估价明显比我强才换（与选技共用同一张价值表）
         if(ready('swap')){
             const pool = pl => pl.skills.reduce((a,s)=>a+(AI_TUNE.skillTier[s.id]||5),0);
@@ -578,7 +565,7 @@ function aiPlanSkills(ai, human){
         // 防御技：残血时活着才有输出
         if(ai.hp<=3){ add('shield', oppDmgExp*3); add('heal', ai.hp<ai.maxHP ? 2 : 0); }
         // 秘密挪弹：对手威胁越实越值（零暴露成本，作废的是他的推理）
-        if(known===null && humanThreat>=2){ add('move', humanThreat*1.5); add('shuffle', humanThreat*1.2); }
+        if(known===null && humanThreat>=2){ add('move', humanThreat*1.5); }
         ev.sort((x,y)=>y[0]-x[0]);
         for(const e of ev){ if(plan.length>=maxSkills) break; push(e[1]); }
     }
@@ -675,7 +662,7 @@ function aiChooseGuess(ai){
             const fishRange = lvl>=4 ? 12 : 4;
             // 钓鱼的数学前提：手里有"私有信息优势"（信息技就绪）——把范围撑大，对手的裸猜命中率就一直趴在地板上，
             // 而自己靠线索收敛。没有信息优势时钓鱼=白白放慢自己的斩杀节奏，必须中点切割全速收敛抢先命中
-            const infoEdge = ['detect','digitsum','peek','precognition','thermometer'].some(id=>
+            const infoEdge = ['detect','digitsum','peek','precognition'].some(id=>
                 ai.skills.some(s=>s.id===id) && (ai.cooldowns[id]||0)<=0 && ai.lockedSkill!==id && ai.secondLockedSkill!==id);
             // 反制钓鱼：自己没有信息优势、但对手行为可疑（逼近答案）时，也贴边猜——
             // 中点切割会把共享范围喂给他收敛，宁可自己慢一点也不送这个信息
