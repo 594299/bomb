@@ -595,8 +595,65 @@
         const $ = id => document.getElementById(id);
 
         async function sha256(str){
-            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-            return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+            // crypto.subtle 仅在安全上下文(https/localhost/file)可用；http 环境下用纯JS实现兜底
+            if(window.crypto && crypto.subtle && crypto.subtle.digest){
+                const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+                return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+            }
+            return sha256Fallback(str);
+        }
+        // 纯JS SHA-256（兜底，不依赖安全上下文）
+        function sha256Fallback(ascii){
+            function rr(v,a){ return (v>>>a)|(v<<(32-a)); }
+            const maxWord = Math.pow(2,32);
+            let result = '';
+            const words = [];
+            const asciiBitLength = ascii.length*8;
+            let hash = sha256Fallback.h = sha256Fallback.h || [];
+            const k = sha256Fallback.k = sha256Fallback.k || [];
+            let primeCounter = k.length;
+            const isComposite = {};
+            for(let candidate=2; primeCounter<64; candidate++){
+                if(!isComposite[candidate]){
+                    for(let i=0; i<313; i+=candidate) isComposite[i]=candidate;
+                    hash[primeCounter]=(Math.pow(candidate,0.5)*maxWord)|0;
+                    k[primeCounter++]=(Math.pow(candidate,1/3)*maxWord)|0;
+                }
+            }
+            ascii += '\x80';
+            while(ascii.length%64-56) ascii += '\x00';
+            for(let i=0; i<ascii.length; i++){
+                const j = ascii.charCodeAt(i);
+                if(j>>8) return '';
+                words[i>>2] |= j << ((3-i)%4)*8;
+            }
+            words[words.length] = (asciiBitLength/maxWord)|0;
+            words[words.length] = asciiBitLength;
+            hash = hash.slice(0,8);
+            for(let j=0; j<words.length;){
+                const w = words.slice(j, j+=16);
+                const oldHash = hash.slice(0);
+                for(let i=0; i<64; i++){
+                    const w15 = w[i-15], w2 = w[i-2];
+                    const a = hash[0], e = hash[4];
+                    const temp1 = hash[7]
+                        + (rr(e,6)^rr(e,11)^rr(e,25))
+                        + ((e&hash[5])^((~e)&hash[6]))
+                        + k[i]
+                        + (w[i] = (i<16) ? w[i] : (w[i-16] + (rr(w15,7)^rr(w15,18)^(w15>>>3)) + w[i-7] + (rr(w2,17)^rr(w2,19)^(w2>>>10)))|0);
+                    const temp2 = (rr(a,2)^rr(a,13)^rr(a,22)) + ((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));
+                    hash = [(temp1+temp2)|0].concat(hash);
+                    hash[4] = (hash[4]+temp1)|0;
+                }
+                for(let i=0; i<8; i++) hash[i] = (hash[i]+oldHash[i])|0;
+            }
+            for(let i=0; i<8; i++){
+                for(let j=3; j+1; j--){
+                    const b = (hash[i]>>(j*8))&255;
+                    result += ((b<16)?'0':'') + b.toString(16);
+                }
+            }
+            return result;
         }
 
         function showToast(msg){
@@ -674,7 +731,7 @@
         });
 
         // ========== 密码验证 ==========
-        let ADMIN_PASSWORD_HASH = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'; // haododoya@163.com
+        let ADMIN_PASSWORD_HASH = '683d3f4730b6647ad6862eca965f7b6c692d243e60143c5a3b24f3cf8bea7a1c'; // haododoya@163.com
         let authed = false;
 
         // 从存储加载自定义密码哈希

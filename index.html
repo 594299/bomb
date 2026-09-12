@@ -84,6 +84,8 @@
         .highlight.active { border-color:var(--neon); box-shadow:0 0 12px rgba(0,240,255,0.3); }
         #info-area { display:flex; flex-direction:column; align-items:center; gap:3px; padding:2px 0; }
         #range-display { font-size:0.8rem; font-weight:700; color:var(--neon); background:rgba(0,240,255,0.08); padding:3px 14px; border-radius:15px; }
+        #tutorial-bomb-hint { font-size:0.72rem; font-weight:700; color:#ffcc66; background:rgba(255,200,80,0.1); border:1px dashed rgba(255,200,80,0.5); padding:2px 12px; border-radius:12px; }
+        #tutorial-bomb-hint.hidden { display:none; }
         #turn-indicator { font-size:0.75rem; font-weight:700; background:rgba(255,255,255,0.06); padding:3px 14px; border-radius:12px; }
         #turn-timer { font-size:0.62rem; color:#ffcc66; min-height:0.8rem; font-weight:700; }
         #turn-indicator.turn-me { color:var(--blue); border:1px solid var(--blue); }
@@ -112,16 +114,22 @@
         #pause-request-btn { padding:6px 12px; border:1px solid rgba(255,204,102,0.4); border-radius:15px; background:rgba(255,204,102,0.08); color:#ffcc66; font-size:0.65rem; font-weight:700; cursor:pointer; margin-top:4px; }
         #pause-request-btn:disabled { opacity:0.4; cursor:default; }
         #codex-battle-btn { padding:6px 12px; border:1px solid rgba(0,240,255,0.4); border-radius:15px; background:rgba(0,240,255,0.08); color:var(--neon); font-size:0.65rem; font-weight:700; cursor:pointer; margin-top:4px; }
-        /* 技能演示：中央技能大卡（开局）→ 键盘上方小卡（播放中） */
+        /* 技能演示：中央技能大卡（开局）→ 顶部小卡（播放中，不挡键盘不伪装成按钮） */
         #demo-card { position:fixed; left:50%; top:36%; transform:translate(-50%,-50%); z-index:1400; background:rgba(8,12,18,0.93); border:2px solid var(--neon); border-radius:16px; padding:18px 32px; text-align:center; pointer-events:none; transition:all 0.6s ease; box-shadow:0 0 30px rgba(0,240,255,0.25); }
         #demo-card.hidden { display:none; }
         #demo-card-icon { font-size:3.2rem; line-height:1.1; }
         #demo-card-name { font-size:1.25rem; font-weight:900; color:var(--neon); margin-top:4px; }
         #demo-card-desc { font-size:0.75rem; color:#cde; margin-top:6px; max-width:260px; line-height:1.5; }
-        #demo-card.dock { top:55%; padding:6px 16px; border-radius:10px; box-shadow:none; background:rgba(8,12,18,0.85); }
-        #demo-card.dock #demo-card-icon { font-size:1.3rem; display:inline; vertical-align:middle; }
-        #demo-card.dock #demo-card-name { font-size:0.8rem; display:inline; margin-left:6px; vertical-align:middle; }
+        #demo-card.dock { top:76px; padding:4px 14px; border-radius:10px; box-shadow:none; background:rgba(8,12,18,0.85); opacity:0.85; }
+        #demo-card.dock #demo-card-icon { font-size:1.1rem; display:inline; vertical-align:middle; }
+        #demo-card.dock #demo-card-name { font-size:0.72rem; display:inline; margin-left:6px; vertical-align:middle; }
         #demo-card.dock #demo-card-desc { display:none; }
+        /* 演示细节箭头：指向范围/技能栏/血条等教学要点 */
+        .demo-arrow { position:fixed; z-index:4900; font-size:1.5rem; pointer-events:none; transform:translateX(-50%); filter:drop-shadow(0 0 6px rgba(255,200,0,0.9)); animation:demoArrowBounce 0.7s ease-in-out infinite; }
+        @keyframes demoArrowBounce { 0%,100% { margin-top:0; } 50% { margin-top:-8px; } }
+        .demo-spotlight { outline:2px solid #ffcc66 !important; outline-offset:3px; border-radius:10px; box-shadow:0 0 18px rgba(255,200,80,0.55) !important; }
+        /* 演示期间技能按钮：可看不可点（真实点击由虚拟鼠标完成） */
+        .skill-btn.demo-locked { opacity:0.45; cursor:not-allowed; }
         #skills-bar { display:none; gap:4px; margin-top:4px; flex-wrap:wrap; justify-content:center; }
         .skill-btn { padding:4px 10px; border:1.5px solid rgba(255,255,255,0.3); border-radius:10px; background:rgba(255,255,255,0.05); color:#999; font-size:0.65rem; font-weight:700; cursor:pointer; min-height:32px; }
         .skill-btn.ready { border-color:var(--neon); color:var(--neon); background:rgba(0,240,255,0.08); box-shadow:0 0 8px rgba(0,240,255,0.2); }
@@ -548,6 +556,7 @@
         </div>
         <div id="info-area">
             <div id="range-display">范围：1 - 100</div>
+            <div id="tutorial-bomb-hint" class="hidden">💣 炸弹：?</div>
             <div id="turn-indicator">等待...</div>
             <div id="turn-timer"></div>
             <div id="message-display">游戏开始</div>
@@ -1356,7 +1365,7 @@ function notifyAvatarApproved(entry){
 }
 
 // ========== 头像选择 ==========
-const AVATAR_LIST = ['🙂','😎','🤠','🥷','👻','🤖','👾','🦊','🐱','🐶','🐼','🦁','🐯','🐸','🦄','🐙','🦉','🐲','🦖','🐳','🦋','🐝','🌙','⭐','🔥','💎','🎮','🎯','🎲','⚔️','🛡️','💀'];
+const AVATAR_LIST = ['🙂','😎','🤠','👺','👻','🤖','👾','🦊','🐱','🐶','🐼','🦁','🐯','🐸','🦄','🐙','🦉','🐲','🦖','🐳','🦋','🐝','🌙','⭐','🔥','💎','🎮','🎯','🎲','⚔️','🛡️','💀'];
 let selectedAvatar = null;
 function renderAvatarPicker(){
     const picker = $('avatar-picker');
@@ -1481,6 +1490,51 @@ function clickElement(el, cb){
 }
 function hideVCursor(){ if(vCursor) vCursor.style.display='none'; }
 
+// 演示专用"真实点击"：虚拟鼠标移动到位后，临时解除演示锁触发原生click，再恢复锁定
+// G.demoClick 标志：点击事件处理链凭它区分"演示脚本的点击"和"用户的点击"（后者一律拦截）
+function demoRealClick(el, cb){
+    if(!el){ if(cb) cb(); return; }
+    clickElement(el, function(){
+        const wasDisabled = el.disabled;
+        if(wasDisabled){ el.disabled=false; el.style.pointerEvents=''; el.style.opacity=''; }
+        G.demoClick = true;
+        try { el.click(); } finally { G.demoClick = false; }
+        if(wasDisabled){ el.disabled=true; el.style.pointerEvents='none'; el.style.opacity='0.25'; }
+        if(cb) cb();
+    });
+}
+
+// 演示细节箭头：指向某个界面细节（关键细节配高亮聚光灯），下一步自动消失
+let demoArrowEl = null, demoSpotEl = null;
+const DEMO_POINT_TARGETS = {
+    range:'#range-display', bomb:'#tutorial-bomb-hint', skills:'#skills-bar',
+    lives:'#opponent-lives', me:'#me-lives', input:'#input-display',
+    message:'#message-display', oppskills:'#opponent-skills-bar', keypad:'#keypad'
+};
+function pointAtDemo(key){
+    clearDemoPoint();
+    const sel = DEMO_POINT_TARGETS[key] || key;
+    const target = document.querySelector(sel);
+    if(!target) return;
+    if(!demoArrowEl){
+        demoArrowEl = document.createElement('div');
+        demoArrowEl.className = 'demo-arrow';
+        document.body.appendChild(demoArrowEl);
+    }
+    const r = target.getBoundingClientRect();
+    const targetAbove = (r.top + r.height/2) < window.innerHeight/2;
+    demoArrowEl.textContent = targetAbove ? '⬆️' : '⬇️';
+    demoArrowEl.style.left = (r.left + r.width/2) + 'px';
+    demoArrowEl.style.top = targetAbove ? (r.bottom + 4) + 'px' : (r.top - 34) + 'px';
+    demoArrowEl.style.display = 'block';
+    demoSpotEl = target;
+    target.classList.add('demo-spotlight');
+}
+function clearDemoPoint(){
+    if(demoArrowEl) demoArrowEl.style.display = 'none';
+    if(demoSpotEl){ demoSpotEl.classList.remove('demo-spotlight'); demoSpotEl = null; }
+}
+
 // ========== 战绩存储 ==========
 function loadStats() {
     try {
@@ -1509,6 +1563,8 @@ function saveSettings() {
     try { localStorage.setItem('bomb_settings', JSON.stringify(G.settings)); } catch(e) {}
 }
 G.settings = loadSettings();
+// 🥷(Unicode13) 在旧系统渲染为豆腐块，统一迁移为 👺
+if(G.settings.avatar === '🥷'){ G.settings.avatar = '👺'; saveSettings(); }
 function applyTheme(theme) {
     document.body.dataset.theme = theme || 'neon';
     document.querySelectorAll('#theme-row .ai-level-btn').forEach(function(b){
@@ -1873,6 +1929,7 @@ function showNumberPicker(title, min, max, onConfirm, onCancel){
     numberSelectInput.min = min;
     numberSelectInput.max = max;
     numberSelectInput.type = Privacy.isLocal() ? 'password' : 'number';
+    numberSelectInput.readOnly = !!G.demo; // 演示中：输入框只读，数字由虚拟鼠标填
     numberSelectOverlay.classList.remove('hidden');
     numberSelectOverlay.classList.add('active');
     setTimeout(()=>numberSelectInput.focus(), 100);
@@ -1884,6 +1941,7 @@ function hideNumberPicker(){
     numberPickerCancelCallback = null;
 }
 numberSelectConfirm.addEventListener('click', function(){
+    if(G.demo && !G.demoClick) return; // 演示中：选数由虚拟鼠标完成
     const min = parseInt(numberSelectInput.min);
     const max = parseInt(numberSelectInput.max);
     const val = parseInt(numberSelectInput.value);
@@ -1896,6 +1954,7 @@ numberSelectConfirm.addEventListener('click', function(){
     if(cb) cb(val);
 });
 numberSelectCancel.addEventListener('click', function(){
+    if(G.demo && !G.demoClick) return; // 演示中：禁止手动取消，防止打乱脚本
     const cancelCb = numberPickerCancelCallback;
     hideNumberPicker();
     if(cancelCb) cancelCb();
@@ -2504,6 +2563,7 @@ document.querySelectorAll('.chat-emoji').forEach(btn => {
 // ========== 快捷发言（嘲讽/狠话/夸AI/求饶/闲聊） ==========
 document.querySelectorAll('.qc-btn').forEach(function(btn){
     btn.addEventListener('click', function(){
+        if(G.demo) return; // 技能演示：快捷发言锁定（图鉴/返回主菜单除外，其它一律不响应）
         const cat = btn.dataset.qc;
         const lines = PLAYER_QUICK[cat];
         if(!lines || !lines.length) return;
@@ -2519,6 +2579,7 @@ document.querySelectorAll('.qc-btn').forEach(function(btn){
 // ========== 名称编辑 ==========
 let nameEditTarget = null;
 function openNameEditor(playerId) {
+    if (G.demo) return; // 演示中禁止改名
     if (!G.mode.includes('local') && !G.mode.includes('remote') && G.mode!=='tutorial') return;
     if (G.mode.includes('remote') && !G.isHost) return;
     nameEditTarget = playerId;
@@ -3575,6 +3636,7 @@ function switchTurn(){
 // ========== 技能使用 ==========
 function useSkill(skillId, playerId, ignoreChecks, copyDepth){
     if(!G.active||G.processing||G.paused){ dlog('SKILL','被守卫拦截 '+skillId+' active='+G.active+' processing='+G.processing+' paused='+G.paused); return; }
+    if(G.demo && !G.demoClick && !ignoreChecks){ showCheatToast('🎬 演示中——技能由虚拟鼠标操作，你看着就好', 1500); return; }
     copyDepth = copyDepth || 0;
     if(copyDepth > 3) return;
 
@@ -3941,14 +4003,25 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
         }
         case 'swap': {
             // 交换双方全部技能：冷却状态随技能一起易主（对面冷却中的换过来照样冷却）
+            // 封锁也随技能易主：谁换到被锁的技能，锁就落在谁身上
+            const lockIds = [user.lockedSkill, user.secondLockedSkill, opponent.lockedSkill, opponent.secondLockedSkill].filter(Boolean);
             const mySkills = user.skills, myCds = user.cooldowns;
             user.skills = opponent.skills; user.cooldowns = opponent.cooldowns;
             opponent.skills = mySkills; opponent.cooldowns = myCds;
             // 交换本身已易主到对面：带着3回合冷却（冷却继续走，不刷新）
             if(!opponent.cooldowns['swap'] || opponent.cooldowns['swap']<3) opponent.cooldowns['swap'] = 3;
-            // 封锁指向的技能可能已易主，清空避免锁空气
+            // 重新落锁：按交换后的技能归属转移封锁
             user.lockedSkill=null; user.secondLockedSkill=null; opponent.lockedSkill=null; opponent.secondLockedSkill=null;
-            messageDisplay.textContent='🔁 '+userName+'交换！双方技能全部互换（冷却随技能转移）';
+            lockIds.forEach(function(lid){
+                const owner = user.skills.some(s=>s.id===lid) ? user : (opponent.skills.some(s=>s.id===lid) ? opponent : null);
+                if(!owner) return; // 被锁技能已不在场上（极少见）
+                if(owner.lockedSkill===lid || owner.secondLockedSkill===lid) return; // 去重
+                if(!owner.lockedSkill) owner.lockedSkill = lid;
+                else if(!owner.secondLockedSkill) owner.secondLockedSkill = lid;
+            });
+            user.lock = !!(user.lockedSkill || user.secondLockedSkill);
+            opponent.lock = !!(opponent.lockedSkill || opponent.secondLockedSkill);
+            messageDisplay.textContent='🔁 '+userName+'交换！双方技能全部互换（冷却与封锁随技能转移）';
             break;
         }
         case 'numberslash': {
@@ -4170,6 +4243,7 @@ keypadButtons.forEach(function(btn){
     btn.addEventListener('click',function(){
         const val=btn.dataset.value;
         const action=btn.dataset.action;
+        if(G.demo && !G.demoClick) return; // 技能演示：键盘锁定，只有虚拟鼠标的点击生效
         if(!G.active||G.processing||!isMyTurn()) return;
         if(Privacy.isLocal()&&G.pendingSkillSelect) return;
         if(val!==undefined){
@@ -4338,6 +4412,16 @@ function updateRange(){
     } else {
         rangeDisplay.textContent='范围：'+v.low+' - '+v.high;
     }
+    // 教程/演示模式：直接亮出炸弹位置（纯教学辅助，其它模式永不显示）
+    const tbh=$('tutorial-bomb-hint');
+    if(tbh){
+        if(G.mode==='tutorial' && G.active && G.bombNumber!==undefined && G.bombNumber!==null){
+            tbh.textContent='💣 炸弹：'+G.bombNumber+'（教学可见）';
+            tbh.classList.remove('hidden');
+        } else {
+            tbh.classList.add('hidden');
+        }
+    }
 }
 function updateInputDisplay(){
     if(G.playerInput===''){ inputDisplay.textContent='等待输入'; inputDisplay.classList.add('empty'); }
@@ -4439,6 +4523,7 @@ function renderSkills(){
             if(canAct) btn.classList.add('ready');
         }
         btn.addEventListener('click',function(){ useSkill(skill.id); });
+        if(G.demo) btn.classList.add('demo-locked'); // 演示中：可看不可点（用户点击会被守卫拦截）
         skillsBar.appendChild(btn);
     });
     const myBuffs=getActiveBuffs(owner);
@@ -5090,13 +5175,12 @@ const SKILL_DEMOS = {
         {say:'个位是 7！候选只剩 7、17、27、37、47', t:3400},
         {say:'从 50 个缩到 5 个，命中率翻 10 倍', t:3200},
         {guess:'bomb', say:'💥 砰！五个里挑一个', t:4000}]},
-    verifier:{ bomb:33, script:[
-        {say:'🎯 验证：悄悄问系统"是不是这个数"', t:3200},
-        {say:'只有你知道答案，对手看不到', t:3000},
-        {use:'verifier', pick:33, t:2800},
-        {say:'悄悄问：炸弹是不是 33？', t:3000},
-        {say:'中了！答案只有你知道', t:2800},
-        {guess:'bomb', say:'💥 砰！直接去收网', t:4000}]},
+    verifier:{ min:32, max:33, bomb:32, script:[
+        {say:'🎯 验证器：悄悄问系统"这数是不是炸弹"', t:3200},
+        {say:'范围只剩两个数：32、33——验证一个，排除法锁答案', point:'range', t:3800},
+        {use:'verifier', pick:33, say:'先悄悄验证 33（结果只有你知道）', t:3400},
+        {guessVerified:{pick:33, other:32}, point:'keypad', t:4800},
+        {say:'范围越小，验证器越准：两个数时一验一个准', t:3600}]},
     scout:{ bomb:25, p2skills:['double','digitsum'], script:[
         {say:'🕵️ 侦察：偷看对手的技能和冷却', t:3200},
         {say:'知己知彼，提前防备它的大招', t:3000},
@@ -5120,15 +5204,15 @@ const SKILL_DEMOS = {
         {say:'✂️ 二分：直接砍掉一半范围', t:3000},
         {say:'最稳的缩圈技能，早用早赚', t:3000},
         {use:'binary', t:2600},
-        {say:'一刀两半！1-50 → 26-50', t:3200},
-        {say:'范围砍半，猜中率翻倍', t:2800},
+        {say:'一刀两半！1-50 → 26-50', point:'range', t:3200},
+        {say:'范围砍半，猜中率翻倍', point:'range', t:2800},
         {guess:'bomb', say:'💥 砰！砍得快，猜得准', t:4000}]},
     blackhole:{ bomb:30, script:[
         {say:'🕳️ 黑洞：选一个数，往中间吸掉几层', t:3400},
         {say:'选离炸弹远的数，安全缩圈不踩雷', t:3200},
         {use:'blackhole', pick:25, t:2800},
-        {say:'吸 25 → 1-50 变成 3-48', t:3000},
-        {say:'炸弹 30 没被吸到，安全！', t:2800},
+        {say:'吸 25 → 1-50 变成 3-48', point:'range', t:3000},
+        {say:'炸弹 30 没被吸到，安全！', point:'range', t:2800},
         {guess:'bomb', say:'💥 砰！慢慢缩也很稳', t:4000}]},
     tide:{ min:1, max:100, bomb:60, script:[
         {say:'🌊 潮汐：把对手的范围拉大（灌水）', t:3400},
@@ -5140,31 +5224,34 @@ const SKILL_DEMOS = {
         {say:'你还是 51~79，它比你大一圈', t:3200},
         {guess:70, who:'p2', say:'它在大海里瞎捞……下回合退潮', t:3600}]},
     double:{ bomb:30, script:[
-        {say:'⚡ 双倍：下一次猜中，伤害+2', t:3200},
-        {say:'可以叠加多层，存够了再爆发', t:3000},
-        {use:'double', t:2400},
-        {say:'存了一层 +2 伤害，等猜中时结算', t:3000},
-        {guess:'bomb', say:'💥 基础1 + 双倍2 = 3 伤！', t:4200}]},
+        {say:'⚡ 双倍：下一次猜中，伤害×2', t:3200},
+        {say:'重点是：倍率能叠加！用几次乘几次', t:3200},
+        {use:'double', say:'第一层：倍率 ×2', t:2800},
+        {refreshCd:true, say:'🔄（演示特权：刷新冷却，马上再点一次）', t:2200},
+        {use:'double', say:'⚡ 再点一次！倍率 2+2 = ×4', point:'skills', t:3000},
+        {say:'看状态栏"生效中"：⚡×4——叠了两层', point:'skills', t:3200},
+        {guess:'bomb', say:'💥 1 × 4 = 4 伤！', t:4200}]},
     rampage:{ bomb:30, script:[
-        {say:'💥 狂暴：总伤害 ×2', t:2800},
-        {say:'可以叠多层，越叠越狠', t:2800},
-        {use:'rampage', t:2400},
-        {say:'伤害倍率 ×2！', t:2600},
-        {say:'再叠一层就是 ×4，越早叠越赚', t:3000},
-        {guess:'bomb', say:'💥 1×2 = 2 伤！', t:4000}]},
+        {say:'💥 翻倍：下一次猜中，总伤害 ×2', t:3000},
+        {say:'它能累乘！×2 再 ×2 就是 ×4', t:3000},
+        {use:'rampage', say:'第一层 ×2 就位', t:2800},
+        {refreshCd:true, say:'🔄（演示特权：刷新冷却，马上再点一次）', t:2200},
+        {use:'rampage', say:'💥 再点一次！×2 ×2 = ×4', point:'skills', t:3000},
+        {say:'看状态栏"生效中"：💥×4——叠了两层', point:'skills', t:3200},
+        {guess:'bomb', say:'💥 1×4 = 4 伤！叠越多炸越狠', t:4200}]},
     pierce:{ bomb:30, script:[
         {say:'🗡️ 穿透：无视对手的护盾', t:3000},
         {say:'对面爱架盾？用这个治它', t:2800},
-        {buff:{who:'p2', field:'shield', val:1}, say:'它架了 1 层盾，普通攻击会被挡', t:3400},
+        {buff:{who:'p2', field:'shield', val:1}, say:'它架了 1 层盾，普通攻击会被挡', point:'oppskills', t:3400},
         {use:'pierce', t:2400},
-        {say:'🗡️ 穿透生效：盾等于空气', t:2800},
+        {say:'🗡️ 穿透生效：盾等于空气', point:'oppskills', t:2800},
         {guess:'bomb', say:'💥 砰！盾白架了，照打不误', t:4200}]},
     lifesteal:{ bomb:30, hp:[3,5], script:[
         {say:'🩸 吸血：猜中敌人时，自己回等量血', t:3400},
         {say:'残血时用，打人又回血', t:2800},
         {use:'lifesteal', t:2400},
-        {say:'挂上吸血：下次猜中就回血', t:2800},
-        {guess:'bomb', say:'💥 打它 1 血，自己回 1 血！', t:4200}]},
+        {say:'挂上吸血：下次猜中就回血', point:'skills', t:2800},
+        {guess:'bomb', say:'💥 打它 1 血，自己回 1 血！', point:'me', t:4200}]},
     anger:{ bomb:30, hp:[2,5], script:[
         {say:'💢 愤怒：已损失的血量 = 额外伤害', t:3400},
         {say:'血越少，攻击力越高', t:2800},
@@ -5186,10 +5273,10 @@ const SKILL_DEMOS = {
     volley:{ bomb:30, maxhp:[5,6], script:[
         {say:'🔱 连击：把一次伤害拆成 3 段', t:3200},
         {say:'护盾/反弹每次只挡一段，拆段就能破防', t:3400},
-        {buff:{who:'p2', field:'shield', val:1}, say:'它架了盾，普通攻击全被挡……', t:3400},
+        {buff:{who:'p2', field:'shield', val:1}, say:'它架了盾，普通攻击全被挡……', point:'oppskills', t:3400},
         {use:'volley', t:2400},
-        {say:'🔱 连击：一锤拆成三锤', t:2800},
-        {guess:'bomb', say:'💥 盾挡第1锤，后2锤照打！共2伤', t:4400}]},
+        {say:'🔱 连击：一锤拆成三锤', point:'skills', t:2800},
+        {guess:'bomb', say:'💥 盾挡第1锤，后2锤照打！共2伤', point:'lives', t:4400}]},
     dormant:{ bomb:30, script:[
         {say:'💤 休眠：对手猜中也不炸，还能攒伤害', t:3400},
         {say:'它炸不了你，你下次猜中还+2伤', t:3200},
@@ -5201,8 +5288,8 @@ const SKILL_DEMOS = {
         {say:'🛡️ 护盾：挡住 1 次伤害', t:2800},
         {say:'可以叠多层，保命神器', t:2800},
         {use:'shield', t:2400},
-        {say:'架了 1 层盾', t:2400},
-        {guess:'bomb', who:'p2', say:'🛡️ 挡住了！0 伤害', t:3800}]},
+        {say:'架了 1 层盾', point:'skills', t:2400},
+        {guess:'bomb', who:'p2', say:'🛡️ 挡住了！0 伤害', point:'me', t:3800}]},
     reflect:{ bomb:30, script:[
         {say:'↩️ 反射：把受到的伤害弹回去', t:3000},
         {say:'对手打你多少，它自己吃多少', t:3000},
@@ -5385,6 +5472,7 @@ function startSkillDemo(skillId){
     dc.classList.remove('hidden','dock');
     setTimeout(function(){ if(G.demo) dc.classList.add('dock'); }, 3000);
     G.demo = { script: def.script.slice(), idx:0, skillName:sk.name };
+    $('quick-chat-bar').style.display='flex'; // 演示布局与真实对战保持一致（按钮会被演示锁拦截）
     setKeypadEnabled(false);
     updateTurnIndicator();
     showCheatToast('🎬 看好了——'+sk.name+'！', 2800);
@@ -5392,14 +5480,15 @@ function startSkillDemo(skillId){
 }
 function demoStep(){
     if(!G.demo || !G.active) return;
-    if(battleArea.style.display!=='flex'){ G.demo=null; $('demo-card').classList.add('hidden'); hideVCursor(); return; }
+    if(battleArea.style.display!=='flex'){ G.demo=null; $('demo-card').classList.add('hidden'); hideVCursor(); clearDemoPoint(); return; }
     setKeypadEnabled(false);
+    clearDemoPoint(); // 上一步的箭头/聚光灯收起
     const s = G.demo.script[G.demo.idx++];
     if(!s){
         const name = G.demo.skillName;
         G.demo = null;
         $('demo-card').classList.add('hidden');
-        hideVCursor();
+        hideVCursor(); clearDemoPoint();
         showCheatToast('🎬 演示结束！'+name+' 就是这么用的', 5000);
         messageDisplay.textContent='🎬 演示结束。点"返回主菜单"退出，或留在这局自由对局练练手';
         G.processing = false;
@@ -5409,68 +5498,79 @@ function demoStep(){
     }
     const next = s.t || 2400;
     if(s.say) showCheatToast(s.say, Math.min(next+600, 5200));
-    if(s.setBomb!==undefined) G.bombNumber = s.setBomb;
+    if(s.point) setTimeout(function(){ if(G.demo) pointAtDemo(s.point); }, 400); // 箭头指向细节
+    if(s.setBomb!==undefined){ G.bombNumber = s.setBomb; updateRange(); }
     if(s.hp){ getPlayer('p1').hp=s.hp[0]; getPlayer('p2').hp=s.hp[1]; renderPlayers(); }
     if(s.buff){ getPlayer(s.buff.who)[s.buff.field]=s.buff.val; renderPlayers(); }
+    if(s.refreshCd){ // 演示专用：刷新冷却，让叠加类技能能连点（教学"可以叠加"）
+        getPlayer(s.who||'p1').cooldowns = {};
+        renderSkills();
+    }
 
     const NUMBER_SKILLS = ['verifier','trap','blackhole','forbid'];
 
     if(s.use){
-        G.processing=false;
-        // 找到技能按钮，用虚拟鼠标点击
-        const skillBtns = skillsBar.querySelectorAll('.skill-btn');
-        let targetBtn = null;
-        const sk = getSkillById(s.use);
-        for(const b of skillBtns){
-            if(b.textContent.includes(sk.name)){ targetBtn = b; break; }
-        }
-        if(targetBtn){
-            clickElement(targetBtn, function(){
-                targetBtn.click(); // 虚拟鼠标点击后触发真实点击
-                if(NUMBER_SKILLS.includes(s.use) && s.pick!==undefined){
-                    // 选数类技能：等待浮层弹出，虚拟鼠标操作
+        const who = s.who||'p1';
+        if(who!=='p1'){ // AI侧没有可点按钮，直接执行
+            useSkill(s.use, who, true);
+            G.processing=true;
+        } else {
+            G.processing=false;
+            // 找到技能按钮，虚拟鼠标"真实点击"（走与实战完全相同的技能链路）
+            const sk = getSkillById(s.use);
+            let targetBtn = null;
+            skillsBar.querySelectorAll('.skill-btn').forEach(function(b){
+                if(b.textContent.includes(sk.name)) targetBtn = b;
+            });
+            if(targetBtn){
+                demoRealClick(targetBtn, function(){
+                    if(NUMBER_SKILLS.includes(s.use) && s.pick!==undefined){
+                        // 选数类技能：等浮层弹出，虚拟鼠标填数并真实点击确定
+                        setTimeout(function(){
+                            if(numberPickerCallback){
+                                numberSelectInput.value = s.pick;
+                                demoRealClick(numberSelectConfirm, function(){ G.processing=true; });
+                            } else { G.processing=true; }
+                        }, 700);
+                    } else { G.processing=true; }
+                });
+            } else {
+                // 找不到按钮（技能已用完等），直接调用兜底
+                useSkill(s.use, 'p1', true);
+                if(s.pick!==undefined){
                     setTimeout(function(){
                         if(numberPickerCallback){
-                            numberSelectInput.value = s.pick;
-                            // 虚拟鼠标移动到确定按钮并点击
-                            clickElement(numberSelectConfirm, function(){
-                                numberSelectConfirm.click();
-                                G.processing=true;
-                            });
-                        } else { G.processing=true; }
-                    }, 700);
-                } else {
-                    G.processing=true;
-                }
-            });
-        } else {
-            // 找不到按钮（技能已用完等），直接调用
-            useSkill(s.use, s.who||'p1', true);
-            if(s.pick!==undefined){
-                setTimeout(function(){
-                    if(numberPickerCallback){ numberSelectInput.value=s.pick; numberSelectConfirm.click(); }
-                    G.processing=true;
-                }, 400);
-            } else { G.processing=true; }
+                            numberSelectInput.value=s.pick;
+                            G.demoClick=true; try{ numberSelectConfirm.click(); } finally{ G.demoClick=false; }
+                        }
+                        G.processing=true;
+                    }, 400);
+                } else { G.processing=true; }
+            }
         }
-    } else if(s.guess!==undefined){
+    } else if(s.guess!==undefined || s.guessVerified){
+        const who = s.who||'p1';
+        let n;
+        if(s.guessVerified){ // 验证器分支教学：中了就猜它，没中就猜另一个（排除法）
+            const hit = G.bombNumber===s.guessVerified.pick;
+            n = hit ? s.guessVerified.pick : s.guessVerified.other;
+            showCheatToast(hit ? ('✅ 验证中了！炸弹就是 '+n+'，直接收网') : ('❌ '+s.guessVerified.pick+' 没中！排除它，炸弹必是 '+n), Math.min(next+600, 5200));
+        } else {
+            n = s.guess==='bomb' ? G.bombNumber : s.guess;
+        }
         G.processing=false;
-        const n = s.guess==='bomb' ? G.bombNumber : s.guess;
         const digits = String(n).split('');
-        // 依次点击数字键，再点确定
+        // 依次真实点击数字键，再真实点击确定（玩家侧全程走实战链路）
         function clickDigit(i){
             if(i >= digits.length){
                 const confirmBtn = document.querySelector('#keypad .key-btn[data-action="confirm"]');
-                clickElement(confirmBtn, function(){
-                    processGuess(n, s.skillAttack||false, s.who||'p1');
-                });
+                if(who==='p1') demoRealClick(confirmBtn);
+                else clickElement(confirmBtn, function(){ processGuess(n, false, who); }); // AI侧无键盘权限，直接结算
                 return;
             }
             const btn = document.querySelector('#keypad .key-btn[data-value="'+digits[i]+'"]');
-            clickElement(btn, function(){
-                if(btn) btn.click();
-                setTimeout(function(){ clickDigit(i+1); }, 250);
-            });
+            if(who==='p1') demoRealClick(btn, function(){ setTimeout(function(){ clickDigit(i+1); }, 250); });
+            else clickElement(btn, function(){ setTimeout(function(){ clickDigit(i+1); }, 250); });
         }
         clickDigit(0);
     }
