@@ -532,10 +532,6 @@
                         <input type="text" id="default-room-title" value="来和我一起玩吧" maxlength="15" style="width:200px;">
                     </div>
                     <div class="setting-row">
-                        <label>最大房间人数：</label>
-                        <input type="number" id="max-players" value="2" min="2" max="10" style="width:60px;">
-                    </div>
-                    <div class="setting-row">
                         <label>游戏音效：</label>
                         <button class="toggle-btn" id="sound-on">开启</button>
                         <button class="toggle-btn" id="sound-off">关闭</button>
@@ -1275,7 +1271,6 @@
         function loadAdminSettings(){
             const s = loadJSON(STORAGE_KEYS.settings, {});
             if(s.defaultRoomTitle) $('default-room-title').value = s.defaultRoomTitle;
-            if(s.maxPlayers) $('max-players').value = s.maxPlayers;
             // 音效和动画开关状态
             const soundOn = s.soundEnabled !== false;
             const animOn = s.animEnabled !== false;

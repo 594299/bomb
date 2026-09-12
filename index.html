@@ -128,8 +128,6 @@
         .demo-arrow { position:fixed; z-index:4900; font-size:1.5rem; pointer-events:none; transform:translateX(-50%); filter:drop-shadow(0 0 6px rgba(255,200,0,0.9)); animation:demoArrowBounce 0.7s ease-in-out infinite; }
         @keyframes demoArrowBounce { 0%,100% { margin-top:0; } 50% { margin-top:-8px; } }
         .demo-spotlight { outline:2px solid #ffcc66 !important; outline-offset:3px; border-radius:10px; box-shadow:0 0 18px rgba(255,200,80,0.55) !important; }
-        /* 演示期间技能按钮：可看不可点（真实点击由虚拟鼠标完成） */
-        .skill-btn.demo-locked { opacity:0.45; cursor:not-allowed; }
         #skills-bar { display:none; gap:4px; margin-top:4px; flex-wrap:wrap; justify-content:center; }
         .skill-btn { padding:4px 10px; border:1.5px solid rgba(255,255,255,0.3); border-radius:10px; background:rgba(255,255,255,0.05); color:#999; font-size:0.65rem; font-weight:700; cursor:pointer; min-height:32px; }
         .skill-btn.ready { border-color:var(--neon); color:var(--neon); background:rgba(0,240,255,0.08); box-shadow:0 0 8px rgba(0,240,255,0.2); }
@@ -352,17 +350,6 @@
             100% { opacity:0; }
         }
 
-        /* ========== 虚拟鼠标（演示用） ========== */
-        .virtual-cursor { position:fixed; width:28px; height:28px; z-index:5000; pointer-events:none; transform:translate(-4px,-4px); transition:left 0.5s ease, top 0.5s ease; }
-        .virtual-cursor svg { width:100%; height:100%; filter:drop-shadow(0 0 4px rgba(0,240,255,0.8)); }
-        .virtual-cursor.clicking { transform:translate(-4px,-4px) scale(0.8); }
-        .virtual-cursor.clicking svg { filter:drop-shadow(0 0 8px rgba(255,200,0,1)); }
-        @keyframes cursorClick {
-            0% { transform:translate(-4px,-4px) scale(1); }
-            50% { transform:translate(-4px,-4px) scale(0.6); }
-            100% { transform:translate(-4px,-4px) scale(1); }
-        }
-
         /* ========== 头像选择 ========== */
         .avatar-picker { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width:320px; margin:8px 0; }
         .avatar-option { width:44px; height:44px; border:2px solid rgba(255,255,255,0.2); border-radius:10px; background:rgba(255,255,255,0.05); font-size:1.5rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
@@ -385,6 +372,7 @@
             <button id="fullscreen-btn" title="全屏">⛶</button>
             <button id="chat-toggle-btn">💬<span id="chat-badge" class="chat-badge">0</span></button>
             <div id="room-info">未连接</div>
+            <div id="spectator-count" style="display:none;font-size:0.68rem;color:#ffcc66;white-space:nowrap;">👁️ 0</div>
         </div>
     </div>
     <div id="main-menu" class="overlay">
@@ -1352,10 +1340,12 @@ function showBanScreen(){
 
 // AI房间数量配置（从 localStorage 读取，后台在 haododoya/admin.html 中配置）
 G.aiRoomConfig = (function(){
+    const d = {1:3, 2:3, 3:2, 4:2};
     try{
         const c = JSON.parse(localStorage.getItem('bomb_ai_rooms')||'{}');
-        return {1:c[1]||3, 2:c[2]||3, 3:c[3]||2, 4:c[4]||2};
-    }catch(e){ return {1:3, 2:3, 3:2, 4:2}; }
+        [1,2,3,4].forEach(function(k){ const v = parseInt(c[k]); if(!isNaN(v) && v >= 0) d[k] = v; }); // 严格转数字：字符串"0"不会被误判成默认值
+    }catch(e){}
+    return d;
 })();
 
 // 通知用户头像已通过审核（把保留的头像放入 approved 列表，用户可在头像选择器看到）
@@ -1456,52 +1446,47 @@ function startIntro(){
     }, 2000);
 }
 
-// ========== 虚拟鼠标（技能演示用） ==========
-let vCursor = null;
-function ensureVCursor(){
-    if(vCursor) return vCursor;
-    vCursor = document.createElement('div');
-    vCursor.className = 'virtual-cursor';
-    vCursor.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M5 3l14 8-6 2-2 6L5 3z" fill="#00f0ff" stroke="#fff" stroke-width="1"/></svg>';
-    vCursor.style.display='none';
-    document.body.appendChild(vCursor);
-    return vCursor;
+// ========== 演示自动操作（无虚拟鼠标：数字自动敲入输入框，技能走真实 useSkill 链路） ==========
+// 自动猜数：逐位把数字敲进输入框（与真人按键相同的显示/音效），再走与"确定"按钮完全相同的结算链路
+function demoAutoGuess(n, who){
+    if(!G.active) return;
+    who = who || 'p1';
+    if(G.currentPlayer!==who || G.processing) return; // 用户已抢先出手/回合已走：脚本不再重复猜
+    G.playerInput = '';
+    updateInputDisplay();
+    const digits = String(n).split('');
+    let i = 0;
+    function typeNext(){
+        if(!G.demo || !G.active || G.currentPlayer!==who) return; // 演示被中断/回合已变就停手
+        if(i < digits.length){
+            G.playerInput += digits[i++];
+            updateInputDisplay();
+            playSound('click');
+            setTimeout(typeNext, 200);
+        } else {
+            setTimeout(function(){
+                if(!G.demo || !G.active || G.currentPlayer!==who || G.processing) return;
+                G.playerInput = '';
+                updateInputDisplay();
+                processGuess(n, false, who);
+            }, 350);
+        }
+    }
+    typeNext();
 }
-function moveVCursor(x, y, cb){
-    const c = ensureVCursor();
-    c.style.display='block';
-    c.style.left = x+'px';
-    c.style.top = y+'px';
-    if(cb) setTimeout(cb, 500);
-}
-function clickVCursor(cb){
-    const c = ensureVCursor();
-    c.classList.add('clicking');
-    setTimeout(function(){ c.classList.remove('clicking'); if(cb) cb(); }, 200);
-}
-function clickElement(el, cb){
-    if(!el){ if(cb) cb(); return; }
-    const rect = el.getBoundingClientRect();
-    const x = rect.left + rect.width/2;
-    const y = rect.top + rect.height/2;
-    moveVCursor(x, y, function(){
-        clickVCursor(cb);
-    });
-}
-function hideVCursor(){ if(vCursor) vCursor.style.display='none'; }
-
-// 演示专用"真实点击"：虚拟鼠标移动到位后，临时解除演示锁触发原生click，再恢复锁定
-// G.demoClick 标志：点击事件处理链凭它区分"演示脚本的点击"和"用户的点击"（后者一律拦截）
-function demoRealClick(el, cb){
-    if(!el){ if(cb) cb(); return; }
-    clickElement(el, function(){
-        const wasDisabled = el.disabled;
-        if(wasDisabled){ el.disabled=false; el.style.pointerEvents=''; el.style.opacity=''; }
-        G.demoClick = true;
-        try { el.click(); } finally { G.demoClick = false; }
-        if(wasDisabled){ el.disabled=true; el.style.pointerEvents='none'; el.style.opacity='0.25'; }
-        if(cb) cb();
-    });
+// 自动放技能：直接调用 useSkill（与点击技能按钮完全相同的链路，冷却/播报/生效全都真实发生）
+// 选数类技能（验证器/陷阱/黑洞/禁猜）会弹出选数浮层 → 等浮层弹出后自动填数并点确定
+function demoAutoUseSkill(skillId, who, pick){
+    if(!G.active) return;
+    who = who || 'p1';
+    useSkill(skillId, who, true);
+    if(pick !== undefined && who === 'p1'){
+        setTimeout(function(){
+            if(!G.demo || !numberPickerCallback) return; // 浮层没弹出（技能被拦截等）就算了
+            numberSelectInput.value = pick;
+            numberSelectConfirm.click();
+        }, 600);
+    }
 }
 
 // 演示细节箭头：指向某个界面细节（关键细节配高亮聚光灯），下一步自动消失
@@ -1802,6 +1787,8 @@ function setConnStatus(msg){ if(connStatus) connStatus.textContent = msg || ''; 
 function cleanupRemote(){
     clearAllTimers();
     setJoinBtnState(true); // 断线/退房：恢复加入按钮
+    if(G.spectators && G.spectators.length){ G.spectators.forEach(function(c){ try{c.close();}catch(e){} }); } // 观战连接一并清掉
+    G.spectators = [];
     if(G.peer){ try{G.peer.destroy();}catch(e){} G.peer=null; }
     if(G.lobbyPeer){ try{G.lobbyPeer.destroy();}catch(e){} G.lobbyPeer=null; }
     if(G.conn){ try{G.conn.close();}catch(e){} G.conn=null; }
@@ -1929,7 +1916,6 @@ function showNumberPicker(title, min, max, onConfirm, onCancel){
     numberSelectInput.min = min;
     numberSelectInput.max = max;
     numberSelectInput.type = Privacy.isLocal() ? 'password' : 'number';
-    numberSelectInput.readOnly = !!G.demo; // 演示中：输入框只读，数字由虚拟鼠标填
     numberSelectOverlay.classList.remove('hidden');
     numberSelectOverlay.classList.add('active');
     setTimeout(()=>numberSelectInput.focus(), 100);
@@ -1941,7 +1927,6 @@ function hideNumberPicker(){
     numberPickerCancelCallback = null;
 }
 numberSelectConfirm.addEventListener('click', function(){
-    if(G.demo && !G.demoClick) return; // 演示中：选数由虚拟鼠标完成
     const min = parseInt(numberSelectInput.min);
     const max = parseInt(numberSelectInput.max);
     const val = parseInt(numberSelectInput.value);
@@ -1954,7 +1939,6 @@ numberSelectConfirm.addEventListener('click', function(){
     if(cb) cb(val);
 });
 numberSelectCancel.addEventListener('click', function(){
-    if(G.demo && !G.demoClick) return; // 演示中：禁止手动取消，防止打乱脚本
     const cancelCb = numberPickerCancelCallback;
     hideNumberPicker();
     if(cancelCb) cancelCb();
@@ -2199,6 +2183,7 @@ function setupConnection(conn){
                 addChatMessage(senderName, data.text, 'opponent');
                 showChatNotification(senderName, data.text);
                 if(chatOverlay.classList.contains('hidden')){ unreadChatCount++; updateChatBadge(); }
+                if(G.isHost) broadcastToSpectators({ type:'chat', senderName: senderName, text: data.text }); // 转发给观战者
             }
         }
         else if(data.type==='private'&&G.myRole==='guest'){
@@ -2243,6 +2228,7 @@ function handleRemoteDisconnect(){
         if(remoteWaiting.style.display !== 'none' && !remoteWaiting.classList.contains('hidden')){
             waitingText.textContent = '对手已离开，等待新对手加入...';
         }
+        updateLobbyStatus(); // 对手离开：大厅状态回到等待中
     }
 }
 
@@ -2336,8 +2322,13 @@ function handleGuestAction(data){
 }
 
 // ========== 状态同步 ==========
+// 给所有观战者广播消息（房主专用；观战者只收不发）
+function broadcastToSpectators(msg){
+    if(!G.spectators || !G.spectators.length) return;
+    G.spectators.forEach(function(c){ try{ if(c.open) c.send(msg); }catch(e){} });
+}
 function syncIfRemote(){
-    if(!G.mode.includes('remote')||!G.conn||!G.isHost) return;
+    if(!G.mode.includes('remote')||!G.isHost) return;
     const p1Clone = deepClone(G.players.p1);
     const p2Clone = deepClone(G.players.p2);
     const sensitiveFields = ['trappedNumber','disguiseNumber','disguise','fakeLow','fakeHigh','lockedSkill','secondLockedSkill','forbidNumber'];
@@ -2359,9 +2350,11 @@ function syncIfRemote(){
         prevLow:G.prevLow, prevHigh:G.prevHigh,
         tideShrinkNext:G.tideShrinkNext,
         roundStartHP:deepClone(G.roundStartHP),
-        roundCount:G.roundCount
+        roundCount:G.roundCount,
+        spectatorCount:(G.spectators ? G.spectators.length : 0) // 对局内显示观战人数
     };
-    try{ G.conn.send({type:'sync',state:state}); }catch(e){}
+    if(G.conn && G.conn.open){ try{ G.conn.send({type:'sync',state:state}); }catch(e){} }
+    broadcastToSpectators({type:'sync', state:state}); // 观战者同步同一份状态
 }
 
 function applySync(state){
@@ -2384,14 +2377,17 @@ function applySync(state){
     if(state.tideShrinkNext!==undefined) G.tideShrinkNext=state.tideShrinkNext;
     if(state.roundStartHP) G.roundStartHP=deepClone(state.roundStartHP);
     if(state.roundCount!==undefined) G.roundCount=state.roundCount;
-    // 客机保持自己的头像/名字不被房主端数据覆盖
-    const myId = G.myRole==='host' ? 'p1' : 'p2';
-    const myAvatar = G.players[myId].avatar;
-    const myName = G.players[myId].name;
+    // 客机保持自己的头像/名字不被房主端数据覆盖（观战者不算参与者，完整采用房主端数据）
+    const isSpec = G.myRole==='spectator';
+    const myId = isSpec ? null : (G.myRole==='host' ? 'p1' : 'p2');
+    const myAvatar = myId ? G.players[myId].avatar : null;
+    const myName = myId ? G.players[myId].name : null;
     Object.assign(G.players.p1, deepClone(state.p1));
     Object.assign(G.players.p2, deepClone(state.p2));
-    G.players[myId].avatar = myAvatar;
-    G.players[myId].name = myName;
+    if(myId){
+        G.players[myId].avatar = myAvatar;
+        G.players[myId].name = myName;
+    }
     if(battleArea.style.display!=='flex'&&G.active){
         showBattleArea();
         roomInfo.textContent='房间: '+G.roomCode;
@@ -2425,6 +2421,7 @@ function applySync(state){
         const shouldEnable = G.active && !G.processing && isMyTurn();
         setKeypadEnabled(shouldEnable);
     }
+    if(state.spectatorCount!==undefined) updateSpectatorCount(state.spectatorCount); // 对局内观战人数徽章
     // Guest侧的回合倒计时（只显示，强制执行在Host）：回合换人/计时器停了才重启，避免每次同步都重置
     if(G.active && G.mode.includes('remote')){
         if(G.turnTimerPlayer!==G.currentPlayer || !G.turnTimer) startTurnTimer();
@@ -2507,6 +2504,7 @@ function sendChatMessage(text) {
     const myName = getMyPlayer().name;
     addChatMessage(myName, text, 'mine');
     G.conn.send({ type: 'chat', senderName: myName, text: text });
+    if(G.isHost) broadcastToSpectators({ type:'chat', senderName: myName, text: text }); // 观战者也能看聊天
 }
 
 // ========== 举报功能 ==========
@@ -2783,6 +2781,7 @@ function endGame(){
     }
     renderSkills();
     syncIfRemote();
+    if(G.mode.includes('remote') && G.isHost) updateLobbyStatus(); // 对局结束：大厅状态回到等待中
 }
 
 function initGame(){
@@ -3636,7 +3635,6 @@ function switchTurn(){
 // ========== 技能使用 ==========
 function useSkill(skillId, playerId, ignoreChecks, copyDepth){
     if(!G.active||G.processing||G.paused){ dlog('SKILL','被守卫拦截 '+skillId+' active='+G.active+' processing='+G.processing+' paused='+G.paused); return; }
-    if(G.demo && !G.demoClick && !ignoreChecks){ showCheatToast('🎬 演示中——技能由虚拟鼠标操作，你看着就好', 1500); return; }
     copyDepth = copyDepth || 0;
     if(copyDepth > 3) return;
 
@@ -4243,7 +4241,6 @@ keypadButtons.forEach(function(btn){
     btn.addEventListener('click',function(){
         const val=btn.dataset.value;
         const action=btn.dataset.action;
-        if(G.demo && !G.demoClick) return; // 技能演示：键盘锁定，只有虚拟鼠标的点击生效
         if(!G.active||G.processing||!isMyTurn()) return;
         if(Privacy.isLocal()&&G.pendingSkillSelect) return;
         if(val!==undefined){
@@ -4429,9 +4426,10 @@ function updateInputDisplay(){
 }
 function updateTurnIndicator(){
     turnIndicator.classList.remove('turn-me','turn-opponent');
-    if(G.demo){ // 技能演示中：锁键盘，回合指示换成演示标题（观众只看不动手）
-        turnIndicator.textContent='🎬 演示中：'+G.demo.skillName;
-        setKeypadEnabled(false);
+    if(G.demo){ // 技能演示中：回合指示换成演示标题；技能栏/键盘保持真实可用（可跟着练手）
+        turnIndicator.textContent='🎬 演示中：'+G.demo.skillName+'（技能可点，可跟着练）';
+        const demoCanAct = G.active && !G.processing && G.currentPlayer===getMyPlayer().id;
+        setKeypadEnabled(demoCanAct);
         renderSkills();
         return;
     }
@@ -4523,7 +4521,6 @@ function renderSkills(){
             if(canAct) btn.classList.add('ready');
         }
         btn.addEventListener('click',function(){ useSkill(skill.id); });
-        if(G.demo) btn.classList.add('demo-locked'); // 演示中：可看不可点（用户点击会被守卫拦截）
         skillsBar.appendChild(btn);
     });
     const myBuffs=getActiveBuffs(owner);
@@ -4705,6 +4702,7 @@ function showBattleArea(){
     $('quick-chat-bar').style.display = (G.mode.includes('ai')||G.mode.includes('remote')) ? 'flex' : 'none';
     if(G.isSkillMode){ skillsBar.style.display='flex'; renderSkills(); }
     if(G.mode.includes('remote') && G.conn && G.conn.open) chatToggleBtn.style.display='inline-block';
+    updateSpectatorCount(); // 进入战斗时刷新观战人数徽章（开局前接入的观战者也要显示）
     tryAutoFullscreen(); // 自动全屏开着时：每次进入战斗/返回菜单都重新全屏，不只是第一次
 }
 
@@ -4766,6 +4764,7 @@ $('create-room-btn').addEventListener('click',function(){
         lobbyMessage.textContent='';
         setConnStatus('房间已创建，可分享链接邀请对手');
         G.peer.on('connection',function(conn){
+            if(conn.metadata && conn.metadata.spectator){ setupSpectator(conn); return; } // 观战连接：不占对战位，随时可进
             if(G.conn){ try{conn.close();}catch(e){} return; }
             setupConnection(conn);
         });
@@ -4805,15 +4804,19 @@ copyLinkBtn.addEventListener('click',function(){
 
 // ========== 联机大厅 ==========
 G.lobbyPeer = null;
+G.spectators = []; // 观战连接列表（仅房主使用）
+G.spectating = false; // 本机是否处于观战模式
+function lobbyPeerIdWith(status){ // status: 'w'=等待中 'p'=已开始
+    const name = (G.roomTitle || getMyPlayer().name || '玩家').slice(0, 15).replace(/-/g, ' '); // 连字符会破坏id分段解析
+    const nameEncoded = encodeURIComponent(name).replace(/%/g,''); // 简单编码，避免特殊字符
+    const hasPwd = G.roomPassword ? 1 : 0;
+    return 'lobby-' + G.roomCode + '-' + nameEncoded + '-' + hasPwd + '-' + status;
+}
 function shareToLobby(){
     if(!G.isHost || !G.peer){ showCheatToast('❌ 只有房主才能分享'); return; }
     if(G.lobbyPeer){ showCheatToast('🌐 已在大厅中'); return; }
-    const name = (G.roomTitle || getMyPlayer().name || '玩家').slice(0, 15);
-    const nameEncoded = encodeURIComponent(name).replace(/%/g,''); // 简单编码，避免特殊字符
-    const hasPwd = G.roomPassword ? 1 : 0;
-    const lobbyPeerId = 'lobby-' + G.roomCode + '-' + nameEncoded + '-' + hasPwd;
     const savedPeer = G.peer; // 保存当前房间 peer
-    createPeer(lobbyPeerId, function(){
+    createPeer(lobbyPeerIdWith(G.active?'p':'w'), function(){
         G.lobbyPeer = G.peer;
         G.peer = savedPeer; // 恢复房间 peer
         const btn = $('share-to-lobby-btn');
@@ -4823,6 +4826,17 @@ function shareToLobby(){
         G.peer = savedPeer;
         showCheatToast('❌ 分享失败: ' + err);
     });
+}
+// 对局状态变化（开始/对手离开）时重注册大厅id，让大厅显示 已开始/等待中
+function updateLobbyStatus(){
+    if(!G.lobbyPeer || !G.isHost) return;
+    const savedPeer = G.peer;
+    try{ G.lobbyPeer.destroy(); }catch(e){}
+    G.lobbyPeer = null;
+    createPeer(lobbyPeerIdWith(G.active?'p':'w'), function(){
+        G.lobbyPeer = G.peer;
+        G.peer = savedPeer;
+    }, function(){ G.peer = savedPeer; });
 }
 $('share-to-lobby-btn').addEventListener('click', shareToLobby);
 
@@ -4864,49 +4878,74 @@ function fetchLobbyList(){
     const listEl = $('lobby-room-list');
     const statusEl = $('lobby-list-status');
     statusEl.textContent = '正在连接大厅...';
+    // 先立刻渲染AI房间兜底——信令服务器慢/挂掉时大厅也绝不留白
+    let finished = false;
+    function renderAiOnly(offline){
+        try{
+            if(!aiFakeRooms || aiFakeRooms.length===0) refreshAiFakeRooms(); // 兜底：配置异常导致空列表时重建
+            const rooms = [];
+            aiFakeRooms.forEach(function(r){ rooms.push({code:r.code, name:r.name, hasPwd:r.hasPwd, isAi:true, aiLevel:r.aiLevel, status:'w'}); });
+            rooms.sort(function(){ return Math.random()-0.5; });
+            G.lastLobbyRooms = rooms;
+            renderLobbyRooms(rooms);
+            statusEl.textContent = '共 ' + rooms.length + ' 个房间' + (offline ? '（离线模式）' : '，正在搜寻真人房间...');
+        }catch(e){
+            listEl.innerHTML = '<div style="color:#888;padding:20px;text-align:center;">列表加载异常，请点刷新重试</div>';
+        }
+    }
+    renderAiOnly(false);
+    function finish(){ finished = true; }
+    const savedPeer = G.peer || null; // 保护房主/连接中的 peer，别让大厅探测顶掉
     const tempId = 'lb-' + Math.random().toString(36).slice(2, 10);
     createPeer(tempId, function(){
         const tempPeer = G.peer;
-        try{
-            tempPeer.listAllPeers(function(peers){
-                listEl.innerHTML = '';
-                const rooms = [];
-                (peers || []).forEach(function(pid){
-                    if(pid.indexOf('lobby-') === 0){
-                        const parts = pid.split('-');
-                        if(parts.length >= 4){
-                            const code = parts[1];
-                            const hasPwd = parts[parts.length-1] === '1';
-                            const nameEncoded = parts.slice(2, parts.length-1).join('-');
-                            let name = '玩家';
-                            try { name = decodeURIComponent(nameEncoded.match(/.{1,2}/g).map(h=>'%'+h).join('')); } catch(e){}
-                            rooms.push({code:code, name:name, hasPwd:hasPwd, isAi:false});
+        G.peer = savedPeer; // 立即还回
+        let listed = false;
+        function showReal(peers){
+            if(finished) return; finish();
+            const rooms = [];
+            (peers || []).forEach(function(pid){
+                if(pid.indexOf('lobby-') === 0){
+                    const parts = pid.split('-');
+                    if(parts.length >= 4){
+                        const code = parts[1];
+                        let hasPwd, status, nameEncoded;
+                        if(parts.length >= 5){ // 新格式：lobby-房码-房名-密码-状态
+                            hasPwd = parts[parts.length-2] === '1';
+                            status = parts[parts.length-1] === 'p' ? 'p' : 'w';
+                            nameEncoded = parts.slice(2, parts.length-2).join('-');
+                        } else { // 老格式无状态，视为等待中
+                            hasPwd = parts[parts.length-1] === '1';
+                            status = 'w';
+                            nameEncoded = parts.slice(2, parts.length-1).join('-');
                         }
+                        let name = '玩家';
+                        try { name = decodeURIComponent(nameEncoded.match(/.{1,2}/g).map(h=>'%'+h).join('')); } catch(e){}
+                        rooms.push({code:code, name:name, hasPwd:hasPwd, isAi:false, status:status});
                     }
-                });
-                // 混入AI伪装房间
-                aiFakeRooms.forEach(function(r){ rooms.push({code:r.code, name:r.name, hasPwd:r.hasPwd, isAi:true, aiLevel:r.aiLevel}); });
-                // 打乱顺序
-                rooms.sort(function(){ return Math.random()-0.5; });
-                G.lastLobbyRooms = rooms; // 缓存供搜索用
-                renderLobbyRooms(rooms);
-                statusEl.textContent = '共 ' + rooms.length + ' 个房间';
-                try{ tempPeer.destroy(); }catch(e){}
+                }
             });
+            aiFakeRooms.forEach(function(r){ rooms.push({code:r.code, name:r.name, hasPwd:r.hasPwd, isAi:true, aiLevel:r.aiLevel, status:'w'}); });
+            rooms.sort(function(){ return Math.random()-0.5; });
+            G.lastLobbyRooms = rooms;
+            renderLobbyRooms(rooms);
+            statusEl.textContent = '共 ' + rooms.length + ' 个房间';
+            try{ tempPeer.destroy(); }catch(e){}
+        }
+        try{
+            tempPeer.listAllPeers(function(peers){ listed = true; showReal(peers); });
+            // listAllPeers 在部分信令服务器上被禁用（回调永不触发）→ 5秒超时保留AI房间
+            setTimeout(function(){
+                if(!listed && !finished){ finish(); statusEl.textContent = '共 ' + aiFakeRooms.length + ' 个房间（实时房间不可用）'; }
+                try{ tempPeer.destroy(); }catch(e){}
+            }, 5000);
+            tempPeer.on('error', function(){ if(!listed && !finished){ finish(); renderAiOnly(true); try{ tempPeer.destroy(); }catch(e){} } });
         } catch(e){
-            listEl.innerHTML = '<div style="color:#ff6666;padding:20px;text-align:center;">获取列表失败：'+e.message+'</div>';
-            statusEl.textContent = '';
+            if(!finished){ finish(); renderAiOnly(true); }
             try{ tempPeer.destroy(); }catch(e){}
         }
     }, function(err){
-        // 即使连接失败也显示AI房间
-        listEl.innerHTML = '';
-        const rooms = [];
-        aiFakeRooms.forEach(function(r){ rooms.push({code:r.code, name:r.name, hasPwd:r.hasPwd, isAi:true, aiLevel:r.aiLevel}); });
-        rooms.sort(function(){ return Math.random()-0.5; });
-        G.lastLobbyRooms = rooms; // 缓存供搜索用
-        renderLobbyRooms(rooms);
-        statusEl.textContent = '共 ' + rooms.length + ' 个房间（离线模式）';
+        if(!finished){ finish(); renderAiOnly(true); }
     });
 }
 
@@ -4927,12 +4966,17 @@ function renderLobbyRooms(rooms, filter){
     rooms.forEach(function(r){
         const item = document.createElement('div');
         item.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin:6px 0;background:rgba(255,255,255,0.05);border:1px solid rgba(0,240,255,0.2);border-radius:10px;cursor:pointer;transition:all 0.2s;';
-        item.innerHTML = '<div style="flex:1;"><span style="font-weight:bold;color:var(--neon);">'+r.code+'</span> <span style="color:#aaa;margin-left:10px;">'+r.name+'</span></div>' + (r.hasPwd ? '<span style="font-size:1.2rem;">🔒</span>' : '');
+        const statusBadge = r.isAi ? '<span style="font-size:0.68rem;color:#44ff44;margin-right:8px;">🟢 等待中</span>'
+            : (r.status==='p' ? '<span style="font-size:0.68rem;color:#ff6666;margin-right:8px;">🔴 已开始</span>' : '<span style="font-size:0.68rem;color:#44ff44;margin-right:8px;">🟢 等待中</span>');
+        const actionHint = (!r.isAi && r.status==='p') ? '<span style="font-size:0.68rem;color:#ffcc66;">👁️ 观战</span>' : '';
+        item.innerHTML = '<div style="flex:1;"><span style="font-weight:bold;color:var(--neon);">'+r.code+'</span> <span style="color:#aaa;margin-left:10px;">'+r.name+'</span></div>' + statusBadge + actionHint + (r.hasPwd ? '<span style="font-size:1.2rem;">🔒</span>' : '');
         item.addEventListener('mouseenter', function(){ this.style.borderColor='var(--neon)'; });
         item.addEventListener('mouseleave', function(){ this.style.borderColor='rgba(0,240,255,0.2)'; });
         item.addEventListener('click', function(){
             if(r.isAi){
                 joinAiRoom(r.aiLevel, r.code);
+            } else if(r.status==='p'){
+                spectateRoom(r.code, r.hasPwd); // 已开始的对局 → 观战
             } else {
                 joinRoomFromLobby(r.code, r.hasPwd);
             }
@@ -4965,7 +5009,7 @@ function joinAiRoom(aiLevel, code){
     }, 800);
 }
 $('show-lobby-btn').addEventListener('click', showLobbyListOverlay);
-$('refresh-lobby-btn').addEventListener('click', fetchLobbyList);
+$('refresh-lobby-btn').addEventListener('click', function(){ refreshAiFakeRooms(); fetchLobbyList(); });
 $('back-lobby-btn').addEventListener('click', function(){ $('lobby-list-overlay').classList.add('hidden'); });
 
 // 从大厅加入房间
@@ -4983,8 +5027,14 @@ function joinRoomFromLobby(code, hasPwd){
 }
 $('password-confirm-btn').addEventListener('click', function(){
     const pwd = $('password-prompt-input').value;
-    G.guestPassword = pwd;
     $('password-prompt-overlay').classList.add('hidden');
+    if(G.pendingSpectateCode){ // 观战密码
+        const code = G.pendingSpectateCode; G.pendingSpectateCode = null;
+        G.spectatePassword = pwd;
+        doSpectate(code);
+        return;
+    }
+    G.guestPassword = pwd;
     doJoinRoom(G.pendingJoinCode);
 });
 $('password-cancel-btn').addEventListener('click', function(){
@@ -4994,6 +5044,154 @@ function doJoinRoom(code){
     G.roomCode = code;
     joinRoomInput.value = code;
     $('join-room-btn').click();
+}
+
+// ========== 观战 ==========
+// 房主侧：接受观战连接（只发不收，观战者摸不到任何操作）
+function setupSpectator(conn){
+    function handleOpen(){
+        // 等观战者发密码（与房间密码一致）
+    }
+    if(conn.open) handleOpen(); else conn.on('open', handleOpen);
+    conn.on('data', function(data){
+        if(!data || !data.type) return;
+        if(data.type==='password'){
+            if(!G.roomPassword || data.password === G.roomPassword){
+                try{ conn.send({type:'spectate_ok'}); }catch(e){}
+                if(G.spectators.indexOf(conn)<0) G.spectators.push(conn);
+                updateSpectatorCount();
+                // 对局进行中：立刻把开局参数+全量状态推给观战者
+                if(G.active){
+                    try{ conn.send({type:'start', minVal:G.minVal, maxVal:G.maxVal, isSkillMode:G.isSkillMode, hp:getPlayer('p1').maxHP, skillCount:G.skillCount}); }catch(e){}
+                    syncIfRemote();
+                }
+            } else {
+                try{ conn.send({type:'password_wrong'}); }catch(e){}
+                setTimeout(function(){ try{conn.close();}catch(e){} }, 400);
+            }
+        }
+        // 其它消息一律忽略：观战者没有操作权
+    });
+    function drop(){
+        G.spectators = G.spectators.filter(function(c){ return c!==conn; });
+        updateSpectatorCount();
+    }
+    conn.on('close', drop);
+    conn.on('error', drop);
+}
+// 观战人数徽章：房主直连统计，客机/观战者靠 sync 里的 spectatorCount
+function updateSpectatorCount(n){
+    if(n===undefined) n = G.spectators ? G.spectators.length : 0;
+    const el = $('spectator-count');
+    if(!el) return;
+    const inBattle = battleArea.style.display==='flex';
+    el.style.display = (inBattle && n>0) ? 'block' : 'none';
+    el.textContent = '👁️ ' + n + ' 人观战';
+}
+// 观战者侧：从大厅进入已开始的对局
+function spectateRoom(code, hasPwd){
+    if(hasPwd){
+        G.pendingSpectateCode = code;
+        $('password-prompt-input').value = '';
+        $('password-prompt-msg').textContent = '';
+        $('password-prompt-overlay').classList.remove('hidden');
+        $('password-prompt-input').focus();
+        return;
+    }
+    G.spectatePassword = '';
+    doSpectate(code);
+}
+function doSpectate(code){
+    $('lobby-list-overlay').classList.add('hidden');
+    showCheatToast('👁️ 正在连接观战...');
+    createPeer('spec-' + code + '-' + Math.random().toString(36).slice(2,6), function(){
+        const specPeer = G.peer;
+        const conn = specPeer.connect('bomb-' + code, { reliable:true, metadata:{spectator:true} });
+        G.spectating = true;
+        G.isHost = false;
+        G.myRole = 'spectator';
+        G.roomCode = code;
+        setupSpectatorClient(conn, specPeer);
+    }, function(err){
+        showCheatToast('❌ 无法连接观战: ' + err);
+        G.spectating = false;
+    });
+}
+function setupSpectatorClient(conn, specPeer){
+    G.specConn = conn;
+    function handleOpen(){
+        try{ conn.send({type:'password', password:G.spectatePassword||'', fp:G.currentUser.fingerprint, spectator:true}); }catch(e){}
+    }
+    if(conn.open) handleOpen(); else conn.on('open', handleOpen);
+    conn.on('data', function(data){
+        if(!data || !data.type) return;
+        if(data.type==='spectate_ok'){
+            enterSpectateView(false);
+            return;
+        }
+        if(data.type==='password_wrong'){
+            showCheatToast('❌ 密码错误');
+            exitSpectate();
+            showLobbyListOverlay();
+            return;
+        }
+        if(data.type==='start'){
+            G.minVal=data.minVal; G.maxVal=data.maxVal;
+            G.isSkillMode=data.isSkillMode;
+            G.mode=data.isSkillMode?'remote-skill':'remote-normal';
+            if(data.hp){ getPlayer('p1').maxHP=data.hp; getPlayer('p2').maxHP=data.hp; }
+            if(data.skillCount!==undefined) G.skillCount=data.skillCount;
+            enterSpectateView(true);
+            return;
+        }
+        if(data.type==='sync' && G.spectating){
+            applySync(data.state);
+            if(data.state && data.state.spectatorCount!==undefined) updateSpectatorCount(data.state.spectatorCount);
+            return;
+        }
+        if(data.type==='spectator_count'){ updateSpectatorCount(data.count); return; }
+        if(data.type==='chat' && data.text){ // 观战可以看聊天，但不能发言
+            addChatMessage(data.senderName||'玩家', data.text, 'opponent');
+            showChatNotification(data.senderName||'玩家', data.text);
+            if(chatOverlay.classList.contains('hidden')){ unreadChatCount++; updateChatBadge(); }
+            return;
+        }
+    });
+    function onLost(){
+        if(!G.spectating) return;
+        showCheatToast('⚠️ 对局已结束或连接断开');
+        exitSpectate();
+        showMainMenu();
+    }
+    conn.on('close', onLost);
+    conn.on('error', onLost);
+}
+function enterSpectateView(hasGame){
+    hideAll();
+    battleArea.style.display='flex';
+    getPlayer('p1').name=' Host'; getPlayer('p1').avatar='🙂';
+    getPlayer('p2').name=' Guest'; getPlayer('p2').avatar='🙂';
+    roomInfo.textContent='👁️ 观战中 · 房间 '+G.roomCode;
+    messageDisplay.textContent = hasGame ? '👁️ 观战模式——你只看，打不了' : '👁️ 已连接，等待对局开始...';
+    surrenderBtn.style.display='none';
+    rematchBtn.style.display='none';
+    gameOverBtn.style.display='block'; // 复用为"退出观战"按钮
+    gameOverBtn.textContent='🚪 退出观战';
+    $('pause-request-btn').style.display='none';
+    chatToggleBtn.style.display='inline-block';
+    $('quick-chat-bar').style.display='none'; // 观战不发表情
+    setKeypadEnabled(false);
+    renderPlayers(); renderSkills(); updateRange(); updateInputDisplay();
+    showCheatToast('👁️ 观战模式：纯围观，操作不了');
+}
+function exitSpectate(){
+    if(G.specConn){ try{G.specConn.close();}catch(e){} G.specConn=null; }
+    G.spectating = false;
+    G.myRole = '';
+    gameOverBtn.textContent='返回主菜单';
+    updateSpectatorCount(0);
+    if(G.peer){ try{G.peer.destroy();}catch(e){} G.peer=null; }
+    hideAll();
 }
 
 $('cancel-waiting-btn').addEventListener('click',function(){
@@ -5028,7 +5226,9 @@ remoteStartBtn.addEventListener('click',function(){
     if(G.conn&&G.conn.open){
         G.conn.send({type:'start',minVal:G.minVal,maxVal:G.maxVal,isSkillMode:G.isSkillMode,hp:getPlayer('p1').maxHP,skillCount:G.skillCount});
     }
+    broadcastToSpectators({type:'start',minVal:G.minVal,maxVal:G.maxVal,isSkillMode:G.isSkillMode,hp:getPlayer('p1').maxHP,skillCount:G.skillCount}); // 等待中的观战者同步开局
     initGame();
+    updateLobbyStatus(); // 大厅房间状态 → 已开始
 });
 surrenderBtn.addEventListener('click',function(){
     if(!G.active) return;
@@ -5049,6 +5249,7 @@ surrenderBtn.addEventListener('click',function(){
 });
 gameOverBtn.addEventListener('click',function(){
     G.demo=null; // 退出技能演示
+    if(G.spectating){ exitSpectate(); showMainMenu(); return; } // 退出观战
     if(G.mode.includes('remote')){ cleanupRemote(); }
     showMainMenu();
 });
@@ -5056,7 +5257,9 @@ rematchBtn.addEventListener('click',function(){
     if(G.mode.includes('remote')){
         if(G.isHost && G.conn && G.conn.open){
             G.conn.send({type:'rematch'});
+            broadcastToSpectators({type:'start',minVal:G.minVal,maxVal:G.maxVal,isSkillMode:G.isSkillMode,hp:getPlayer('p1').maxHP,skillCount:G.skillCount}); // 观战者跟随重赛
             initGame();
+            updateLobbyStatus(); // 大厅房间状态 → 已开始
         } else if(!G.isHost) {
             if(G.conn && G.conn.open){
                 G.conn.send({type:'request_rematch'});
@@ -5447,7 +5650,9 @@ function startSkillDemo(skillId){
     getPlayer('p2').skills = (def.p2skills||[]).map(getSkillById).filter(s=>s);
     G.tutorial = { levelData:{ level:'演', name:sk.name, min:G.minVal, max:G.maxVal,
         playerHP:getPlayer('p1').maxHP, aiHP:getPlayer('p2').maxHP,
-        playerSkills:[], aiSkills:[], aiScript:[], hint:'', goal:'', lesson:'' }, aiScriptQueue:[], currentStepIndex:0 };
+        playerSkills:(def.p1skills||[skillId]), aiSkills:(def.p2skills||[]), aiScript:[], hint:'', goal:'', lesson:'' }, aiScriptQueue:[], currentStepIndex:0 };
+    // 注意：resetGameState 会清空 p.skills 并从 levelData.playerSkills/aiSkills 重新装配——
+    // 演示的技能必须写进 levelData，技能栏才会真实出现（可点击、进冷却、演示结束还能练手）
     G.tutorialNextLevel = null;
     resetGameState(); // 注意：resetGameState会清G.demo，之后才能设置
     showBattleArea();
@@ -5472,23 +5677,21 @@ function startSkillDemo(skillId){
     dc.classList.remove('hidden','dock');
     setTimeout(function(){ if(G.demo) dc.classList.add('dock'); }, 3000);
     G.demo = { script: def.script.slice(), idx:0, skillName:sk.name };
-    $('quick-chat-bar').style.display='flex'; // 演示布局与真实对战保持一致（按钮会被演示锁拦截）
-    setKeypadEnabled(false);
+    $('quick-chat-bar').style.display='flex'; // 演示布局与真实对战保持一致
     updateTurnIndicator();
     showCheatToast('🎬 看好了——'+sk.name+'！', 2800);
     setTimeout(demoStep, 2200);
 }
 function demoStep(){
     if(!G.demo || !G.active) return;
-    if(battleArea.style.display!=='flex'){ G.demo=null; $('demo-card').classList.add('hidden'); hideVCursor(); clearDemoPoint(); return; }
-    setKeypadEnabled(false);
+    if(battleArea.style.display!=='flex'){ G.demo=null; $('demo-card').classList.add('hidden'); clearDemoPoint(); return; }
     clearDemoPoint(); // 上一步的箭头/聚光灯收起
     const s = G.demo.script[G.demo.idx++];
     if(!s){
         const name = G.demo.skillName;
         G.demo = null;
         $('demo-card').classList.add('hidden');
-        hideVCursor(); clearDemoPoint();
+        clearDemoPoint();
         showCheatToast('🎬 演示结束！'+name+' 就是这么用的', 5000);
         messageDisplay.textContent='🎬 演示结束。点"返回主菜单"退出，或留在这局自由对局练练手';
         G.processing = false;
@@ -5511,43 +5714,8 @@ function demoStep(){
 
     if(s.use){
         const who = s.who||'p1';
-        if(who!=='p1'){ // AI侧没有可点按钮，直接执行
-            useSkill(s.use, who, true);
-            G.processing=true;
-        } else {
-            G.processing=false;
-            // 找到技能按钮，虚拟鼠标"真实点击"（走与实战完全相同的技能链路）
-            const sk = getSkillById(s.use);
-            let targetBtn = null;
-            skillsBar.querySelectorAll('.skill-btn').forEach(function(b){
-                if(b.textContent.includes(sk.name)) targetBtn = b;
-            });
-            if(targetBtn){
-                demoRealClick(targetBtn, function(){
-                    if(NUMBER_SKILLS.includes(s.use) && s.pick!==undefined){
-                        // 选数类技能：等浮层弹出，虚拟鼠标填数并真实点击确定
-                        setTimeout(function(){
-                            if(numberPickerCallback){
-                                numberSelectInput.value = s.pick;
-                                demoRealClick(numberSelectConfirm, function(){ G.processing=true; });
-                            } else { G.processing=true; }
-                        }, 700);
-                    } else { G.processing=true; }
-                });
-            } else {
-                // 找不到按钮（技能已用完等），直接调用兜底
-                useSkill(s.use, 'p1', true);
-                if(s.pick!==undefined){
-                    setTimeout(function(){
-                        if(numberPickerCallback){
-                            numberSelectInput.value=s.pick;
-                            G.demoClick=true; try{ numberSelectConfirm.click(); } finally{ G.demoClick=false; }
-                        }
-                        G.processing=true;
-                    }, 400);
-                } else { G.processing=true; }
-            }
-        }
+        const pick = (NUMBER_SKILLS.includes(s.use) && s.pick!==undefined) ? s.pick : undefined;
+        demoAutoUseSkill(s.use, who, pick); // 真实技能链路；选数类自动填数确定
     } else if(s.guess!==undefined || s.guessVerified){
         const who = s.who||'p1';
         let n;
@@ -5558,21 +5726,7 @@ function demoStep(){
         } else {
             n = s.guess==='bomb' ? G.bombNumber : s.guess;
         }
-        G.processing=false;
-        const digits = String(n).split('');
-        // 依次真实点击数字键，再真实点击确定（玩家侧全程走实战链路）
-        function clickDigit(i){
-            if(i >= digits.length){
-                const confirmBtn = document.querySelector('#keypad .key-btn[data-action="confirm"]');
-                if(who==='p1') demoRealClick(confirmBtn);
-                else clickElement(confirmBtn, function(){ processGuess(n, false, who); }); // AI侧无键盘权限，直接结算
-                return;
-            }
-            const btn = document.querySelector('#keypad .key-btn[data-value="'+digits[i]+'"]');
-            if(who==='p1') demoRealClick(btn, function(){ setTimeout(function(){ clickDigit(i+1); }, 250); });
-            else clickElement(btn, function(){ setTimeout(function(){ clickDigit(i+1); }, 250); });
-        }
-        clickDigit(0);
+        demoAutoGuess(n, who); // 数字自动敲入输入框，再走真实结算
     }
     setTimeout(demoStep, next);
 }
