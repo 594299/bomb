@@ -5,6 +5,8 @@
 // 依赖：ai-brain.js（信念/配置），主文件全局（运行时调用）：G、getPlayer
 // ============================================================================
 
+// 重生对斩杀线的额外血量：复活血量随上限缩放（至少3血，高上限复活半管）——与主文件 rebirthHP 同步
+function aiRebirthBonus(p){ return p.rebirth ? Math.max(2, Math.ceil(p.maxHP/2)-1) : 0; }
 function aiChooseSkill(ai, human, options){
     const tier = AI_TUNE.skillTier;
     const owned = ai.skills.map(s=>s.id);
@@ -129,7 +131,7 @@ function aiPickBestWeightedGuess(wc, ai, human){
     const total = aiWeightedTotal(wc);
     if(total<=0) return wc[Math.floor(wc.length/2)].n;
     const lethalDamage = aiEstimateHitDamage(ai, human);
-    const lethalNow = lethalDamage >= human.hp + (human.rebirth?2:0);
+    const lethalNow = lethalDamage >= human.hp + aiRebirthBonus(human);
     const oppDamage = aiEstimateOpponentHitDamage(human, ai);
     const baseEntropy = aiWeightedEntropy(wc);
     let best = wc[0].n, bestProb = wc[0].w/total, bestScore = -Infinity;
@@ -167,7 +169,7 @@ function aiChooseVerifierNumber(ai, human, low, high){
     const total = aiWeightedTotal(wc);
     const baseEntropy = aiWeightedEntropy(wc);
     const lethalDamage = aiEstimateHitDamage(ai, human);
-    const lethalNow = lethalDamage >= human.hp + (human.rebirth?2:0);
+    const lethalNow = lethalDamage >= human.hp + aiRebirthBonus(human);
     const plannedGuess = aiPickBestWeightedGuess(wc, ai, human);
     const choices = aiShortlistWeightedNumbers(wc, 8);
     if(plannedGuess!==null && choices.indexOf(plannedGuess)<0) choices.unshift(plannedGuess);
@@ -430,7 +432,7 @@ function aiPlanSkills(ai, human){
     const defLayers = Math.max(0,human.shield||0)+Math.max(0,human.reflect||0);
     const volleySegs = (humanDefensed && ready('volley')) ? (plan.includes('empower')?5:3) : 1;
     const effDmg = defLayers>0 ? Math.max(1,Math.round(estDmg/volleySegs))*Math.max(0,volleySegs-Math.min(defLayers,volleySegs)) : estDmg;
-    const canLethal = effDmg >= human.hp + (human.rebirth?2:0);
+    const canLethal = effDmg >= human.hp + aiRebirthBonus(human);
     // 读人成果（软线索）：没有硬线索时给斩杀估算一个保守口径——软候选按1.5倍计入（约6折信任），
     // 体现"宁可被钓也要会跟注，但不下全部身家"；硬线索照旧全信
     const softCands = (cands===null && lvl>=3) ? aiCandidates(false) : null;
@@ -633,6 +635,29 @@ function aiChooseGuess(ai){
     } else if(ai.blind){
         guess = Math.floor(Math.random()*range)+_aiRLo(); // 被致盲：只能瞎猜
     } else {
+        // 反读心迷彩（装糖）：刚用秘密提示技——这一猜故意避开刚拿到的线索，
+        // 让围观读猜测流的人读到假规律。代价：本猜只吃范围收缩的诚实收益
+        let camoGuess = null;
+        if(G.aiCamo && lvl>=3){
+            G.aiCamo = false;
+            const b = G.aiBrain;
+            const pool = [];
+            for(let n=_aiRLo(); n<=_aiRHi(); n++){
+                if(b){
+                    if(b.lastDigit!==null && n%10===b.lastDigit) continue;
+                    if(b.digitSum!==null && aiDigitSum(n)===b.digitSum) continue;
+                    if(b.digits!==null && String(n).length===b.digits) continue;
+                    if(b.tens!==null && Math.floor(n/10)%10===b.tens) continue;
+                    if(b.parity!==null && n%2===b.parity) continue;
+                }
+                pool.push(n);
+            }
+            if(pool.length>0) camoGuess = pool[Math.floor(Math.random()*pool.length)];
+            // 池空=线索已锁死全部候选，放弃迷彩正常打
+        }
+        if(camoGuess!==null){
+            guess = camoGuess; // usedClues保持false：迷彩猜不计入线索制导，SPRT污染检测不误判
+        } else {
         let cands = null, wc = null;
         if(lvl>=3) wc = aiWeightedCands(); // 困难起：硬线索过滤 + 软线索概率加权
         else if(lvl===2 && Math.random()<0.9) cands = aiCandidates(); // 普通AI偶尔走神
@@ -685,6 +710,7 @@ function aiChooseGuess(ai){
             }
             guess = Math.max(_aiRLo(), Math.min(_aiRHi(), guess));
         }
+        } // /迷彩落空时的正常猜法分支
     }
     // 对手本回合发动了陷阱/禁猜（动作公开、数字保密），人类最爱埋正中点——AI避开
     // 仅限盲猜：确知/有候选时躲雷=放弃稳杀，聪明反被聪明误（踩雷掉1血也远小于放过必中）

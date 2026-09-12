@@ -99,6 +99,11 @@ function aiPlayNormal(){
             G.processing=false;
             dlog('AI','放技能 '+id+' ('+i+'/'+plan.length+')');
             useSkill(id, 'p2', true); // ignoreChecks：已预检，且让选数类技能走自动选数
+            // 反读心迷彩：刚用了秘密提示技，本回合猜数有概率故意偏离新线索——围观读猜测流的人一猜读不穿
+            if(['detect','peek','digitsum','precognition','verifier'].indexOf(id)>=0 && aiEffectiveLevel()>=3 && Math.random()<0.35){
+                G.aiCamo = true;
+                dlog('AI','反读心：本猜将故意偏离新线索（装糖）');
+            }
             // skip/终局类技能可能已换边或结束游戏，此时绝不能恢复processing（否则人类回合被锁死）
             if(G.active && G.currentPlayer==='p2') G.processing=true;
             else { dlog('AI','技能改变了回合/游戏状态 processing保持false turn='+G.currentPlayer); return; }
