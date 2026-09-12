@@ -32,6 +32,217 @@ function aiChooseSkill(ai, human, options){
     });
     return best;
 }
+function aiEstimateHitDamage(ai, human){
+    let mult = (ai.doubleDamage||0)+(ai.allinMultiplier||0);
+    let damage = mult>0 ? mult : 1;
+    if(ai.anger){
+        const lost = ai.maxHP - ai.hp;
+        damage += Math.floor(lost/2);
+    }
+    if(ai.bombletDamage) damage += ai.bombletDamage;
+    if(ai.dormantBonus) damage += 2;
+    damage += (ai.diceBonus||0);
+    if(ai.rampageMulti) damage *= ai.rampageMulti;
+    const segs = (ai.volley && ai.volley>1) ? ai.volley : 1;
+    const defLayers = Math.max(0, human.shield||0) + Math.max(0, human.reflect||0);
+    if(defLayers<=0) return damage;
+    const perSeg = Math.max(1, Math.round(damage/segs));
+    return Math.max(0, perSeg * Math.max(0, segs-Math.min(defLayers, segs)));
+}
+function aiEstimateOpponentHitDamage(human, ai){
+    let damage = (1+(human.doubleDamage||0)+(human.allinMultiplier||0)+(human.bombletDamage||0))*(human.rampageMulti||1);
+    if(human.anger){
+        const lost = human.maxHP - human.hp;
+        damage += Math.floor(lost/2);
+    }
+    damage += (human.diceBonus||0);
+    const segs = (human.volley && human.volley>1) ? human.volley : 1;
+    const defLayers = Math.max(0, ai.shield||0) + Math.max(0, ai.reflect||0);
+    if(defLayers<=0) return damage;
+    const perSeg = Math.max(1, Math.round(damage/segs));
+    return Math.max(0, perSeg * Math.max(0, segs-Math.min(defLayers, segs)));
+}
+function aiEstimatePlannedCandCount(candCount, range, plan){
+    let out = Math.max(1, Math.min(range, candCount));
+    const applyFactor = f => { out = Math.max(1, Math.min(range, Math.ceil(out * f))); };
+    if(plan.includes('binary')) applyFactor(range<=4 ? 0.5 : 0.55);
+    if(plan.includes('blackhole')) applyFactor(0.72);
+    if(plan.includes('detect')) applyFactor(0.58);
+    if(plan.includes('peek')) applyFactor(0.24);
+    if(plan.includes('digitsum')) applyFactor(0.38);
+    if(plan.includes('precognition')) applyFactor(0.34);
+    if(plan.includes('thermometer')) applyFactor(0.62);
+    if(plan.includes('verifier') && out>1) out--;
+    return Math.max(1, Math.min(range, out));
+}
+function aiShouldSpendRiskyBurst(ctx){
+    if(ctx.known || ctx.canLethal) return true;
+    if(ctx.aiFrozen || ctx.humanDormant) return false;
+    if(ctx.aiBehind) return true;
+    if(ctx.humanCanHit && (ctx.oppDmgExp>=Math.max(1.5, ctx.aiHp*0.45) || ctx.oppHitProb>=0.24 || ctx.humanThreat>=3)) return true;
+    if(ctx.effHit>=0.5) return true;
+    const missPenalty = (ctx.hasAllin ? (1-ctx.effHit)*1.15 : 0) + (ctx.hasSpeed ? 0.35 : 0);
+    const nowEV = ctx.effHit * Math.max(1, ctx.effDmg) - missPenalty;
+    const futureEV = ctx.futureHit * Math.max(1, ctx.effDmg);
+    return futureEV <= nowEV + 0.35;
+}
+function aiShouldPreStackBurst(ctx){
+    if(ctx.aiFrozen || ctx.humanDormant) return false;
+    if(ctx.known || ctx.willing) return false;
+    if(ctx.aiBehind) return false;
+    if(ctx.humanCanHit && ctx.oppDmgExp>=Math.max(1.2, ctx.aiHp*0.35)) return false;
+    if(ctx.futureHit < 0.38 || ctx.futureCand > Math.max(4, ctx.guessTries+1)) return false;
+    return true;
+}
+function aiPeekSubsetHitProb(wc){
+    if(!wc || !wc.length) return 0;
+    let total = 0, best = 0;
+    wc.forEach(o=>{ total += o.w; if(o.w>best) best=o.w; });
+    return total>0 ? best/total : 0;
+}
+function aiForecastHitProbForWeightedRange(wc){
+    if(!wc || !wc.length) return 0;
+    let lo = wc[0].n, hi = wc[0].n;
+    for(let i=1; i<wc.length; i++){
+        if(wc[i].n<lo) lo = wc[i].n;
+        if(wc[i].n>hi) hi = wc[i].n;
+    }
+    const fc = aiPredictHumanGuess(lo, hi);
+    return fc ? fc.hitProb : 1/Math.max(1, hi-lo+1);
+}
+function aiShortlistWeightedNumbers(wc, limit){
+    const out = [];
+    const add = n => {
+        if(n===null || n===undefined || out.indexOf(n)>=0) return;
+        out.push(n);
+    };
+    if(!wc || !wc.length) return out;
+    const ranked = wc.slice().sort((a,b)=>(b.w-a.w)||(a.n-b.n));
+    ranked.slice(0, Math.min(limit||6, ranked.length)).forEach(o=>add(o.n));
+    [0.2, 0.35, 0.5, 0.65, 0.8].forEach(q=>{
+        const idx = Math.max(0, Math.min(wc.length-1, Math.round((wc.length-1)*q)));
+        add(wc[idx].n);
+    });
+    return out;
+}
+function aiPickBestWeightedGuess(wc, ai, human){
+    if(!wc || !wc.length) return null;
+    const total = aiWeightedTotal(wc);
+    if(total<=0) return wc[Math.floor(wc.length/2)].n;
+    const lethalDamage = aiEstimateHitDamage(ai, human);
+    const lethalNow = lethalDamage >= human.hp + (human.rebirth?2:0);
+    const oppDamage = aiEstimateOpponentHitDamage(human, ai);
+    const baseEntropy = aiWeightedEntropy(wc);
+    let best = wc[0].n, bestProb = wc[0].w/total, bestScore = -Infinity;
+    for(let i=0; i<wc.length; i++){
+        const guess = wc[i].n;
+        const split = aiSplitWeightedGuess(wc, guess);
+        const hitP = split.hit / total;
+        const missMass = split.miss;
+        const remainFrac = missMass>0 ? Math.max(split.below, split.above)/missMass : 0;
+        const infoGain = 1 - remainFrac;
+        const entropyGain = Math.max(0, baseEntropy - aiExpectedPostGuessEntropy(wc, guess));
+        const hitReward = lethalNow ? 10 : (2 + Math.min(8, lethalDamage));
+        const finishBonus = (ai.speed||0)>0 ? hitP*2 : 0;
+        const antiDormantPenalty = human.dormant ? hitP*4 : 0;
+        const futureSelfProb = missMass>0 ? (split.below/total)*aiPeekSubsetHitProb(split.belowSet) + (split.above/total)*aiPeekSubsetHitProb(split.aboveSet) : 0;
+        const futureOppProb = missMass>0 ? (split.below/total)*aiForecastHitProbForWeightedRange(split.belowSet) + (split.above/total)*aiForecastHitProbForWeightedRange(split.aboveSet) : 0;
+        const tempoSwing = (1-hitP) * (futureSelfProb*4 - futureOppProb*Math.max(3, oppDamage));
+        const score = hitP*hitReward + infoGain*2.2 + entropyGain*1.4 + finishBonus + tempoSwing - antiDormantPenalty;
+        if(score > bestScore + 1e-9 || (Math.abs(score-bestScore)<=1e-9 && hitP>bestProb)){
+            bestScore = score;
+            best = guess;
+            bestProb = hitP;
+        }
+    }
+    return best;
+}
+function aiChooseVerifierNumber(ai, human, low, high){
+    let wc = aiWeightedCands();
+    if(!wc || !wc.length){
+        const cands = aiCandidates(true) || aiCandidates() || [];
+        wc = cands.length ? cands.map(n=>({ n:n, w:1 })) : null;
+    }
+    if(!wc || !wc.length) return Math.floor((low+high)/2);
+    if(wc.length===1) return wc[0].n;
+    const total = aiWeightedTotal(wc);
+    const baseEntropy = aiWeightedEntropy(wc);
+    const lethalDamage = aiEstimateHitDamage(ai, human);
+    const lethalNow = lethalDamage >= human.hp + (human.rebirth?2:0);
+    const plannedGuess = aiPickBestWeightedGuess(wc, ai, human);
+    const choices = aiShortlistWeightedNumbers(wc, 8);
+    if(plannedGuess!==null && choices.indexOf(plannedGuess)<0) choices.unshift(plannedGuess);
+    let best = choices[0], bestScore = -Infinity;
+    for(let i=0; i<choices.length; i++){
+        const n = choices[i];
+        const pick = wc.find(o=>o.n===n);
+        if(!pick) continue;
+        const hitP = pick.w / total;
+        const infoGain = Math.max(0, baseEntropy - aiExpectedPostVerifyEntropy(wc, n));
+        const followBonus = n===plannedGuess ? 0.8 : 0;
+        const score = hitP*(lethalNow ? 14 : 7) + infoGain*1.2 + followBonus;
+        if(score > bestScore + 1e-9 || (Math.abs(score-bestScore)<=1e-9 && hitP > ((wc.find(o=>o.n===best)||{w:0}).w/total))){
+            bestScore = score;
+            best = n;
+        }
+    }
+    return best;
+}
+function aiChooseBlackholeNumber(low, high){
+    const wc = aiWeightedCands();
+    if(!wc || !wc.length) return Math.floor((low+high)/2);
+    const choices = aiShortlistWeightedNumbers(wc, 8);
+    const mid = Math.floor((low+high)/2);
+    if(choices.indexOf(mid)<0) choices.push(mid);
+    if(choices.indexOf(Math.min(high, low+2))<0) choices.push(Math.min(high, low+2));
+    if(choices.indexOf(Math.max(low, high-2))<0) choices.push(Math.max(low, high-2));
+    let weightedMean = 0;
+    const total = aiWeightedTotal(wc);
+    wc.forEach(o=>{ weightedMean += o.n * o.w; });
+    weightedMean = total>0 ? weightedMean/total : mid;
+    let best = choices[0], bestScore = -Infinity;
+    for(let i=0; i<choices.length; i++){
+        const n = Math.max(low, Math.min(high, choices[i]));
+        const outcome = aiExpectedBlackholeOutcome(wc, low, high, n);
+        const centerBias = 1 - Math.min(1, Math.abs(n-weightedMean)/Math.max(1, high-low));
+        const score = -outcome.entropy*3 - outcome.width*0.12 + centerBias*0.35;
+        if(score > bestScore){
+            bestScore = score;
+            best = n;
+        }
+    }
+    return best;
+}
+function aiChooseControlNumber(skillId, low, high){
+    if(skillId==='blackhole') return aiChooseBlackholeNumber(low, high);
+    const forecast = aiPredictHumanGuess(low, high);
+    const forecastMap = aiPredictHumanGuessMap(low, high, 2);
+    if(!forecast) return Math.floor((low+high)/2);
+    const picks = [forecast.primary].concat(forecast.alternatives||[]).filter((n, i, arr)=>n>=low && n<=high && arr.indexOf(n)===i);
+    if(!picks.length) return Math.floor((low+high)/2);
+    if(skillId==='forbid' || skillId==='trap'){
+        const scoreMap = {};
+        const addScore = (n, sc) => {
+            if(n<low || n>high || sc<=0) return;
+            scoreMap[n] = (scoreMap[n]||0) + sc;
+        };
+        forecastMap.slice(0, 6).forEach((x, idx)=>addScore(x.n, x.score * (idx===0 ? 1.2 : (idx===1 ? 0.82 : 0.58))));
+        addScore(forecast.primary, 1.4 + forecast.confidence*2.4);
+        (forecast.alternatives||[]).forEach((n, idx)=>addScore(n, 0.8 - idx*0.18 + forecast.confidence));
+        if(forecast.style==='candidate-finish') addScore(forecast.primary, 1.5);
+        let best = picks[0], bestScore = -Infinity;
+        Object.keys(scoreMap).forEach(k=>{
+            const n = parseInt(k);
+            const score = scoreMap[k];
+            if(score > bestScore){
+                bestScore = score;
+                best = n;
+            }
+        });
+        return best;
+    }
+    return picks[0];
+}
 
 // AI 回合技能规划：按局势返回一串要连放的技能id（有先后顺序，赋能必须在被强化技能前面）
 function aiPlanSkills(ai, human){
@@ -52,9 +263,9 @@ function aiPlanSkills(ai, human){
     const maxSkills = Math.min(lvl===2 ? 3 : (lvl===3 ? 5 : (lvl>=4 ? 99 : 6)), ai.skills.length + 1);
     const plan = [];
     const push = id => { if(plan.length<maxSkills && !plan.includes(id)) plan.push(id); };
-    const range = G.high - G.low + 1;
+    const range = _aiRHi() - _aiRLo() + 1;
     let cands = aiCandidates(true); // 技能规划=下重注：只认硬线索，软线索（模式挖掘）不得参与
-    if(cands && cands.length===0){ aiWipeValueClues(); cands=null; } // 线索矛盾：清空取值线索重推（保留侦察情报）
+    if(cands && cands.length===0){ aiHandleContradiction(); cands=null; } // 线索矛盾：首次容忍，连续才清洗（ai-brain.js）
     const known = aiKnownBomb();
     const candCount = known!==null ? 1 : ((cands && cands.length>0) ? cands.length : range);
     const hitChance = 1 / candCount;
@@ -72,33 +283,26 @@ function aiPlanSkills(ai, human){
         return (id in obs) ? obs[id]<=0 : false; // 公开用过：按播报的冷却推断；从未公开用过：保守按未就绪
     };
     const avgShrink = (G.humanGuesses||0)>0 ? (G.humanShrink||0)/G.humanGuesses : 0;
-    const humanThreat = (G.humanSuspicion||0)
+    const hView = human.view || { low:G.low, high:G.high };
+    const humanForecast = aiPredictHumanGuess(hView.low, hView.high);
+    const humanGuessMap = aiPredictHumanGuessMap(hView.low, hView.high, 2);
+    const topGuessScore = humanGuessMap.length ? humanGuessMap[0].score : 0;
+    let humanThreat = (G.humanSuspicion||0)
         + (avgShrink>0.45?1:0) // 收敛接近二分效率：不是瞎猜，是有章法的推进
         + (oppCdReady('verifier')?1:0)
         + (oppCdReady('binary')?1:0);
+    if(humanForecast && humanForecast.confidence>=0.55) humanThreat += 1;
+    if(humanForecast && humanForecast.effectivePool<=4) humanThreat += 1;
     // 对手这回合伤不了我：冰封命中不炸 / 被暂停没有回合——别为空气交保命件
     const humanCanHit = !human.frozen && !human.skipNext;
     // 宏观节奏：血量落后或对手威胁逼近了——放弃钓鱼全速收敛，斩杀阈值也放宽
     G.aiBehind = ai.hp<=human.hp-2 || humanThreat>=3;
-    // 对手命中概率估计（终局博弈的核心输入，只看公开行为）：
-    // 模式挖出了软线索 → 他大概率只在线索候选里猜，候选数可精确算；否则按收敛效率粗估
-    const _soft = (G.aiBrain && G.aiBrain.soft) || null;
-    const _hasSoft = _soft && (_soft.lastDigit!==null || _soft.tens!==null || _soft.digitSum!==null || _soft.parity!==null);
-    let oppCands = range;
-    if(_hasSoft){
-        oppCands = 0;
-        for(let n=G.low; n<=G.high; n++){
-            if(_soft.lastDigit!==null && n%10!==_soft.lastDigit) continue;
-            if(_soft.tens!==null && Math.floor(n/10)%10!==_soft.tens) continue;
-            if(_soft.digitSum!==null){ let sm=0; const st=String(n); for(const c of st) sm+=+c; if(sm!==_soft.digitSum) continue; }
-            if(_soft.parity!==null && n%2!==_soft.parity) continue;
-            oppCands++;
-        }
-        oppCands = Math.max(1, oppCands);
-    } else if(avgShrink>0.45) oppCands = Math.max(1, Math.ceil(range/2)); // 有章法的推进：按二分收敛估
-    else if(avgShrink>0.3) oppCands = Math.max(1, Math.ceil(range*0.7));
+    // 对手命中概率估计（终局博弈的核心输入）：优先采用"候选池+习惯"预测，退化时再回落到收敛率粗估
+    let oppCands = humanForecast ? humanForecast.effectivePool : range;
+    if(!humanForecast && avgShrink>0.45) oppCands = Math.max(1, Math.ceil(range/2)); // 有章法的推进：按二分收敛估
+    else if(!humanForecast && avgShrink>0.3) oppCands = Math.max(1, Math.ceil(range*0.7));
     // 对手出手次数计入加速续猜（公开buff）：带2层加速的对手终局命中率是裸估的3倍
-    const oppHitProb = Math.min(1, (1+(human.speed||0))/oppCands);
+    const oppHitProb = humanForecast ? Math.max(Math.min(1, (1+(human.speed||0))/oppCands), humanForecast.hitProb) : Math.min(1, (1+(human.speed||0))/oppCands);
     const oppDmgExp = humanCanHit ? oppHitProb * Math.max(1, humanMaxDmg) : 0; // 对手下回合的期望伤害
 
     // 0) 确知炸弹（验证器命中过）→ 全力斩杀链，必中
@@ -190,13 +394,17 @@ function aiPlanSkills(ai, human){
         if(lvl>=3 && ready('precognition')) push('precognition');
         if(lvl>=3 && ready('thermometer')) push('thermometer');
     }
-    // 验证器：候选较少时验证中位候选——中了直接确知炸弹，没中也排除一半候选
+    // 验证器：候选较少时验证“当前最值得怀疑”的数字——中了立刻确知，没中也能排除最优猜点
     if(ready('verifier') && candCount>1 && candCount<=(lvl>=4?14:(lvl>=3?6:3))) push('verifier');
     // 侦察：对手埋雷/设禁猜/伪装（动作公开、数字保密）→ 必侦察看穿；否则大师低概率顺手刺探
     // 侦察=拿对手冷却视野（威胁评估立刻精确化）：对手行为可疑就刺探，大师也会例行刺探
     if(lvl>=3 && ready('scout') && (ai.scoutVision||0)<=0){
         if((G.humanSuspicion||0)>=1 || avgShrink>0.4) push('scout');
         else if(lvl>=4 && human.skills.length>0 && Math.random()<0.3) push('scout');
+    }
+    if(lvl>=3 && topGuessScore>=0.78 && range<=16){
+        if(ready('forbid')) push('forbid');
+        else if(ready('trap')) push('trap');
     }
 
     // 4.5) 终局精确博弈：对手下回合命中概率到临界值就必须拆台——
@@ -306,9 +514,8 @@ function aiPlanSkills(ai, human){
         }
         // 回退：被迫进入赌博区（范围小但没线索）→ 重开到自己上次猜之前，拒绝赌命
         if(lvl>=4 && ready('rewind') && range<=6 && candCount>2 && ai.prevLow!==undefined && ai.prevLow!==null) push('rewind');
-        // 说谎：这回合反正是低价值猜（被冰封/对手休眠/大范围盲猜），反馈不重要——
-        // 赌一手假反馈：50%概率范围不缩小，对手也吃不到自己猜错的收敛红利
-        if(ready('lie') && (ai.frozen || human.dormant || candCount>15) && Math.random()<0.5) push('lie');
+        // 说谎（进攻型）：对手下条反馈必假、范围不动——他收敛越凶，这口假信息越毒
+        if(ready('lie') && (humanThreat>=2 || oppHitProb>=0.12) && Math.random()<0.6) push('lie');
         // 穿透：已叠了伤且对手有盾 → 独立补穿透，不绑死斩杀链
         if(ready('pierce') && human.shield>0 && !plan.includes('pierce')
             && (plan.includes('double')||plan.includes('allin')||plan.includes('rampage')||plan.includes('bomblet'))) push('pierce');
@@ -389,9 +596,9 @@ function aiTopUp(ai, human, used){
     if(lvl<2) return [];
     const ready = id => !used[id] && ai.skills.some(s=>s.id===id) && (ai.cooldowns[id]||0)<=0 && ai.lockedSkill!==id && ai.secondLockedSkill!==id;
     let cands = aiCandidates(true); // 追加爆发=下重注：只认硬线索
-    if(cands && cands.length===0){ aiWipeValueClues(); cands=null; }
+    if(cands && cands.length===0){ aiHandleContradiction(); cands=null; }
     const known = aiKnownBomb();
-    const candCount = known!==null ? 1 : ((cands && cands.length>0) ? cands.length : (G.high-G.low+1));
+    const candCount = known!==null ? 1 : ((cands && cands.length>0) ? cands.length : (_aiRHi()-_aiRLo()+1));
     const out = [];
     const push = id => { if(out.length<3 && !out.includes(id) && ready(id)) out.push(id); };
     if((known!==null || candCount<=4) && !human.dormant){ // 对手休眠设伏：爆发被吞还送+2，改走压缩/确认磨过去
@@ -410,7 +617,7 @@ function aiTopUp(ai, human, used){
         if(lvl>=4) push('speed');
     }
     // 终局抢轮次：砍不动就偷走对手的下回合
-    if((G.high-G.low+1)<=8 && lvl>=3){
+    if((_aiRHi()-_aiRLo()+1)<=8 && lvl>=3){
         push('pause');
         if(lvl>=4) push('freeze');
     }
@@ -420,65 +627,49 @@ function aiTopUp(ai, human, used){
 // 猜数决策（纯选择，不碰 DOM 不执行）：返回 {guess, usedClues}
 // 本猜命中率写入 G.aiLastGuessP（仅线索制导猜>0），供情报污染检测使用；故意求不中的猜不计
 function aiChooseGuess(ai){
-    const range=G.high-G.low+1;
+    const range=_aiRHi()-_aiRLo()+1;
     const lvl=aiEffectiveLevel();
     G.aiLastGuessP = 0;
     const known = aiKnownBomb();
     let guess;
     let usedClues = false; // 本猜是否基于确知/候选（盲猜才允许躲雷，稳杀局绝不让步）
-    if(ai.frozen && lvl>=3 && !ai.blind && !ai.fog){
+    if(ai.frozen && lvl>=3 && !ai.blind){
         // 被冰封：命中不炸也不缩范围，猜错反而正常缩——故意贴边"求不中"，下回合冰化再杀
-        guess = Math.random()<0.5 ? G.low+1 : G.high-1;
-        guess = Math.max(G.low, Math.min(G.high, guess));
-    } else if(getPlayer('p1').dormant && lvl>=3 && !ai.blind && !ai.fog){
+        guess = Math.random()<0.5 ? _aiRLo()+1 : _aiRHi()-1;
+        guess = Math.max(_aiRLo(), Math.min(_aiRHi(), guess));
+    } else if(getPlayer('p1').dormant && lvl>=3 && !ai.blind){
         // 对手休眠设伏：命中=白打还送+2——贴边钓鱼降低踩中率，即使确知炸弹也绝不撞埋伏
-        guess = Math.random()<0.5 ? G.low+1 : G.high-1;
-        guess = Math.max(G.low, Math.min(G.high, guess));
-    } else if(known!==null && !ai.blind && !ai.fog && lvl>=2){
+        guess = Math.random()<0.5 ? _aiRLo()+1 : _aiRHi()-1;
+        guess = Math.max(_aiRLo(), Math.min(_aiRHi(), guess));
+    } else if(known!==null && !ai.blind && lvl>=2){
         guess = known; usedClues = true; G.aiLastGuessP = 1; // 验证器命中过，直接收割
-    } else if(ai.blind || ai.fog){
-        guess = Math.floor(Math.random()*range)+G.low; // 被致盲/迷雾：只能瞎猜
+    } else if(ai.blind){
+        guess = Math.floor(Math.random()*range)+_aiRLo(); // 被致盲：只能瞎猜
     } else {
         let cands = null, wc = null;
         if(lvl>=3) wc = aiWeightedCands(); // 困难起：硬线索过滤 + 软线索概率加权
         else if(lvl===2 && Math.random()<0.9) cands = aiCandidates(); // 普通AI偶尔走神
         else if(lvl===1 && Math.random()<0.6) cands = aiCandidates(); // 简单AI也会用线索，只是经常想不起来
-        if(wc && wc.length===0){ aiWipeValueClues(); wc=null; } // 线索矛盾：清空取值线索重推（保留侦察情报）
-        if(cands && cands.length===0){ aiWipeValueClues(); cands=null; }
+        if(wc && wc.length===0){ aiHandleContradiction(); wc=null; } // 线索矛盾：首次容忍，连续才清洗（ai-brain.js）
+        if(cands && cands.length===0){ aiHandleContradiction(); cands=null; }
         if(wc && wc.length>0){
             usedClues = true;
             let totW = 0; wc.forEach(o=>{ totW+=o.w; });
-            if(wc.length<=2){
-                // 候选极少：按概率权重抽（软线索加权后的最大似然收割）
-                let r = Math.random()*totW, pick = wc[0];
-                for(let i=0;i<wc.length;i++){ r-=wc[i].w; if(r<=0){ pick=wc[i]; break; } }
-                guess = pick.n; G.aiLastGuessP = pick.w/totW;
-            } else {
-                // 加权最优分割：按"概率质量"对半切，而非按数值中点——
-                // 软线索把概率压歪时（如个位=2的候选挤在82/92），切质量中位比切数值中点收敛快一截
-                let best=wc[0].n, bestW=wc[0].w, bestScore=Infinity;
-                for(let ci=0;ci<wc.length;ci++){
-                    const g=wc[ci].n;
-                    let below=0, above=0;
-                    for(let cj=0;cj<wc.length;cj++){ if(wc[cj].n<g) below+=wc[cj].w; else if(wc[cj].n>g) above+=wc[cj].w; }
-                    const tot=below+above;
-                    if(tot===0){ best=g; bestW=wc[ci].w; break; }
-                    const score=(below*below+above*above)/tot; // 期望剩余概率质量（两侧越均匀越小）
-                    if(score<bestScore-1e-9){ bestScore=score; best=g; bestW=wc[ci].w; }
-                }
-                guess=best; G.aiLastGuessP=bestW/totW;
-            }
+            const best = aiPickBestWeightedGuess(wc, ai, getPlayer('p1'));
+            const pick = wc.find(o=>o.n===best) || wc[0];
+            guess = pick.n;
+            G.aiLastGuessP = pick.w/totW;
         } else if(cands && cands.length>0){
             usedClues = true;
-            if(cands.length<=2) guess = cands[Math.floor(Math.random()*cands.length)]; // 候选极少：直接收割
-            else guess = cands[Math.floor(cands.length/2)]; // 中位切割，最大信息量
+            const uw = cands.map(n=>({ n:n, w:1 }));
+            guess = aiPickBestWeightedGuess(uw, ai, getPlayer('p1'));
             G.aiLastGuessP = 1/cands.length;
             if(lvl<=2 && range>4){ // 简单/普通AI带点抖动，不够精准
                 guess += (Math.random()<0.5?-1:1)*Math.floor(Math.random()*3);
-                guess = Math.max(G.low, Math.min(G.high, guess));
+                guess = Math.max(_aiRLo(), Math.min(_aiRHi(), guess));
             }
         } else {
-            const mid = (G.low+G.high)/2;
+            const mid = (_aiRLo()+_aiRHi())/2;
             const fishRate = G.aiBehind ? 0 : (lvl>=4 ? 1 : 0.5); // 逆风不钓鱼：全速中点收敛抢回节奏
             // 大师只在范围很大时才钓鱼——范围≤12直接中点切割，快速收敛压迫感拉满
             const fishRange = lvl>=4 ? 12 : 4;
@@ -493,25 +684,25 @@ function aiChooseGuess(ai){
                 // 钓鱼猜法（高手策略）：猜贴边数字。命中概率与中点完全相同(1/range)，
                 // 但猜错范围只缩1格——不给对手送信息；对手的中点猜法反而替我们缩圈。
                 // 若炸弹恰好在最边缘(1/range概率)，范围直接塌缩成1格，下回合必中。
-                guess = Math.random()<0.5 ? G.low+1 : G.high-1;
+                guess = Math.random()<0.5 ? _aiRLo()+1 : _aiRHi()-1;
             } else if(lvl===1){
                 // 简单AI：中点附近大范围乱飘（不再是全范围纯随机）
                 const spread=Math.max(1, Math.floor(range*0.3));
-                guess=Math.max(G.low, Math.min(G.high, Math.round(mid+(Math.floor(Math.random()*(spread*2+1))-spread))));
+                guess=Math.max(_aiRLo(), Math.min(_aiRHi(), Math.round(mid+(Math.floor(Math.random()*(spread*2+1))-spread))));
             } else if(lvl===2){
                 const spread=Math.max(1, Math.floor(range*0.15));
                 const offset=Math.floor(Math.random()*(spread*2+1))-spread;
-                guess=Math.max(G.low, Math.min(G.high, Math.round(mid+offset)));
+                guess=Math.max(_aiRLo(), Math.min(_aiRHi(), Math.round(mid+offset)));
             } else {
                 guess = Math.round(mid); // 范围已小：中点切割快速收敛
             }
-            guess = Math.max(G.low, Math.min(G.high, guess));
+            guess = Math.max(_aiRLo(), Math.min(_aiRHi(), guess));
         }
     }
     // 对手本回合发动了陷阱/禁猜（动作公开、数字保密），人类最爱埋正中点——AI避开
     // 仅限盲猜：确知/有候选时躲雷=放弃稳杀，聪明反被聪明误（踩雷掉1血也远小于放过必中）
-    if(lvl>=3 && !usedClues && (G.humanTrap || G.humanForbid) && guess===Math.floor((G.low+G.high)/2)){
-        guess = Math.max(G.low, Math.min(G.high, guess + (Math.random()<0.5?-1:1)));
+    if(lvl>=3 && !usedClues && (G.humanTrap || G.humanForbid) && guess===Math.floor((_aiRLo()+_aiRHi())/2)){
+        guess = Math.max(_aiRLo(), Math.min(_aiRHi(), guess + (Math.random()<0.5?-1:1)));
     }
     return { guess:guess, usedClues:usedClues };
 }

@@ -14,12 +14,30 @@ const AI_TUNE = {
         volley:9, double:8, rampage:8, detect:8, binary:8, verifier:8, digitsum:8,
         shield:7, reflect:7, heal:7, rebirth:7, allin:7, empower:7, pause:7, peek:7, precognition:7,
         bomblet:6, forbid:6, trap:6, pierce:6, dormant:6, shuffle:6, speed:6, freeze:6, scout:6, numberslash:6,
-        blind:5, lock:5, slow:5, disguise:5, web:5, anger:5, lifesteal:5, thermometer:5,
+        blind:5, lock:5, disguise:5, web:5, anger:5, lifesteal:5, thermometer:5,
         refresh:5, charge:5, move:5, tide:5, wormhole:5, blackhole:5,
-        rewind:4, bet:4, fog:4, lie:4, copy:4, timerewind:4, swap:4,
+        slow:6, fog:6, lie:6, // 控制三兄弟加强后升值：缓速2次/迷雾3次/说谎进攻型
+        rewind:4, bet:4, copy:4, timerewind:4, swap:4,
         dice:3, gambler:3, skip:4
     }
 };
+
+// AI 的视图范围（可能被说谎/迷雾欺骗）：推理永远用"AI 看到的范围"，真实范围只在主文件结算
+function _aiRLo(){ const p=getPlayer('p2'); return (p && p.view) ? p.view.low : G.low; }
+function _aiRHi(){ const p=getPlayer('p2'); return (p && p.view) ? p.view.high : G.high; }
+// 线索矛盾处理：首次矛盾不离场（可能只是视图被说谎假缩，同步后自动恢复）；
+// 连续两轮（按AI回合计）矛盾才废弃——人类秘密挪弹的持续性污染才会触发真正的清洗
+function aiHandleContradiction(){
+    const b = G.aiBrain;
+    if(!b) return;
+    if(b.contraToken !== G.aiTurnToken){ b.contraToken = G.aiTurnToken; b.contraStrikes = (b.contraStrikes||0)+1; }
+    if((b.contraStrikes||0)>=2){
+        aiWipeValueClues();
+        dlog('AI','连续两轮线索矛盾：情报确已过期，废弃取值线索重推');
+    } else {
+        dlog('AI','线索矛盾（首次）：暂不离场再观察一轮——若只是视图被假缩，同步后自动恢复');
+    }
+}
 
 // AI 大脑：只用公开信息 + 信息技能私有结果做推理（不偷看炸弹）
 function aiIsUser(u){ return u.id==='p2' && (G.mode.includes('ai') || G.mode==='tutorial'); }
@@ -29,6 +47,168 @@ function aiBrain(){
 }
 function aiEmptySoft(){ return { lastDigit:null, tens:null, digitSum:null, parity:null }; }
 function aiEffectiveLevel(){ return G.mode==='tutorial' ? Math.min(G.aiLevel, 2) : G.aiLevel; }
+function aiDigitSum(n){ let s=0; const st=String(n); for(const c of st) s+=+c; return s; }
+function aiMatchFeatureSet(n, feat){
+    if(!feat) return true;
+    if(feat.lastDigit!==null && n%10!==feat.lastDigit) return false;
+    if(feat.tens!==null && Math.floor(n/10)%10!==feat.tens) return false;
+    if(feat.digitSum!==null && aiDigitSum(n)!==feat.digitSum) return false;
+    if(feat.parity!==null && n%2!==feat.parity) return false;
+    return true;
+}
+function aiOpponentModel(){
+    if(!G.aiOppModel){
+        G.aiOppModel = {
+            samples:0,
+            centerEMA:0.5,
+            edgeEMA:0.5,
+            precisionEMA:0.5,
+            shrinkEMA:0,
+            lowEdgeCount:0,
+            highEdgeCount:0,
+            softAligned:0,
+            softBroken:0,
+            recent:[]
+        };
+    }
+    return G.aiOppModel;
+}
+function aiObserveHumanGuess(guess, prevLow, prevHigh, newLow, newHigh){
+    if(!G.mode.includes('ai')) return;
+    const m = aiOpponentModel();
+    const width = Math.max(1, prevHigh-prevLow+1);
+    const newWidth = Math.max(1, newHigh-newLow+1);
+    const mid = (prevLow+prevHigh)/2;
+    const span = Math.max(1, width-1);
+    const pos = (guess-prevLow)/span;
+    const centerHit = Math.abs(guess-mid)<=Math.max(1, width*0.15) ? 1 : 0;
+    const edgeHit = Math.min(pos, 1-pos)<=0.2 ? 1 : 0;
+    const preciseOffMid = (width>=20 && Math.abs(guess-mid)>width*0.2) ? 1 : 0;
+    const shrink = Math.max(0, Math.min(1, (width-newWidth)/width));
+    const ema = m.samples===0 ? 1 : 0.28;
+    m.centerEMA = m.samples===0 ? centerHit : (m.centerEMA*(1-ema) + centerHit*ema);
+    m.edgeEMA = m.samples===0 ? edgeHit : (m.edgeEMA*(1-ema) + edgeHit*ema);
+    m.precisionEMA = m.samples===0 ? preciseOffMid : (m.precisionEMA*(1-ema) + preciseOffMid*ema);
+    m.shrinkEMA = m.samples===0 ? shrink : (m.shrinkEMA*(1-ema) + shrink*ema);
+    if(pos<=0.35) m.lowEdgeCount++;
+    if(pos>=0.65) m.highEdgeCount++;
+    m.samples++;
+    const pool = aiInferHumanBombPool(prevLow, prevHigh);
+    if(pool && pool.length){
+        if(pool.indexOf(guess)>=0) m.softAligned++;
+        else m.softBroken++;
+    }
+    m.recent.push({ guess:guess, low:prevLow, high:prevHigh, pos:pos });
+    if(m.recent.length>8) m.recent.shift();
+}
+function aiInferHumanBombPool(low, high){
+    const b = G.aiBrain;
+    const soft = (b && b.soft) ? b.soft : null;
+    const hasSoft = soft && (soft.lastDigit!==null || soft.tens!==null || soft.digitSum!==null || soft.parity!==null);
+    if(!hasSoft) return null;
+    const out = [];
+    for(let n=low; n<=high; n++){
+        if(aiMatchFeatureSet(n, soft)) out.push(n);
+    }
+    return out.length ? out : null;
+}
+function aiProjectRangeAfterMiss(low, high, guess, dir){
+    if(dir==='below') return { low:low, high:Math.max(low, guess-1) };
+    return { low:Math.min(high, guess+1), high:high };
+}
+function aiEstimateBombSideProb(low, high, guess){
+    const pool = aiInferHumanBombPool(low, high);
+    let below = 0, above = 0;
+    if(pool && pool.length){
+        for(const n of pool){
+            if(n<guess) below++;
+            else if(n>guess) above++;
+        }
+    } else {
+        below = Math.max(0, guess-low);
+        above = Math.max(0, high-guess);
+    }
+    const total = below + above;
+    if(total<=0) return { below:0.5, above:0.5 };
+    return { below:below/total, above:above/total };
+}
+function aiPredictHumanGuessMap(low, high, depth){
+    const scores = {};
+    const add = (n, w) => {
+        if(n<low || n>high || w<=0) return;
+        scores[n] = (scores[n]||0) + w;
+    };
+    const walk = (lo, hi, d, weight) => {
+        if(d<=0 || lo>hi || weight<=0.02) return;
+        const fc = aiPredictHumanGuess(lo, hi);
+        if(!fc) return;
+        const picks = [fc.primary].concat(fc.alternatives||[]).filter((n, i, arr)=>n>=lo && n<=hi && arr.indexOf(n)===i);
+        if(!picks.length) return;
+        const base = Math.max(0.2, fc.confidence||0.4);
+        for(let i=0; i<picks.length; i++){
+            const n = picks[i];
+            const localWeight = weight * base * (i===0 ? 1 : (i===1 ? 0.58 : 0.33));
+            add(n, localWeight);
+            const side = aiEstimateBombSideProb(lo, hi, n);
+            const below = aiProjectRangeAfterMiss(lo, hi, n, 'below');
+            const above = aiProjectRangeAfterMiss(lo, hi, n, 'above');
+            if(below.low<=below.high) walk(below.low, below.high, d-1, localWeight * side.below * 0.82);
+            if(above.low<=above.high) walk(above.low, above.high, d-1, localWeight * side.above * 0.82);
+        }
+    };
+    walk(low, high, depth, 1);
+    return Object.keys(scores)
+        .map(k=>({ n:parseInt(k), score:scores[k] }))
+        .sort((a,b)=>b.score-a.score);
+}
+function aiPredictHumanGuess(low, high){
+    const m = aiOpponentModel();
+    const human = getPlayer('p1');
+    const width = Math.max(1, high-low+1);
+    const pool = aiInferHumanBombPool(low, high);
+    const preferCenter = m.samples>=3 ? m.centerEMA>=0.56 : true;
+    const preferEdge = m.samples>=3 ? m.edgeEMA>=0.58 : false;
+    const preferLow = (m.lowEdgeCount||0) >= (m.highEdgeCount||0);
+    const result = { primary:Math.floor((low+high)/2), alternatives:[], effectivePool:width, hitProb:Math.min(1, (1+(human.speed||0))/width), confidence:0.2, style:'mid' };
+    if(pool && pool.length){
+        const q1 = pool[Math.max(0, Math.floor((pool.length-1)*0.25))];
+        const mid = pool[Math.floor(pool.length/2)];
+        const q3 = pool[Math.max(0, Math.ceil((pool.length-1)*0.75))];
+        result.style = pool.length<=4 ? 'candidate-finish' : (preferEdge ? 'candidate-edge' : 'candidate-mid');
+        result.primary = pool.length===1 ? pool[0] : (preferEdge ? (preferLow ? q1 : q3) : mid);
+        result.alternatives = [mid, preferLow ? q3 : q1].filter((n, i, arr)=>arr.indexOf(n)===i && n!==result.primary);
+        const softConfidence = (m.softAligned+1) / (m.softAligned + m.softBroken + 2);
+        result.effectivePool = Math.max(1, Math.ceil(pool.length * (softConfidence>=0.6 ? 0.75 : 1)));
+        result.hitProb = Math.min(1, (1+(human.speed||0))/result.effectivePool);
+        result.confidence = Math.min(0.95, 0.45 + softConfidence*0.4 + (pool.length<=4 ? 0.12 : 0));
+        return result;
+    }
+    const avgShrink = (G.humanGuesses||0)>0 ? (G.humanShrink||0)/G.humanGuesses : 0;
+    if(preferEdge){
+        result.style = 'edge';
+        result.primary = preferLow ? Math.min(high, low+1) : Math.max(low, high-1);
+        result.alternatives = [Math.floor((low+high)/2), preferLow ? Math.max(low, low+Math.floor(width*0.25)) : Math.min(high, high-Math.floor(width*0.25))]
+            .filter((n, i, arr)=>arr.indexOf(n)===i && n!==result.primary);
+    } else if(!preferCenter && m.precisionEMA>=0.52 && width>=8){
+        result.style = 'quarter';
+        result.primary = Math.round(low + (high-low) * (preferLow ? 0.35 : 0.65));
+        result.alternatives = [Math.floor((low+high)/2), preferLow ? Math.max(low, low+1) : Math.min(high, high-1)]
+            .filter((n, i, arr)=>arr.indexOf(n)===i && n!==result.primary);
+    } else {
+        result.style = 'mid';
+        result.primary = Math.floor((low+high)/2);
+        result.alternatives = [Math.max(low, result.primary-1), Math.min(high, result.primary+1)]
+            .filter((n, i, arr)=>arr.indexOf(n)===i && n!==result.primary);
+    }
+    let effPool = width;
+    if(m.precisionEMA>=0.58) effPool = Math.max(1, Math.ceil(width*0.55));
+    else if(avgShrink>0.45 || m.shrinkEMA>0.45) effPool = Math.max(1, Math.ceil(width/2));
+    else if(avgShrink>0.3 || m.shrinkEMA>0.3) effPool = Math.max(1, Math.ceil(width*0.7));
+    result.effectivePool = effPool;
+    result.hitProb = Math.min(1, (1+(human.speed||0))/effPool);
+    result.confidence = Math.min(0.8, 0.22 + Math.max(m.centerEMA, m.edgeEMA)*0.35 + m.precisionEMA*0.15);
+    return result;
+}
 // 根据 AI 已掌握的线索过滤候选炸弹数字（多条线索取交集组合推理：
 // 已知个位 → 只留该个位的数；再知数字和 → 进一步只留“其余位之和 = 数字和-个位”的数。
 // 例：个位=2 ∩ 数字和=6 → 范围内只剩 42；再∩奇偶/首位/温度计/验证排除，候选常收敛到个位数）
@@ -46,16 +226,17 @@ function aiCandidates(hardOnly){
     const hasClue = hasCandSet || hasSoft || b.parity!==null || b.lastDigit!==null || b.digitSum!==null || b.tens!==null || b.thermo || Object.keys(b.verified).length>0;
     if(!hasClue) return null;
     const cands = [];
-    for(let n=G.low; n<=G.high; n++){
+    for(let n=_aiRLo(); n<=_aiRHi(); n++){
         if(hasCandSet && b.candSet.indexOf(n)<0) continue; // 移位追踪得到的显式候选集
         if(b.parity!==null && (n%2)!==b.parity) continue;
         if(b.lastDigit!==null && (n%10)!==b.lastDigit) continue;
         if(b.tens!==null && Math.floor(n/10)%10!==b.tens) continue;
         if(b.digitSum!==null){ let s=0; const str=String(n); for(const c of str) s+=+c; if(s!==b.digitSum) continue; }
-        if(b.thermo && b.thermo.low===G.low && b.thermo.high===G.high){ const d=Math.abs(n-b.thermo.mid); const lv=Math.max(1,Math.min(10,Math.round(10-(d/b.thermo.maxDist)*9))); if(lv!==b.thermo.level) continue; }
+        if(b.thermo && b.thermo.low===_aiRLo() && b.thermo.high===_aiRHi()){ const d=Math.abs(n-b.thermo.mid); const lv=Math.max(1,Math.min(10,Math.round(10-(d/b.thermo.maxDist)*9))); if(lv!==b.thermo.level) continue; }
         if(b.verified[n]===false) continue;
         cands.push(n);
     }
+    if(cands.length>0) b.contraStrikes = 0; // 候选恢复一致：此前的矛盾已解除
     if(hasSoft){
         const fs = cands.filter(n=>{
             if(soft.lastDigit!==null && n%10!==soft.lastDigit) return false;
@@ -84,26 +265,25 @@ function aiMinePatterns(guess){
     if(!b.soft) b.soft = aiEmptySoft();
     const s = b.soft;
     const seq = G.humanGuessSeq || [];
-    const dsum = n => { let sm=0; const st=String(n); for(const c of st) sm+=+c; return sm; };
     // 已确认的软线索被新猜测打破 → 当场作废
     if(s.lastDigit!==null && guess%10!==s.lastDigit){ s.lastDigit=null; dlog('AI','软线索[个位]被打破，丢弃'); }
     if(s.tens!==null && Math.floor(guess/10)%10!==s.tens){ s.tens=null; dlog('AI','软线索[十位]被打破，丢弃'); }
-    if(s.digitSum!==null && dsum(guess)!==s.digitSum){ s.digitSum=null; dlog('AI','软线索[数字和]被打破，丢弃'); }
+    if(s.digitSum!==null && aiDigitSum(guess)!==s.digitSum){ s.digitSum=null; dlog('AI','软线索[数字和]被打破，丢弃'); }
     if(s.parity!==null && guess%2!==s.parity){ s.parity=null; dlog('AI','软线索[奇偶]被打破，丢弃'); }
     // 确认新软线索：连续N次猜中同一特征才采信（N按巧合率定）；确认=对手在线索驱动，威胁拉满
     const confirm = (attr, val, need) => {
         if(s[attr]!==null || seq.length<need) return;
         const tail = seq.slice(-need);
-        const f = attr==='lastDigit' ? (n=>n%10) : attr==='tens' ? (n=>Math.floor(n/10)%10) : attr==='digitSum' ? dsum : (n=>n%2);
+        const f = attr==='lastDigit' ? (n=>n%10) : attr==='tens' ? (n=>Math.floor(n/10)%10) : attr==='digitSum' ? aiDigitSum : (n=>n%2);
         if(!tail.every(n=>f(n)===val)) return;
         s[attr]=val;
         G.humanSuspicion=(G.humanSuspicion||0)+2;
         dlog('AI','模式挖掘确认：对手疑似掌握['+attr+'='+val+']（连续'+need+'次一致）');
     };
     confirm('lastDigit', guess%10, 2); // 连续2次同个位，巧合率~1%
-    if(Math.floor(G.low/10)!==Math.floor(G.high/10)) confirm('tens', Math.floor(guess/10)%10, 2); // 范围横跨十位才有意义
+    if(Math.floor(_aiRLo()/10)!==Math.floor(_aiRHi()/10)) confirm('tens', Math.floor(guess/10)%10, 2); // 范围横跨十位才有意义
     if(lvl>=4){ // 大师才做弱信号模式
-        confirm('digitSum', dsum(guess), 3); // 数字和巧合率不低，要3次
+        confirm('digitSum', aiDigitSum(guess), 3); // 数字和巧合率不低，要3次
         confirm('parity', guess%2, 3);       // 奇偶巧合率50%，要3次
     }
 }
@@ -184,16 +364,15 @@ function aiWeightedCands(){
     const hasSoft = soft && (soft.lastDigit!==null || soft.tens!==null || soft.digitSum!==null || soft.parity!==null);
     if(!hard && !hasSoft) return null;
     let pool = hard;
-    if(!pool){ pool = []; for(let n=G.low; n<=G.high; n++) pool.push(n); }
+    if(!pool){ pool = []; for(let n=_aiRLo(); n<=_aiRHi(); n++) pool.push(n); }
     const W = AI_TUNE.softWeight;
-    const dsum = n => { let s=0; const st=String(n); for(const c of st) s+=+c; return s; };
     let boosted = 0;
     const out = pool.map(n=>{
         let w = 1;
         if(hasSoft){
             if(soft.lastDigit!==null && n%10===soft.lastDigit) w*=W;
             if(soft.tens!==null && Math.floor(n/10)%10===soft.tens) w*=W;
-            if(soft.digitSum!==null && dsum(n)===soft.digitSum) w*=W;
+            if(soft.digitSum!==null && aiDigitSum(n)===soft.digitSum) w*=W;
             if(soft.parity!==null && n%2===soft.parity) w*=W;
         }
         if(w>1) boosted++;
@@ -201,6 +380,82 @@ function aiWeightedCands(){
     });
     if(hasSoft && boosted===0){ b.soft=null; dlog('AI','软线索与硬事实矛盾，全部丢弃'); } // 被钓了：一个都匹配不上
     return out;
+}
+function aiWeightedTotal(wc){
+    if(!wc || !wc.length) return 0;
+    let total = 0;
+    wc.forEach(o=>{ total += Math.max(0, o.w||0); });
+    return total;
+}
+function aiWeightedEntropy(wc){
+    const total = aiWeightedTotal(wc);
+    if(total<=0) return 0;
+    let ent = 0;
+    wc.forEach(o=>{
+        const w = Math.max(0, o.w||0);
+        if(w<=0) return;
+        const p = w / total;
+        ent -= p * Math.log2(p);
+    });
+    return ent;
+}
+function aiSplitWeightedGuess(wc, guess){
+    let total = 0, hit = 0, below = 0, above = 0;
+    const belowSet = [], aboveSet = [];
+    if(!wc || !wc.length) return { total:0, hit:0, miss:0, below:0, above:0, belowSet:belowSet, aboveSet:aboveSet };
+    for(let i=0; i<wc.length; i++){
+        const o = wc[i];
+        const w = Math.max(0, o.w||0);
+        total += w;
+        if(o.n===guess) hit += w;
+        else if(o.n<guess){ below += w; belowSet.push(o); }
+        else { above += w; aboveSet.push(o); }
+    }
+    return { total:total, hit:hit, miss:Math.max(0, total-hit), below:below, above:above, belowSet:belowSet, aboveSet:aboveSet };
+}
+function aiExpectedPostGuessEntropy(wc, guess){
+    const sp = aiSplitWeightedGuess(wc, guess);
+    if(sp.total<=0) return 0;
+    return (sp.below/sp.total)*aiWeightedEntropy(sp.belowSet) + (sp.above/sp.total)*aiWeightedEntropy(sp.aboveSet);
+}
+function aiExpectedPostVerifyEntropy(wc, guess){
+    const total = aiWeightedTotal(wc);
+    if(total<=0) return 0;
+    const missSet = [];
+    let hit = 0;
+    for(let i=0; i<wc.length; i++){
+        const o = wc[i];
+        if(o.n===guess) hit += Math.max(0, o.w||0);
+        else missSet.push(o);
+    }
+    const missP = Math.max(0, total-hit) / total;
+    return missP * aiWeightedEntropy(missSet);
+}
+function aiBlackholeRangeForBomb(low, high, pivot, bomb){
+    let newLow = low;
+    let newHigh = high;
+    if(low < pivot) newLow = Math.min(low + 2, pivot);
+    if(high > pivot) newHigh = Math.max(high - 2, pivot);
+    if(bomb < newLow) newLow = bomb;
+    if(bomb > newHigh) newHigh = bomb;
+    if(newLow > newHigh) return null;
+    return { low:newLow, high:newHigh };
+}
+function aiExpectedBlackholeOutcome(wc, low, high, pivot){
+    const total = aiWeightedTotal(wc);
+    if(total<=0) return { entropy:0, width:Math.max(1, high-low+1) };
+    let entropy = 0, width = 0;
+    for(let i=0; i<wc.length; i++){
+        const actual = wc[i];
+        const actualP = Math.max(0, actual.w||0) / total;
+        if(actualP<=0) continue;
+        const r = aiBlackholeRangeForBomb(low, high, pivot, actual.n);
+        if(!r) continue;
+        const next = wc.filter(o=>o.n>=r.low && o.n<=r.high);
+        entropy += actualP * aiWeightedEntropy(next);
+        width += actualP * Math.max(1, r.high-r.low+1);
+    }
+    return { entropy:entropy, width:width };
 }
 // AI 猜错后的情报自检（由 processGuess 在未命中分支调用，能走到这=猜的数确定不是炸弹）：
 // ① 猜过的数标记排除（免费排除法，纯公开信息）

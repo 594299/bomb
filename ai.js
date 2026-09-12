@@ -67,14 +67,14 @@ function aiPlayNormal(){
     messageDisplay.textContent='🤖 AI思考中...';
     const ai=getPlayer('p2'), human=getPlayer('p1');
     const plan = aiPlanSkills(ai, human);
-    dlog('AI','回合开始 token='+token+' plan=['+plan.join(',')+'] range='+G.low+'~'+G.high+' hp='+ai.hp+'/'+human.hp);
+    dlog('AI','回合开始 token='+token+' plan=['+plan.join(',')+'] range='+_aiRLo()+'~'+_aiRHi()+' hp='+ai.hp+'/'+human.hp);
     // 赛前垃圾话/鼓励
     if(G.mode.includes('ai')){
         const combo = ['double','allin','rampage','volley'].filter(id=>plan.includes(id)).length;
         if(combo>=2 && Math.random()<0.6) aiTalk('lethal');
         else if(ai.hp<=2 && Math.random()<0.35) aiTalk('aiLowHP');
         else if(human.hp<=2 && Math.random()<0.35) aiTalk('playerLowHP');
-        else if(G.high-G.low+1<=6 && Math.random()<0.3) aiTalk('playerClose');
+        else if(_aiRHi()-_aiRLo()+1<=6 && Math.random()<0.3) aiTalk('playerClose');
         else if(Math.random()<0.12) aiTalk('idle');
         else if(Math.random()<0.08) aiTalk('encourage');
     }
@@ -120,7 +120,7 @@ function aiGuess(token){
     updateInputDisplay();
     const _c = aiCandidates();
     const known = aiKnownBomb();
-    dlog('AI','猜 '+guess+' range='+G.low+'~'+G.high+(pick.usedClues?'(线索)':'(盲猜)')+' 已知='+(known!==null?('确知'+known):('候选'+(_c?_c.length:'无线索'))));
+    dlog('AI','猜 '+guess+' range='+_aiRLo()+'~'+_aiRHi()+(pick.usedClues?'(线索)':'(盲猜)')+' 已知='+(known!==null?('确知'+known):('候选'+(_c?_c.length:'无线索'))));
     messageDisplay.textContent='🤖 AI 输入了 '+guess;
     setTimeout(function(){
         if(!G.active) return;
@@ -165,7 +165,7 @@ function tutorialAI(){
     } else if(action.type === 'guess'){
         G.processing = false;
         // 夹取到当前范围，避免脚本数字越界导致无效猜测
-        const n = Math.max(G.low, Math.min(G.high, action.number));
+        const n = Math.max(_aiRLo(), Math.min(_aiRHi(), action.number));
         processGuess(n, false, 'p2');
     }
 }
