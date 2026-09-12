@@ -38,6 +38,7 @@
         .overlay::before, .overlay::after { content:''; margin:auto; flex-shrink:0; }
         .overlay > * { flex-shrink:0; } /* 关键：禁止子项被压扁，超高改为滚动 */
         .overlay.hidden { display:none; }
+        .hidden { display:none; } /* 通用隐藏：demo-card / slash-panel / codex-detail 等非 overlay 元素也靠它隐藏 */
         .overlay-title { font-size:1.6rem; font-weight:900; margin-bottom:20px; text-align:center; }
         .btn { padding:14px 40px; border:2px solid var(--neon); border-radius:50px; background:rgba(0,240,255,0.1); color:var(--neon); font-size:1rem; font-weight:700; cursor:pointer; margin-top:12px; min-width:220px; outline:none; }
         .btn:active { transform:scale(0.95); }
@@ -98,12 +99,13 @@
         #pause-request-btn { padding:6px 12px; border:1px solid rgba(255,204,102,0.4); border-radius:15px; background:rgba(255,204,102,0.08); color:#ffcc66; font-size:0.65rem; font-weight:700; cursor:pointer; margin-top:4px; }
         #pause-request-btn:disabled { opacity:0.4; cursor:default; }
         #codex-battle-btn { padding:6px 12px; border:1px solid rgba(0,240,255,0.4); border-radius:15px; background:rgba(0,240,255,0.08); color:var(--neon); font-size:0.65rem; font-weight:700; cursor:pointer; margin-top:4px; }
-        /* 技能演示：中央技能大卡（开局）→ 顶部小卡（播放中） */
+        /* 技能演示：中央技能大卡（开局）→ 键盘上方小卡（播放中） */
         #demo-card { position:fixed; left:50%; top:36%; transform:translate(-50%,-50%); z-index:1400; background:rgba(8,12,18,0.93); border:2px solid var(--neon); border-radius:16px; padding:18px 32px; text-align:center; pointer-events:none; transition:all 0.6s ease; box-shadow:0 0 30px rgba(0,240,255,0.25); }
+        #demo-card.hidden { display:none; }
         #demo-card-icon { font-size:3.2rem; line-height:1.1; }
         #demo-card-name { font-size:1.25rem; font-weight:900; color:var(--neon); margin-top:4px; }
         #demo-card-desc { font-size:0.75rem; color:#cde; margin-top:6px; max-width:260px; line-height:1.5; }
-        #demo-card.dock { top:7%; padding:6px 16px; border-radius:10px; box-shadow:none; background:rgba(8,12,18,0.85); }
+        #demo-card.dock { top:55%; padding:6px 16px; border-radius:10px; box-shadow:none; background:rgba(8,12,18,0.85); }
         #demo-card.dock #demo-card-icon { font-size:1.3rem; display:inline; vertical-align:middle; }
         #demo-card.dock #demo-card-name { font-size:0.8rem; display:inline; margin-left:6px; vertical-align:middle; }
         #demo-card.dock #demo-card-desc { display:none; }
@@ -3464,55 +3466,6 @@ document.addEventListener('keydown', function(e){
     if(btn && !btn.disabled){ btn.click(); e.preventDefault(); }
 });
 
-document.addEventListener('keydown', function(e){
-    if(!G.active || G.processing || !isMyTurn()) return;
-    if(Privacy.isLocal() && G.pendingSkillSelect) return;
-    if(e.key >= '0' && e.key <= '9'){
-        if(G.playerInput.length >= getMaxInputLength()) return;
-        if(G.playerInput==='' && e.key==='0'){
-            G.playerInput='0';
-            updateInputDisplay();
-            return;
-        }
-        if(G.playerInput==='0'){
-            return;
-        }
-        G.playerInput += e.key;
-        updateInputDisplay();
-        playSound('click');
-    } else if(e.key === 'Backspace'){
-        G.playerInput = G.playerInput.slice(0, -1);
-        updateInputDisplay();
-    } else if(e.key === 'Enter'){
-        const guess = parseInt(G.playerInput);
-        if(isNaN(guess)) return;
-        if(G.mode.includes('remote') && !G.isHost){
-            if(isNaN(guess)||guess<G.low||guess>G.high){
-                messageDisplay.textContent='⚠️ 请输入 '+G.low+'~'+G.high+' 之间的数字';
-                G.playerInput=''; updateInputDisplay();
-                return;
-            }
-            if(G.conn){
-                G.conn.send({type:'action', action:'guess', playerId:getMyPlayer().id, guess:guess});
-                G.processing=true;
-                setKeypadEnabled(false);
-                G.playerInput='';
-                updateInputDisplay();
-                clearGuestActionTimeout();
-                guestActionTimeout = setTimeout(function(){
-                    if(G.processing&&G.active){
-                        G.processing=false;
-                        setKeypadEnabled(isMyTurn());
-                        messageDisplay.textContent='⚠️ 网络延迟，请重试';
-                    }
-                }, 8000);
-            }
-            return;
-        }
-        processGuess(guess, false, G.mode.includes('local') ? G.currentPlayer : getMyPlayer().id);
-    }
-});
-
 // ========== 渲染函数 ==========
 // AI 随机二次元头像：API 302 重定向到随机头像图，直接当img源用；加载失败回退emoji
 // 每局随机 API 头像，加载失败回退 emoji
@@ -4119,184 +4072,271 @@ const SKILL_EXAMPLES = {
 //          {setBomb:n} 锁定炸弹 {hp:[a,b]} 调血 {buff:{who,field,val}} 调状态 {t:ms} 本步时长
 const SKILL_DEMOS = {
     detect:{ bomb:42, script:[
-        {use:'detect', t:2000},
-        {say:'📡 看！炸弹是 2 位数', t:2600},
-        {say:'1~9 都不是，只剩 10~50', t:2600},
-        {guess:'bomb', say:'💥 砰！一下就猜中了', t:3800}]},
+        {say:'📡 侦测：猜出炸弹是几位数', t:3000},
+        {say:'位数越少，候选数越少，越好猜', t:3200},
+        {use:'detect', t:2600},
+        {say:'看！炸弹是 2 位数 → 1~9 全排除', t:3200},
+        {say:'只剩 10~50，范围一下砍半', t:3000},
+        {guess:'bomb', say:'💥 砰！一下就猜中了', t:4000}]},
     peek:{ bomb:37, script:[
-        {use:'peek', t:2000},
-        {say:'🔍 个位是 7！', t:2400},
-        {say:'只剩 7、17、27、37、47', t:2600},
-        {guess:'bomb', say:'💥 砰！五个里挑一个', t:3800}]},
+        {say:'🔍 透视：偷看炸弹的个位数字', t:3000},
+        {say:'知道个位，就能锁定一小撮候选', t:3200},
+        {use:'peek', t:2600},
+        {say:'个位是 7！候选只剩 7、17、27、37、47', t:3400},
+        {say:'从 50 个缩到 5 个，命中率翻 10 倍', t:3200},
+        {guess:'bomb', say:'💥 砰！五个里挑一个', t:4000}]},
     verifier:{ bomb:33, script:[
-        {use:'verifier', pick:33, t:2400},
-        {say:'🎯 悄悄问：是不是 33？', t:2600},
-        {say:'中了！只有你知道答案', t:2600},
-        {guess:'bomb', say:'💥 砰！直接去收网', t:3800}]},
+        {say:'🎯 验证：悄悄问系统"是不是这个数"', t:3200},
+        {say:'只有你知道答案，对手看不到', t:3000},
+        {use:'verifier', pick:33, t:2800},
+        {say:'悄悄问：炸弹是不是 33？', t:3000},
+        {say:'中了！答案只有你知道', t:2800},
+        {guess:'bomb', say:'💥 砰！直接去收网', t:4000}]},
     scout:{ bomb:25, p2skills:['double','digitsum'], script:[
-        {use:'scout', t:2000},
-        {say:'🕵️ 看！它的技能冷却你全看见', t:3000},
-        {say:'它还不知道自己被看了', t:2800}]},
+        {say:'🕵️ 侦察：偷看对手的技能和冷却', t:3200},
+        {say:'知己知彼，提前防备它的大招', t:3000},
+        {use:'scout', t:2800},
+        {say:'看！它有双倍和数和，都还没用', t:3200},
+        {say:'它不知道你偷看了，可以提前布局', t:3200}]},
     digitsum:{ bomb:28, script:[
-        {use:'digitsum', t:2000},
-        {say:'➕ 2+8=10，和是 10', t:2600},
-        {guess:'bomb', say:'💥 砰！对着和猜，快多了', t:3800}]},
+        {say:'➕ 数和：算出炸弹各位数字之和', t:3200},
+        {say:'用和来缩小范围，比瞎猜快多了', t:3000},
+        {use:'digitsum', t:2600},
+        {say:'2+8=10，数字和是 10', t:2800},
+        {say:'和为 10 的数不多：19、28、37、46', t:3200},
+        {guess:'bomb', say:'💥 砰！对着和猜，快多了', t:4000}]},
     precognition:{ bomb:46, script:[
-        {use:'precognition', t:2000},
-        {say:'🔮 十位是 4！', t:2400},
-        {say:'只剩 40~49 这十个数', t:2600},
-        {guess:'bomb', say:'💥 砰！', t:3800}]},
+        {say:'🔮 预知：偷看炸弹的十位数字', t:3000},
+        {say:'知道十位，范围直接砍掉一大半', t:3000},
+        {use:'precognition', t:2600},
+        {say:'十位是 4！只剩 40~49 这十个数', t:3200},
+        {guess:'bomb', say:'💥 砰！十拿九稳', t:4000}]},
     binary:{ bomb:37, script:[
-        {use:'binary', t:2000},
-        {say:'✂️ 一刀两半！1-50 → 26-50', t:2800},
-        {guess:'bomb', say:'💥 砰！砍得快，猜得准', t:3800}]},
+        {say:'✂️ 二分：直接砍掉一半范围', t:3000},
+        {say:'最稳的缩圈技能，早用早赚', t:3000},
+        {use:'binary', t:2600},
+        {say:'一刀两半！1-50 → 26-50', t:3200},
+        {say:'范围砍半，猜中率翻倍', t:2800},
+        {guess:'bomb', say:'💥 砰！砍得快，猜得准', t:4000}]},
     blackhole:{ bomb:30, script:[
-        {use:'blackhole', pick:25, t:2400},
-        {say:'🕳️ 黑洞吸一吸：1-50 → 3-48', t:2800},
-        {guess:'bomb', say:'💥 砰！慢慢缩也很稳', t:3800}]},
+        {say:'🕳️ 黑洞：选一个数，往中间吸掉几层', t:3400},
+        {say:'选离炸弹远的数，安全缩圈不踩雷', t:3200},
+        {use:'blackhole', pick:25, t:2800},
+        {say:'吸 25 → 1-50 变成 3-48', t:3000},
+        {say:'炸弹 30 没被吸到，安全！', t:2800},
+        {guess:'bomb', say:'💥 砰！慢慢缩也很稳', t:4000}]},
     tide:{ min:1, max:100, bomb:60, script:[
-        {guess:50, say:'先猜，范围变小了', t:2800},
+        {say:'🌊 潮汐：把对手的范围拉大（灌水）', t:3400},
+        {say:'下回合退潮，它的范围会比你大很多', t:3200},
+        {guess:50, say:'先正常猜，范围缩到 51~100', t:3200},
         {guess:80, say:'再猜：只剩 51~79', t:2800},
-        {use:'tide', t:2000},
-        {say:'🌊 哗啦！给它灌水到 46~84', t:3000},
-        {say:'你还是 51~79，它蒙圈了', t:2800},
-        {guess:70, who:'p2', say:'它在大海里瞎捞……下回合退潮', t:3200}]},
+        {use:'tide', t:2400},
+        {say:'🌊 灌水！它的范围变成 46~84', t:3200},
+        {say:'你还是 51~79，它比你大一圈', t:3200},
+        {guess:70, who:'p2', say:'它在大海里瞎捞……下回合退潮', t:3600}]},
     double:{ bomb:30, script:[
-        {use:'double', t:2000},
-        {say:'⚡ 伤害+2，先存起来', t:2600},
-        {guess:'bomb', say:'💥 1+2=3 伤！存钱有利息', t:3800}]},
+        {say:'⚡ 双倍：下一次猜中，伤害+2', t:3200},
+        {say:'可以叠加多层，存够了再爆发', t:3000},
+        {use:'double', t:2400},
+        {say:'存了一层 +2 伤害，等猜中时结算', t:3000},
+        {guess:'bomb', say:'💥 基础1 + 双倍2 = 3 伤！', t:4200}]},
     rampage:{ bomb:30, script:[
-        {use:'rampage', t:2000},
-        {say:'💥 总伤害×2！', t:2400},
-        {say:'能叠好几次，越早叠越赚', t:2600},
-        {guess:'bomb', say:'💥 1×2=2 伤！', t:3800}]},
+        {say:'💥 狂暴：总伤害 ×2', t:2800},
+        {say:'可以叠多层，越叠越狠', t:2800},
+        {use:'rampage', t:2400},
+        {say:'伤害倍率 ×2！', t:2600},
+        {say:'再叠一层就是 ×4，越早叠越赚', t:3000},
+        {guess:'bomb', say:'💥 1×2 = 2 伤！', t:4000}]},
     pierce:{ bomb:30, script:[
-        {buff:{who:'p2', field:'shield', val:1}, say:'它架了 1 层盾……', t:2400},
-        {use:'pierce', t:2000},
-        {say:'🗡️ 穿透：盾=空气', t:2400},
-        {guess:'bomb', say:'💥 砰！盾白架了', t:3800}]},
+        {say:'🗡️ 穿透：无视对手的护盾', t:3000},
+        {say:'对面爱架盾？用这个治它', t:2800},
+        {buff:{who:'p2', field:'shield', val:1}, say:'它架了 1 层盾，普通攻击会被挡', t:3400},
+        {use:'pierce', t:2400},
+        {say:'🗡️ 穿透生效：盾等于空气', t:2800},
+        {guess:'bomb', say:'💥 砰！盾白架了，照打不误', t:4200}]},
     lifesteal:{ bomb:30, hp:[3,5], script:[
-        {use:'lifesteal', t:2000},
-        {say:'🩸 挂上吸血：猜中就回血', t:2600},
-        {guess:'bomb', say:'💥 打它 1 血，自己回 1 血！', t:3800}]},
+        {say:'🩸 吸血：猜中敌人时，自己回等量血', t:3400},
+        {say:'残血时用，打人又回血', t:2800},
+        {use:'lifesteal', t:2400},
+        {say:'挂上吸血：下次猜中就回血', t:2800},
+        {guess:'bomb', say:'💥 打它 1 血，自己回 1 血！', t:4200}]},
     anger:{ bomb:30, hp:[2,5], script:[
-        {use:'anger', t:2000},
-        {say:'💢 掉了 3 血 → 伤害+1', t:2600},
-        {guess:'bomb', say:'💥 血越少，刀越狠！', t:3800}]},
+        {say:'💢 愤怒：已损失的血量 = 额外伤害', t:3400},
+        {say:'血越少，攻击力越高', t:2800},
+        {use:'anger', t:2400},
+        {say:'掉了 3 血 → 伤害+3', t:2800},
+        {guess:'bomb', say:'💥 1+3 = 4 伤！血越少刀越狠', t:4200}]},
     allin:{ bomb:30, script:[
-        {use:'allin', t:2000},
-        {say:'🔥 伤害+3！猜错自己-1', t:2600},
-        {guess:'bomb', say:'💥 4 伤！赌赢血赚', t:3800}]},
+        {say:'🔥 孤注一掷：伤害+3，但猜错自损1血', t:3400},
+        {say:'高风险高回报，有把握猜中再用', t:3000},
+        {use:'allin', t:2400},
+        {say:'伤害+3 已就位！', t:2600},
+        {guess:'bomb', say:'💥 1+3 = 4 伤！赌赢血赚', t:4200}]},
     bomblet:{ bomb:30, script:[
-        {use:'bomblet', t:2000},
-        {say:'💣 子母弹：猜中再+2 伤', t:2600},
-        {guess:'bomb', say:'💥 1+2=3 伤！', t:3800}]},
+        {say:'💣 子母弹：猜中时额外炸 2 伤', t:3200},
+        {say:'和双倍叠加，一发入魂', t:2800},
+        {use:'bomblet', t:2400},
+        {say:'子母弹已装填：猜中再+2', t:2800},
+        {guess:'bomb', say:'💥 1+2 = 3 伤！', t:4000}]},
     volley:{ bomb:30, maxhp:[5,6], script:[
-        {buff:{who:'p2', field:'shield', val:1}, say:'它架了盾，普通攻击全被挡……', t:2600},
-        {use:'volley', t:2000},
-        {say:'🔱 连击：一锤拆成三锤', t:2400},
-        {guess:'bomb', say:'💥 盾挡 1 锤，后 2 锤照打！', t:4000}]},
+        {say:'🔱 连击：把一次伤害拆成 3 段', t:3200},
+        {say:'护盾/反弹每次只挡一段，拆段就能破防', t:3400},
+        {buff:{who:'p2', field:'shield', val:1}, say:'它架了盾，普通攻击全被挡……', t:3400},
+        {use:'volley', t:2400},
+        {say:'🔱 连击：一锤拆成三锤', t:2800},
+        {guess:'bomb', say:'💥 盾挡第1锤，后2锤照打！共2伤', t:4400}]},
     dormant:{ bomb:30, script:[
-        {use:'dormant', t:2000},
-        {say:'💤 埋个伏：它猜中也不炸', t:2600},
-        {guess:'bomb', who:'p2', say:'💤 吞掉了！你下次+2 伤', t:3200},
-        {guess:'bomb', say:'💥 3 伤！连本带利', t:3800}]},
+        {say:'💤 休眠：对手猜中也不炸，还能攒伤害', t:3400},
+        {say:'它炸不了你，你下次猜中还+2伤', t:3200},
+        {use:'dormant', t:2400},
+        {say:'埋好伏：它猜中也吞掉', t:2800},
+        {guess:'bomb', who:'p2', say:'💤 它猜中了……但没炸！你攒了+2', t:3600},
+        {guess:'bomb', say:'💥 1+2 = 3 伤！连本带利', t:4200}]},
     shield:{ bomb:30, script:[
-        {use:'shield', t:2000},
-        {say:'🛡️ 架盾：挡住 1 次伤害', t:2600},
-        {guess:'bomb', who:'p2', say:'🛡️ 挡住了！0 伤害', t:3600}]},
+        {say:'🛡️ 护盾：挡住 1 次伤害', t:2800},
+        {say:'可以叠多层，保命神器', t:2800},
+        {use:'shield', t:2400},
+        {say:'架了 1 层盾', t:2400},
+        {guess:'bomb', who:'p2', say:'🛡️ 挡住了！0 伤害', t:3800}]},
     reflect:{ bomb:30, script:[
-        {use:'reflect', t:2000},
-        {say:'↩️ 架反弹：打你的弹回去', t:2600},
-        {guess:'bomb', who:'p2', say:'↩️ 它吃了自己的伤害！', t:3600}]},
+        {say:'↩️ 反射：把受到的伤害弹回去', t:3000},
+        {say:'对手打你多少，它自己吃多少', t:3000},
+        {use:'reflect', t:2400},
+        {say:'架好反弹：打我的弹回去', t:2800},
+        {guess:'bomb', who:'p2', say:'↩️ 它打我1血，反弹回去它也-1！', t:4000}]},
     heal:{ bomb:30, hp:[3,5], script:[
-        {use:'heal', say:'💊 回血！3 → 4', t:3000}]},
+        {say:'💊 治疗：回复 1 点生命', t:2800},
+        {say:'残血时用，多撑一回合', t:2800},
+        {use:'heal', say:'💊 回血！3 → 4', t:3600}]},
     rebirth:{ bomb:30, hp:[1,5], script:[
-        {use:'rebirth', t:2000},
-        {say:'🕊️ 先回 1 血，死了还能复活', t:3000},
-        {guess:'bomb', who:'p2', say:'🕊️ 死了……又站起来了！', t:4000}]},
+        {say:'🕊️ 重生：回1血，死后还能复活一次', t:3400},
+        {say:'相当于多了一条命', t:2800},
+        {use:'rebirth', t:2400},
+        {say:'先回 1 血，并获得复活', t:3000},
+        {guess:'bomb', who:'p2', say:'💀 死了……', t:2600},
+        {say:'🕊️ 又站起来了！复活成功', t:3200}]},
     speed:{ bomb:30, script:[
-        {use:'speed', t:2000},
-        {say:'🏃 这回合猜错能再猜', t:2400},
-        {guess:20, say:'猜错……但还能猜！', t:2800},
-        {guess:'bomb', say:'💥 砰！第二次中了', t:3800}]},
+        {say:'🏃 加速：这回合猜错可以再猜一次', t:3400},
+        {say:'相当于多一次猜数机会', t:2800},
+        {use:'speed', t:2400},
+        {say:'加速生效：猜错能再猜', t:2600},
+        {guess:20, say:'猜错了……但还能猜！', t:3000},
+        {guess:'bomb', say:'💥 砰！第二次中了', t:4000}]},
     blind:{ bomb:30, script:[
-        {use:'blind', t:2000},
-        {say:'🙈 把它眼睛蒙上！', t:2600},
-        {guess:10, who:'p2', say:'它只能瞎猜了', t:3200}]},
+        {say:'🙈 致盲：让对手看不到范围变化', t:3200},
+        {say:'它还以为范围没变，瞎猜一通', t:3000},
+        {use:'blind', t:2400},
+        {say:'把它眼睛蒙上了', t:2600},
+        {guess:10, say:'你猜 10，范围缩到 11~50', t:3000},
+        {guess:25, who:'p2', say:'它看不见缩圈，还在 1~50 里瞎猜', t:3600}]},
     lock:{ bomb:30, p2skills:['double','digitsum'], script:[
-        {use:'lock', t:2000},
-        {say:'🚫 封它一个技能！', t:2600},
-        {say:'它的招被锁住，用不了了', t:2800}]},
+        {say:'🚫 封锁：随机封掉对手一个技能', t:3200},
+        {say:'封到关键技能，它就废了一半', t:3000},
+        {use:'lock', t:2400},
+        {say:'封了它一个技能！', t:2800},
+        {say:'被封的技能这回合用不了', t:2800}]},
     pause:{ bomb:30, script:[
-        {use:'pause', t:2000},
-        {say:'🕐 它的回合，没收！', t:2600},
-        {guess:10, say:'还是你的回合！', t:2800},
-        {guess:'bomb', say:'💥 砰！连动两回合', t:3800}]},
+        {say:'🕐 暂停：跳过对手的回合', t:2800},
+        {say:'你连动两回合，它只能干看着', t:3000},
+        {use:'pause', t:2400},
+        {say:'它的回合，没收！', t:2600},
+        {guess:10, say:'还是你的回合！继续猜', t:3000},
+        {guess:'bomb', say:'💥 砰！连动两回合', t:4000}]},
     freeze:{ bomb:30, script:[
-        {use:'freeze', t:2000},
-        {say:'❄️ 把炸弹冻住 1 回合', t:2600},
-        {guess:'bomb', who:'p2', say:'❄️ 它猜中了……但没炸！', t:3600}]},
+        {say:'❄️ 冰冻：炸弹冻住 1 回合', t:2800},
+        {say:'这回合谁猜中都不炸', t:2800},
+        {use:'freeze', t:2400},
+        {say:'炸弹冻住了！', t:2600},
+        {guess:'bomb', who:'p2', say:'❄️ 它猜中了……但没炸！', t:3800}]},
     forbid:{ bomb:40, script:[
-        {use:'forbid', pick:25, say:'🚷 24~26 都不许猜！', t:2800},
-        {guess:25, who:'p2', say:'🚷 它踩线了，白猜一轮', t:3400}]},
+        {say:'🚷 禁猜：选一个数，周围3个数对手都不能猜', t:3600},
+        {say:'它猜到禁猜区 = 白猜一轮', t:3000},
+        {use:'forbid', pick:25, say:'🚷 24~26 都不许猜！', t:3200},
+        {guess:25, who:'p2', say:'🚷 它猜了 25，踩线了！白猜一轮', t:3800}]},
     fog:{ bomb:40, script:[
-        {use:'fog', t:2000},
-        {say:'🌫️ 下雾！它看不见你缩圈', t:2800},
-        {guess:30, say:'你 31~50，它还停在 1~50', t:3000},
-        {guess:20, who:'p2', say:'它拿旧地图猜数，慢你一步', t:3200}]},
+        {say:'🌫️ 迷雾：对手看不到你的范围变化', t:3400},
+        {say:'你缩圈它看不见，拿旧范围猜数', t:3000},
+        {use:'fog', t:2400},
+        {say:'下雾了！它看不见你缩圈', t:2800},
+        {guess:30, say:'你猜 30，范围变成 31~50', t:3000},
+        {guess:20, who:'p2', say:'它还以为是 1~50，猜了 20，慢你一步', t:3800}]},
     disguise:{ bomb:25, script:[
-        {use:'disguise', t:2000},
-        {say:'🎭 给炸弹穿个马甲', t:2600},
-        {guess:'bomb', who:'p2', say:'🎭 踩到假货！真身暴露了', t:3600}]},
+        {say:'🎭 伪装：给炸弹穿个假马甲', t:3000},
+        {say:'对手猜中马甲不炸，还会暴露真炸弹', t:3200},
+        {use:'disguise', t:2400},
+        {say:'给炸弹穿好马甲了', t:2600},
+        {guess:'bomb', who:'p2', say:'🎭 它踩到假货！真炸弹暴露了', t:4000}]},
     copy:{ bomb:30, p2skills:['double'], script:[
-        {use:'copy', t:2400},
-        {say:'📋 偷它的双倍，马上用！', t:2600},
-        {guess:'bomb', say:'💥 用它的招打它：3 伤', t:3800}]},
+        {say:'📋 复制：偷对手一个技能来用', t:3000},
+        {say:'它的好招，就是你的好招', t:2800},
+        {use:'copy', t:2600},
+        {say:'📋 偷到它的双倍！', t:2800},
+        {say:'马上就能用，不用等冷却', t:2800},
+        {guess:'bomb', say:'💥 用它的招打它：1+2=3 伤', t:4200}]},
     trap:{ bomb:40, script:[
-        {use:'trap', pick:25, say:'🧨 在 25 埋雷，24~26 都会炸', t:2800},
-        {guess:25, who:'p2', say:'💥 砰！它踩雷了', t:3600}]},
+        {say:'🧨 陷阱：在一个数周围埋雷', t:3000},
+        {say:'对手猜到雷区，直接扣血', t:2800},
+        {use:'trap', pick:25, say:'🧨 在 25 埋雷，24~26 都会炸', t:3200},
+        {guess:25, who:'p2', say:'💥 砰！它踩雷了，-2 血', t:4000}]},
     empower:{ bomb:30, maxhp:[5,6], script:[
-        {use:'empower', t:2000},
-        {say:'✨ 下一个技能效果翻倍！', t:2600},
-        {use:'double', say:'⚡ 双倍变成+4！', t:2400},
-        {guess:'bomb', say:'💥 1+4=5 伤！', t:3800}]},
+        {say:'✨ 赋能：下一个技能效果翻倍', t:3200},
+        {say:'配合伤害技能，一发入魂', t:2800},
+        {use:'empower', t:2400},
+        {say:'✨ 赋能生效：下个技能效果×2', t:2800},
+        {use:'double', say:'⚡ 双倍 +2 变成 +4！', t:2800},
+        {guess:'bomb', say:'💥 1+4 = 5 伤！', t:4200}]},
     web:{ bomb:40, script:[
-        {use:'web', t:2000},
-        {say:'🕸️ 36~44 全变雷区，踩中-2', t:2800},
-        {guess:42, who:'p2', say:'💥 砰！它踩进雷区 -2 血', t:3600}]},
+        {say:'🕸️ 蛛网：在一片区域布下雷区', t:3000},
+        {say:'对手踩到雷区扣 2 血', t:2800},
+        {use:'web', t:2400},
+        {say:'🕸️ 36~44 全变雷区，踩中-2', t:3000},
+        {guess:42, who:'p2', say:'💥 砰！它踩进雷区 -2 血', t:4000}]},
     refresh:{ bomb:30, maxhp:[5,6], p1skills:['refresh','double'], script:[
-        {use:'double', say:'先用双倍（它进冷却了）', t:2400},
-        {use:'refresh', say:'🔄 刷新！冷却没了', t:2600},
-        {use:'double', say:'⚡ 再叠一层，+4！', t:2400},
-        {guess:'bomb', say:'💥 5 伤！', t:3800}]},
+        {say:'🔄 刷新：清空所有技能的冷却', t:3000},
+        {say:'刚用过的技能马上又能用', t:2800},
+        {use:'double', say:'先用双倍（进冷却了）', t:2800},
+        {use:'refresh', say:'🔄 刷新！冷却全清空', t:2800},
+        {use:'double', say:'⚡ 再叠一层双倍，现在+4！', t:2800},
+        {guess:'bomb', say:'💥 1+4 = 5 伤！', t:4200}]},
     charge:{ bomb:37, p1skills:['charge','binary'], script:[
-        {use:'binary', say:'先用二分（它进冷却了）', t:2400},
-        {use:'charge', say:'🔋 所有冷却-1！', t:2600},
-        {guess:'bomb', say:'💥 砰！招招都快一步', t:3800}]},
+        {say:'🔋 充能：所有技能冷却 -1', t:2800},
+        {say:'招招都能更快用出来', t:2800},
+        {use:'binary', say:'先用二分（进冷却了）', t:2800},
+        {use:'charge', say:'🔋 充能！所有冷却-1', t:2800},
+        {guess:'bomb', say:'💥 砰！招招都快一步', t:4000}]},
     skip:{ bomb:30, script:[
-        {use:'skip', t:2000},
-        {say:'⏭️ 这回合我不动', t:2600},
-        {guess:10, who:'p2', say:'让它先出招，再看情况', t:3200}]},
+        {say:'⏭️ 跳过：本回合不猜数', t:2600},
+        {say:'让对手先动，再伺机反击', t:2800},
+        {use:'skip', t:2400},
+        {say:'这回合我不动', t:2600},
+        {guess:10, who:'p2', say:'让它先出招，再看情况', t:3400}]},
     dice:{ bomb:30, script:[
-        {use:'dice', say:'🎲 掷骰子，看运气！', t:3000},
-        {guess:'bomb', say:'💥 砰！顺手一猜', t:3800}]},
+        {say:'🎲 骰子：随机获得一个增益或伤害', t:3400},
+        {say:'纯看运气，搏一搏单车变摩托', t:3000},
+        {use:'dice', say:'🎲 掷骰子，看运气！', t:3400},
+        {guess:'bomb', say:'💥 砰！顺手一猜', t:4000}]},
     gambler:{ bomb:30, script:[
-        {use:'gambler', say:'🃏 抛硬币：一半打它，一半打自己', t:3000},
-        {say:'落后的时候才值得赌', t:2800}]},
+        {say:'🃏 赌徒：50% 打对手，50% 打自己', t:3400},
+        {say:'落后时搏一把，赢了翻盘输了认栽', t:3000},
+        {use:'gambler', say:'🃏 抛硬币：一半打它，一半打自己', t:3400},
+        {say:'血量落后的时候才值得赌', t:3200}]},
     swap:{ bomb:30, p2skills:['double','volley','verifier'], script:[
-        {use:'swap', t:2400},
-        {say:'🔁 技能全换！好牌归你了', t:2800},
-        {use:'double', say:'⚡ 用刚换来的双倍', t:2400},
-        {guess:'bomb', say:'💥 3 伤！', t:3800}]},
+        {say:'🔁 交换：和对手互换全部技能', t:3200},
+        {say:'它的好牌全归你', t:2600},
+        {use:'swap', t:2600},
+        {say:'🔁 技能全换！好牌归你了', t:3000},
+        {use:'double', say:'⚡ 用刚换来的双倍', t:2800},
+        {guess:'bomb', say:'💥 1+2 = 3 伤！', t:4200}]},
     numberslash:{ bomb:40, script:[
-        {use:'numberslash', t:2000},
-        {say:'⚔️ 猜数就能攒攻击/治疗', t:2800},
-        {guess:10, say:'+0.5！看上面的小面板', t:2800},
-        {guess:15, who:'p2', t:2600},
-        {guess:20, say:'继续攒……', t:2600},
-        {guess:25, who:'p2', t:2600},
-        {guess:30, say:'结算！攻多打人，疗多回血', t:3000},
+        {say:'⚔️ 数刃：每次猜数攒"攻击/治疗"点数', t:3400},
+        {say:'到结算时：攻多就打人，疗多就回血', t:3200},
+        {use:'numberslash', t:2400},
+        {say:'开始攒点数，看上面的小面板', t:2800},
+        {guess:10, say:'猜 10，攒了点攻击', t:2800},
+        {guess:15, who:'p2', say:'它猜，你继续攒', t:2600},
+        {guess:20, say:'再猜，继续攒……', t:2600},
+        {guess:25, who:'p2', say:'它又猜，你攒够了', t:2600},
+        {guess:30, say:'结算！攻击多 → 打它 1 血', t:3200},
         {say:'注意：炸弹炸了会提前结束哦', t:3600}]}
 };
 function startSkillDemo(skillId){
