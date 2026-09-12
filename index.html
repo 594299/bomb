@@ -4026,6 +4026,25 @@ showMainMenu();
 checkUrlRoom();
 updateStatsDisplay();
 
+// ========== AI 模块桥接 ==========
+// 主脚本是 IIFE 闭包：外部 ai*.js 是独立脚本，访问不到闭包内部。
+// 把 AI 需要的内部引用挂到 window（对象引用，天然同步；let 变量用 getter 保持活绑定）
+window.G = G;
+window.useSkill = useSkill;
+window.processGuess = processGuess;
+window.dlog = dlog;
+window.getPlayer = getPlayer;
+window.getSkillById = getSkillById;
+window.drawSkillOptionIds = drawSkillOptionIds;
+window.setKeypadEnabled = setKeypadEnabled;
+window.updateInputDisplay = updateInputDisplay;
+window.renderSkills = renderSkills;
+window.showCheatToast = showCheatToast;
+window.messageDisplay = messageDisplay;
+window.$ = $;
+window.SECRET_SKILLS = SECRET_SKILLS;
+Object.defineProperty(window, 'skillSelectPhase', { get(){ return skillSelectPhase; }, configurable:true });
+
 })();
 </script>
 </body>
