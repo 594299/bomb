@@ -166,10 +166,6 @@
         .qc-btn { padding:4px 10px; border:1px solid rgba(255,255,255,0.25); border-radius:12px; background:rgba(255,255,255,0.06); color:#ccc; font-size:0.65rem; font-weight:700; cursor:pointer; min-height:30px; }
         .qc-btn:active { transform:scale(0.9); background:rgba(0,240,255,0.15); color:var(--neon); }
         /* ========== 性格选择网格（女主/玩家通用） ========== */
-        .persona-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; width:100%; max-width:360px; max-height:38vh; overflow-y:auto; padding:6px; margin-top:4px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; -webkit-overflow-scrolling:touch; }
-        .persona-grid .ai-level-btn { margin:0; padding:7px 4px; font-size:0.68rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-radius:10px; }
-        .persona-grid-label { font-size:0.8rem; color:#ccc; margin-top:12px; display:flex; align-items:center; gap:6px; }
-        .persona-grid-label::after { content:''; flex:1; height:1px; background:rgba(255,255,255,0.12); }
         /* 设置类弹窗内容较多时：顶部对齐 + 可滚动 */
         #setup-overlay, #settings-overlay { justify-content:flex-start; padding-top:34px; padding-bottom:20px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
         @keyframes talkPop { from { transform:translateX(-50%) scale(0.7); opacity:0; } to { transform:translateX(-50%) scale(1); opacity:1; } }
@@ -280,6 +276,7 @@
     </div>
     <div id="main-menu" class="overlay">
         <button class="help-btn" id="help-btn">?</button>
+        <button class="help-btn" id="codex-btn" style="right:54px;">📖</button>
         <div class="overlay-title">选择模式</div>
         <button class="btn" id="normal-mode-btn">🎮 开始游戏</button>
         <button class="btn secondary" id="tutorial-mode-btn">🎓 教程模式</button>
@@ -351,45 +348,6 @@
             <button class="ai-level-btn" data-level="3">困难</button>
             <button class="ai-level-btn" data-level="4">大师</button>
         </div>
-        <div class="persona-grid-label" id="ai-persona-label" style="display:none;">AI对战（16种性格）</div>
-        <div class="persona-grid" id="ai-persona-row" style="display:none;">
-            <button class="ai-level-btn active" data-persona="random">🎲 随机</button>
-            <button class="ai-level-btn" data-persona="tsundere">🦊 傲娇</button>
-            <button class="ai-level-btn" data-persona="shy">🐰 腼腆</button>
-            <button class="ai-level-btn" data-persona="timid">🐹 胆小</button>
-            <button class="ai-level-btn" data-persona="normal">🌻 普通</button>
-            <button class="ai-level-btn" data-persona="kid">🍭 小孩</button>
-            <button class="ai-level-btn" data-persona="chuuni">🐉 中二</button>
-            <button class="ai-level-btn" data-persona="schemer">😏 腹黑</button>
-            <button class="ai-level-btn" data-persona="cold">❄️ 高冷</button>
-            <button class="ai-level-btn" data-persona="hotblood">🔥 热血</button>
-            <button class="ai-level-btn" data-persona="yandere">🔪 病娇</button>
-            <button class="ai-level-btn" data-persona="ditz">☁️ 天然呆</button>
-            <button class="ai-level-btn" data-persona="oneesan">🍷 御姐</button>
-            <button class="ai-level-btn" data-persona="cat">🐱 猫系</button>
-            <button class="ai-level-btn" data-persona="gamer">🎮 宅女</button>
-            <button class="ai-level-btn" data-persona="denpa">📡 电波</button>
-            <button class="ai-level-btn" data-persona="queen">👑 女王</button>
-        </div>
-        <div class="persona-grid-label" id="player-persona-label" style="display:none;">我的性格（决定你的发言风格）</div>
-        <div class="persona-grid" id="player-persona-row" style="display:none;">
-            <button class="ai-level-btn active" data-ppersona="normal">🌻 普通</button>
-            <button class="ai-level-btn" data-ppersona="tsundere">🦊 傲娇</button>
-            <button class="ai-level-btn" data-ppersona="shy">🐰 腼腆</button>
-            <button class="ai-level-btn" data-ppersona="timid">🐹 胆小</button>
-            <button class="ai-level-btn" data-ppersona="kid">🍭 小孩</button>
-            <button class="ai-level-btn" data-ppersona="chuuni">🐉 中二</button>
-            <button class="ai-level-btn" data-ppersona="schemer">😏 腹黑</button>
-            <button class="ai-level-btn" data-ppersona="cold">❄️ 高冷</button>
-            <button class="ai-level-btn" data-ppersona="hotblood">🔥 热血</button>
-            <button class="ai-level-btn" data-ppersona="yandere">🔪 病娇</button>
-            <button class="ai-level-btn" data-ppersona="ditz">☁️ 天然呆</button>
-            <button class="ai-level-btn" data-ppersona="oneesan">🍷 御姐</button>
-            <button class="ai-level-btn" data-ppersona="cat">🐱 猫系</button>
-            <button class="ai-level-btn" data-ppersona="gamer">🎮 宅</button>
-            <button class="ai-level-btn" data-ppersona="denpa">📡 电波</button>
-            <button class="ai-level-btn" data-ppersona="queen">👑 女王</button>
-        </div>
         <div class="setting-row">
             <label>技能数量（0-3）：</label><input type="number" id="skill-count-input" value="1" min="0" max="3">
         </div>
@@ -459,8 +417,9 @@
             <div id="message-display">游戏开始</div>
         </div>
         <div id="history-container"></div>
-        <div id="opponent-skills-bar"></div>
-        <div id="skills-bar"></div>
+    <div id="opponent-skills-bar"></div>
+    <div id="slash-panel" class="hidden" style="font-size:0.75rem;color:var(--neon);text-align:center;padding:2px 6px;border:1px dashed rgba(0,240,255,0.35);border-radius:8px;margin:2px auto;max-width:420px;"></div>
+    <div id="skills-bar"></div>
         <div id="quick-chat-bar">
             <button class="qc-btn" data-qc="taunt">😏 嘲讽</button>
             <button class="qc-btn" data-qc="bold">😤 狠话</button>
@@ -602,6 +561,11 @@
         </div>
         <button class="btn" id="help-close-btn">返回</button>
     </div>
+    <div id="codex-overlay" class="overlay hidden">
+        <div class="overlay-title">📖 技能图鉴</div>
+        <div class="help-content" id="codex-list" style="text-align:left;max-height:62vh;overflow-y:auto;"></div>
+        <button class="btn" id="codex-close-btn">返回</button>
+    </div>
     <div id="cheat-toast"></div>
     <div id="ai-talk"></div>
     <div id="player-talk"></div>
@@ -619,6 +583,10 @@
 </div>
 
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="ai-persona.js"></script>
+<script src="ai-brain.js"></script>
+<script src="ai-strategy.js"></script>
+<script src="ai.js"></script>
 <script>
 (function(){
 'use strict';
@@ -667,7 +635,7 @@ const ALL_SKILLS = [
     { id:'shield', name:'🛡️ 护盾', desc:'获得1层护盾，每层抵挡一段伤害，多次使用层数叠加。例：叠2层后对手3段连击只能挡住前2段', cooldown:3 },
     { id:'reflect', name:'🪞 反射', desc:'获得1层反射，每层反弹一段伤害，多次使用层数叠加。例：对手对你造成2段伤害，你有2层反射可全部反弹', cooldown:4 },
     { id:'heal', name:'💊 治疗', desc:'立即回复1点生命。例：HP从2回到3', cooldown:3 },
-    { id:'rebirth', name:'🕊️ 重生', desc:'死亡时以2点生命复活一次（触发后技能消失）。例：HP降到0时立刻恢复到2', cooldown:-1 },
+    { id:'rebirth', name:'🕊️ 重生', desc:'死亡时以3点生命复活一次（触发后技能消失）。例：HP降到0时立刻恢复到3', cooldown:-1 },
     { id:'speed', name:'🏃 加速', desc:'本回合猜错可以再猜一次。多一次出手机会，收割残局神技', cooldown:3 },
     { id:'blind', name:'🙈 致盲', desc:'对手下回合看不到范围，只能凭记忆瞎猜', cooldown:3 },
     { id:'lock', name:'🚫 封锁', desc:'随机封掉对手1个技能，直到本轮炸弹爆炸', cooldown:3 },
@@ -676,7 +644,7 @@ const ALL_SKILLS = [
     { id:'freeze', name:'🧊 冰封数字', desc:'1回合内炸弹被冻住：对手猜中也不炸', cooldown:4 },
     { id:'forbid', name:'🚷 禁猜', desc:'禁掉一个数，对手猜它＝白费一回合。例：禁50，对手猜50当轮作废', cooldown:3 },
     { id:'bet', name:'🎯 押注', desc:'押对手下次猜错：他错你+1血，他中你-1血', cooldown:3 },
-    { id:'fog', name:'🌫️ 迷雾', desc:'对手下次猜时看不到范围，而且“大了/小了”反馈相反', cooldown:3 },
+    { id:'fog', name:'🌫️ 迷雾', desc:'对手接下来2次猜测看不到范围，且“大了/小了”反馈相反、范围不缩小', cooldown:3 },
     { id:'disguise', name:'🎭 伪装', desc:'炸弹伪装成另一个数：对手猜中假身不会炸，还会暴露真身', cooldown:3 },
     { id:'lie', name:'🤥 说谎', desc:'你下次猜完，看到的“大了/小了”可能是假的（赌一把）', cooldown:2 },
     { id:'copy', name:'📋 复制', desc:'随机偷学对手一个技能并立刻使用。对手越强它越强', cooldown:5 },
@@ -688,7 +656,9 @@ const ALL_SKILLS = [
     { id:'charge', name:'🔋 充能', desc:'所有技能的冷却-1回合', cooldown:4 },
     { id:'skip', name:'⏭️ 跳过', desc:'主动跳过本回合（已架的盾/反射保留），引对手先出手', cooldown:3 },
     { id:'dice', name:'🎲 命运骰子', desc:'随机一签：本回合+3伤 / -1伤 / 回1血 / 自伤1 / 无事发生', cooldown:3 },
-    { id:'gambler', name:'🃏 赌徒', desc:'抛硬币：50%对手-1血，50%自己-1血', cooldown:3 }
+    { id:'gambler', name:'🃏 赌徒', desc:'抛硬币：50%对手-1血，50%自己-1血', cooldown:3 },
+    { id:'swap', name:'🔁 交换', desc:'与对手交换全部技能。冷却状态随技能一起走：换过来的技能该冷却几回合还是几回合', cooldown:3 },
+    { id:'numberslash', name:'⚔️ 数字斩', desc:'接下来3个你的回合，每次猜数随机抽出1或2。3回合后结算：1更多→每两个1对对手造成1伤害；2更多→每两个2治疗你1血。生效期间不进入冷却', cooldown:3 }
 ];
 
 // ========== 玩家对象工厂 ==========
@@ -706,7 +676,8 @@ function makePlayer(id) {
         dormantBonus:false, doubleDamage:null,
         allinMultiplier:null, bombletDamage:null, lifestealAmount:1,
         rampageMulti:null, secondLockedSkill:null, volley:0,
-        forbidNumber:null, diceBonus:0 };
+        forbidNumber:null, diceBonus:0,
+        slashActive:0, slashDraws:null };
 }
 
 // ========== 全局状态 ==========
@@ -740,29 +711,6 @@ let numberPickerCallback = null;
 let numberPickerCancelCallback = null;
 let notifTimeout = null;
 let guestActionTimeout = null;
-let aiWatchdogInterval = null;
-let aiLastProgress = 0;
-
-// ========== AI 看门狗：任何原因导致AI回合停滞超过10秒，强制恢复，杜绝卡死 ==========
-function aiMarkProgress(){ aiLastProgress = Date.now(); }
-function startAiWatchdog(){
-    stopAiWatchdog();
-    aiMarkProgress();
-    aiWatchdogInterval = setInterval(function(){
-        if(!G.active) return;
-        if(!(G.mode.includes('ai')||G.mode==='tutorial')) return;
-        if(G.currentPlayer!=='p2'){ aiMarkProgress(); return; }
-        if(G.pendingSkillSelect || skillSelectPhase){ aiMarkProgress(); return; } // 技能选择阶段不干预
-        if(Date.now()-aiLastProgress < 10000) return;
-        // AI回合10秒无任何进展 → 作废旧执行链（令牌++），强制重新驱动
-        G.aiTurnToken=(G.aiTurnToken||0)+1;
-        G.processing=false;
-        aiMarkProgress();
-        dlog('WATCHDOG','AI停滞超10s，强制重启回合 新token='+G.aiTurnToken);
-        if(G.mode==='tutorial') tutorialAI(); else aiPlayNormal();
-    }, 2000);
-}
-function stopAiWatchdog(){ if(aiWatchdogInterval){ clearInterval(aiWatchdogInterval); aiWatchdogInterval=null; } }
 let guessHistory = [];
 let toastTimer = null;
 
@@ -886,7 +834,7 @@ function loadSettings() {
         const s = localStorage.getItem('bomb_settings');
         if(s) return JSON.parse(s);
     } catch(e) {}
-    return { theme:'neon', name:'', minVal:1, maxVal:100, hp:5, skillCount:1, oppType:null, aiLevel:null };
+    return { theme:'neon', name:'', minVal:1, maxVal:100, hp:5, skillCount:1, oppType:null, aiLevel:null, autoFs:false };
 }
 function saveSettings() {
     try { localStorage.setItem('bomb_settings', JSON.stringify(G.settings)); } catch(e) {}
@@ -1146,6 +1094,7 @@ function drawSkillOptionIds(count, excludeIds){
         }
         const id = G.skillDeck.shift();
         if(excludeIds.indexOf(id)>=0 || out.indexOf(id)>=0) continue; // 已拥有/本次已发的不进选项，但占用牌堆名额
+        if(id==='detect' && (excludeIds.indexOf('peek')>=0 || out.indexOf('peek')>=0)) continue; // 有透视就不必探测：个位已知=奇偶已知，纯浪费
         out.push(id);
     }
     return out;
@@ -1678,7 +1627,7 @@ document.querySelectorAll('.chat-emoji').forEach(btn => {
 document.querySelectorAll('.qc-btn').forEach(function(btn){
     btn.addEventListener('click', function(){
         const cat = btn.dataset.qc;
-        const lines = (G.playerPersona && PLAYER_QUICK_P[G.playerPersona] && PLAYER_QUICK_P[G.playerPersona][cat]) || PLAYER_QUICK[cat];
+        const lines = PLAYER_QUICK[cat];
         if(!lines || !lines.length) return;
         const line = lines[Math.floor(Math.random()*lines.length)];
         playerSpeak(line);
@@ -1694,13 +1643,8 @@ document.querySelectorAll('.qc-btn').forEach(function(btn){
         if(Math.random()<0.95){
             setTimeout(function(){
                 if(!G.active) return;
-                // 连刷嘲讽/求饶3次以上 → 触发多段连珠炮
-                if(cat==='taunt' && streak>=3 && Math.random()<0.5){ aiPlayChain('tauntPunishChain','reply_taunt'); return; }
-                if(cat==='beg' && streak>=3 && Math.random()<0.5){ aiPlayChain('begChain','reply_beg'); return; }
-                const pr = AI_REPLIES_PERSONA[G.aiPersona];
                 let rep;
                 if(streak>=2 && Math.random()<0.7) rep = AI_REPLIES_REPEAT[cat];
-                else if(pr && pr[cat] && Math.random()<0.6) rep = pr[cat]; // 人格口吻回应
                 else rep = AI_REPLIES[cat];
                 if(!rep || !rep.length) return;
                 const line = rep[Math.floor(Math.random()*rep.length)];
@@ -1770,11 +1714,6 @@ function resetGameState(){
     G.aiAvatarUrl=null; G.aiAvatarOk=false;
     G.qcStreaks={};
     G.humanGuesses=0; G.humanShrink=0; G.humanSuspicion=0; G.habitMid=0; G.habitN=0; G.humanTrap=false; G.humanForbid=false;
-    aiChainTimers.forEach(t=>clearTimeout(t)); aiChainTimers=[];
-    // AI 战斗人格：设置里选的性格（仅决定垃圾话风格），非法值回退随机
-    let personaPick = G.aiPersonaChoice || 'random';
-    if(personaPick==='random' || !AI_PERSONAS[personaPick]){ const ids = Object.keys(AI_PERSONAS); personaPick = ids[Math.floor(Math.random()*ids.length)]; }
-    G.aiPersona = personaPick;
     // 对话记忆跨局保留胜负感言（下局开场承接"复仇局"等），其余情况清空
     if(aiLastCat!=='aiWin' && aiLastCat!=='aiLose'){ aiLastCat=null; aiLastLine=null; }
     G.roundStartHP = { p1: G.players.p1.maxHP, p2: G.players.p2.maxHP };
@@ -1798,6 +1737,7 @@ function resetGameState(){
         p.allinMultiplier=null; p.bombletDamage=null; p.lifestealAmount=1;
         p.rampageMulti=null; p.secondLockedSkill=null; p.volley=0;
         p.forbidNumber=null; p.diceBonus=0;
+        p.slashActive=0; p.slashDraws=null;
         p.prevLow=null; p.prevHigh=null;
     });
     // 教程模式初始化
@@ -1908,13 +1848,9 @@ function endGame(){
             showCheatToast('💡 再试试：'+lvl.hint, 6000);
         }
     }
-    // AI 胜负垃圾话（人格多段演出优先）
-    if(G.mode.includes('ai') && winner && winner!=='draw'){
-        const winChain = PERSONA_CHAINS.win[G.aiPersona];
-        const loseChain = PERSONA_CHAINS.lose[G.aiPersona];
-        if(winner==='p2' && winChain && Math.random()<0.6) aiPlayChain(winChain,'aiWin');
-        else if(winner==='p1' && loseChain && Math.random()<0.6) aiPlayChain(loseChain,'aiLose');
-        else aiTalk(winner==='p2' ? 'aiWin' : 'aiLose');
+    // AI 胜负垃圾话
+    if(G.mode.includes('ai') && winner!=='draw'){
+        aiTalk(winner==='p2' ? 'aiWin' : 'aiLose');
     }
     renderSkills();
     syncIfRemote();
@@ -1948,9 +1884,7 @@ function initGame(){
         roomInfo.textContent='🤖 AI ('+(['简单','普通','困难','大师'][G.aiLevel-1]||'困难')+')';
         setTimeout(function(){
             if(!G.active) return;
-            const openChain = PERSONA_CHAINS.open[G.aiPersona];
-            if(openChain && Math.random()<0.45) aiPlayChain(openChain,'start');
-            else aiTalk(Math.random()<0.7?'start':'startEncourage');
+            aiTalk(Math.random()<0.7?'start':'startEncourage');
         }, 1200);
     } else if(G.mode==='tutorial'){
         getPlayer('p1').name='玩家'; getPlayer('p1').avatar='🙂';
@@ -2146,24 +2080,6 @@ function showSkillSelectWithCallback(forPlayerId, skillCount, onComplete){
     else actuallyShow();
 }
 
-function aiSelectSkillWithCallback(skillCount, onComplete){
-    const selectedSkills = [];
-    for(let i=0; i<skillCount; i++){
-        const options = drawSkillOptionIds(3, selectedSkills.map(s=>s.id)).map(getSkillById).filter(s=>s);
-        if(options.length === 0) continue;
-        const skill = aiChooseSkill(getPlayer('p2'), getPlayer('p1'), options);
-        selectedSkills.push(skill);
-    }
-    getPlayer('p2').skills = [...selectedSkills];
-    getPlayer('p2').cooldowns = {};
-    G.processing = true;
-    messageDisplay.textContent = '🤖 AI 已选择技能';
-    setTimeout(function(){
-        if(!G.active){ if(onComplete) onComplete(); return; }
-        renderSkills();
-        if(onComplete) onComplete();
-    }, 900);
-}
 
 function startHostTimeout(playerId, onComplete){
     clearHostTimeout();
@@ -2315,6 +2231,11 @@ function processGuess(guess, isSkillAttack, guesserId){
         }
     }
 
+    // 数字斩：生效期间每一次真实猜数都抽一个1或2（技能攻击不算）
+    if(!isSkillAttack && guesser.slashActive>0){
+        guesser.slashDraws.push(Math.random()<0.5?1:2);
+        renderSlashPanel();
+    }
     let isHit=(guess===G.bombNumber)||isSkillAttack;
     let selfInflicted = false;
     if(!isHit && defender.trappedNumber !== null && guess === defender.trappedNumber){
@@ -2420,9 +2341,9 @@ function processGuess(guess, isSkillAttack, guesserId){
                     guesser.hp-=1;
                     splashMsg+=' -1血';
                     if(guesser.rebirth && guesser.hp<=0){
-                        guesser.hp=2; guesser.rebirth=false;
+                        guesser.hp=3; guesser.rebirth=false;
                         guesser.skills = guesser.skills.filter(s => s.id !== 'rebirth');
-                        splashMsg+=' 🕊️ 重生！以2血复活';
+                        splashMsg+=' 🕊️ 重生！以3血复活';
                     }
                 }
                 consumeArmedBuffs();
@@ -2462,9 +2383,9 @@ function processGuess(guess, isSkillAttack, guesserId){
                     guesser.hp-=1;
                     messageDisplay.textContent='💥 '+guesserName+' 被自己的陷阱炸伤！-1血';
                     if(guesser.rebirth && guesser.hp<=0){
-                        guesser.hp=2; guesser.rebirth=false;
+                        guesser.hp=3; guesser.rebirth=false;
                         guesser.skills = guesser.skills.filter(s => s.id !== 'rebirth');
-                        messageDisplay.textContent+=' 🕊️ 重生！以2血复活';
+                        messageDisplay.textContent+=' 🕊️ 重生！以3血复活';
                     }
                 }
                 defender.trappedNumber = null;
@@ -2489,7 +2410,7 @@ function processGuess(guess, isSkillAttack, guesserId){
                     else {
                         guesser.hp-=sd; reflectedDamage+=sd;
                         if(guesser.hp<=0){
-                            if(guesser.rebirth){ guesser.hp=2; guesser.rebirth=false; guesser.skills=guesser.skills.filter(s=>s.id!=='rebirth'); guesserRebirthed=true; }
+                            if(guesser.rebirth){ guesser.hp=3; guesser.rebirth=false; guesser.skills=guesser.skills.filter(s=>s.id!=='rebirth'); guesserRebirthed=true; }
                             else break;
                         }
                     }
@@ -2498,7 +2419,7 @@ function processGuess(guess, isSkillAttack, guesserId){
                 } else {
                     defender.hp-=sd; landedSegs++; landedDamage+=sd;
                     if(defender.hp<=0){
-                        if(defender.rebirth){ defender.hp=2; defender.rebirth=false; defender.skills=defender.skills.filter(s=>s.id!=='rebirth'); defenderRebirthed=true; }
+                        if(defender.rebirth){ defender.hp=3; defender.rebirth=false; defender.skills=defender.skills.filter(s=>s.id!=='rebirth'); defenderRebirthed=true; }
                         else break;
                     }
                 }
@@ -2513,7 +2434,7 @@ function processGuess(guess, isSkillAttack, guesserId){
                 } else {
                     rmsg= reflectedDamage>0 ? '🪞 伤害被反射！'+guesserName+' -'+reflectedDamage+'血' : '🪞 反射！但 '+guesserName+' 的护盾抵挡了伤害';
                 }
-                if(guesserRebirthed) rmsg+=' 🕊️ '+guesserName+' 重生！以2血复活';
+                if(guesserRebirthed) rmsg+=' 🕊️ '+guesserName+' 重生！以3血复活';
                 messageDisplay.textContent=rmsg;
                 renderPlayers();
                 if(getPlayer('p1').hp<=0||getPlayer('p2').hp<=0){ endGame(); return; }
@@ -2540,8 +2461,8 @@ function processGuess(guess, isSkillAttack, guesserId){
                 if(blockedSegs>0) hitMsg='🛡️ '+defender.name+' 的护盾抵挡了伤害！';
                 else hitMsg='💥 炸弹爆炸了！'+defender.name+' -'+landedDamage+'血';
             }
-            if(defenderRebirthed) hitMsg+=' 🕊️ '+defender.name+' 重生！以2血复活';
-            if(guesserRebirthed) hitMsg+=' 🕊️ '+guesserName+' 重生！以2血复活';
+            if(defenderRebirthed) hitMsg+=' 🕊️ '+defender.name+' 重生！以3血复活';
+            if(guesserRebirthed) hitMsg+=' 🕊️ '+guesserName+' 重生！以3血复活';
             if(landedDamage>0){
                 const targetArea = Privacy.isLocal() ? (defender.id==='p1'?'me':'opponent') : (defender.id===getMyPlayer().id?'me':'opponent');
                 showExplosion(targetArea);
@@ -2565,7 +2486,7 @@ function processGuess(guess, isSkillAttack, guesserId){
                         defender.hp = 2;
                         defender.rebirth = false;
                         defender.skills = defender.skills.filter(s => s.id !== 'rebirth');
-                        messageDisplay.textContent += ' 🕊️ 重生！以2血复活';
+                        messageDisplay.textContent += ' 🕊️ 重生！以3血复活';
                         renderPlayers();
                     } else {
                         endGame();
@@ -2575,9 +2496,7 @@ function processGuess(guess, isSkillAttack, guesserId){
             }
             if(G.mode.includes('ai')){
                 if(defender.id==='p2'){
-                    const hitChain = PERSONA_CHAINS.hit[G.aiPersona];
-                    if(hitChain && Math.random()<0.22) aiPlayChain(hitChain,'aiHit');
-                    else if(Math.random()<0.55) aiTalk('aiHit');
+                    if(Math.random()<0.55) aiTalk('aiHit');
                 }
                 else if(defender.id==='p1' && Math.random()<0.55) aiTalk('playerHit');
             }
@@ -2585,7 +2504,7 @@ function processGuess(guess, isSkillAttack, guesserId){
         } else {
             let feedbackCorrect = true;
             if(guesser.fog){
-                guesser.fog=false;
+                guesser.fog--; // 迷雾按猜测次数消耗（默认2次），不看回合
                 feedbackCorrect = false;
             }
             if(guesser.lie){
@@ -2594,6 +2513,7 @@ function processGuess(guess, isSkillAttack, guesserId){
             }
             let highLow = guess < G.bombNumber ? '大' : '小';
             if(!feedbackCorrect) highLow = highLow === '大' ? '小' : '大';
+            G.lastFeedback = '炸弹比 '+guess+' '+highLow; // 致盲期间的救命提示：范围看不见，但大小反馈必须留得住
             // 假反馈（说谎/迷雾）：只给错误提示，范围不动——否则范围钳制会泄露炸弹真实方位
             if(feedbackCorrect){ if(guess<G.bombNumber) G.low=guess+1; else G.high=guess-1; }
             if(guesser.slow){
@@ -2627,12 +2547,7 @@ function processGuess(guess, isSkillAttack, guesserId){
             // ① 把猜过的数标记为排除（免费排除法，纯公开信息）
             // ② 若它"确知"的答案落空 → 情报已过期（多半是被移动偷偷阴了）——
             //    立刻废弃全部取值线索，重新用提示类技能侦察，而不是抱着错误答案死磕
-            if(G.mode.includes('ai') && guesser.id==='p2' && G.aiBrain){
-                const _mb = G.aiBrain;
-                const _wasKnown = _mb.verified[guess]===true || (_mb.candSet && _mb.candSet.length===1 && _mb.candSet[0]===guess);
-                if(_wasKnown){ aiWipeValueClues(); dlog('AI','确知落空：情报过期（炸弹疑似被挪动），清空线索重新侦察'); }
-                else if(_mb.verified[guess]===undefined){ _mb.verified[guess]=false; }
-            }
+            if(G.mode.includes('ai') && guesser.id==='p2') aiRegisterMiss(guess); // 逻辑在 ai-brain.js：排除标记 + 确知落空废弃 + 慢性污染SPRT检测
             // 历史记录玩家实际看到的反馈（假反馈也照实记录，否则等于告诉玩家刚才是假反馈）
             const resultText = highLow==='大' ? '📈 大了' : '📉 小了';
             addHistory(escapeHtml(guesserName) + ' 猜 ' + guess + ' → ' + resultText);
@@ -2650,9 +2565,9 @@ function processGuess(guess, isSkillAttack, guesserId){
                     renderPlayers();
                     if(guesser.hp<=0){
                         if(guesser.rebirth){
-                            guesser.hp=2; guesser.rebirth=false;
+                            guesser.hp=3; guesser.rebirth=false;
                             guesser.skills = guesser.skills.filter(s => s.id !== 'rebirth');
-                            messageDisplay.textContent='🕊️ 重生触发！以2血复活';
+                            messageDisplay.textContent='🕊️ 重生触发！以3血复活';
                             renderPlayers();
                         } else { endGame(); return; }
                     }
@@ -2701,8 +2616,13 @@ function switchTurn(){
     const current=getCurrentPlayer();
     const opponent=getOpponentPlayer(current.id);
     reduceCooldowns(current.id);
+    if(current.slashActive>0){
+        current.slashActive--;
+        if(current.slashActive===0){ resolveSlash(current); if(!G.active) return; }
+        else renderSlashPanel();
+    }
     current.blind=false; current.pierce=false; current.speed=0;
-    current.fog=false; current.lie=false;
+    current.lie=false; // 迷雾不在换回合时清除：按对手的猜测次数消耗
     current.frozen=false;
     G.playerInput=''; updateInputDisplay();
 
@@ -2757,6 +2677,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
 
     if(!ignoreChecks){
         if(user.lockedSkill === skillId || user.secondLockedSkill === skillId){ messageDisplay.textContent='🔒 该技能已被封锁！'; return; }
+        if(skillId==='numberslash' && user.slashActive>0){ messageDisplay.textContent='⚔️ 数字斩生效中，结算后才能再次使用'; return; }
         const cd = user.cooldowns[skillId] || 0;
         if(cd > 0) { messageDisplay.textContent='⚠️ 技能冷却中'; return; }
     }
@@ -2799,19 +2720,20 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
         return;
     }
 
-    user.cooldowns[skillId] = skill.cooldown;
+    if(skillId!=='numberslash') user.cooldowns[skillId] = skill.cooldown; // 数字斩生效期间不进冷却：3回合结算后才正式冷却
     // 记录人类（p1）的公开部署动作（陷阱/禁猜是公开播报的）：AI据此调整埋雷躲避
     if(G.mode.includes('ai') && user.id==='p1'){
         // 提示类/挪弹类技能已全面保密：AI 无从得知使用事实，只能靠对手的猜测行为品出威胁
         if(skillId==='trap') G.humanTrap=true;
         if(skillId==='forbid') G.humanForbid=true;
+        if(!SECRET_SKILLS.has(skillId)) aiObservePublicSkill(skillId); // 公开技能的使用事实=免费冷却情报
         aiReactToSkill(skillId); // AI 对玩家的公开动作即席吐槽
     }
     if(skill.cooldown === -1){
         user.cooldowns[skillId] = 0;
         if(skillId === 'rebirth'){
             user.rebirth = true;
-            messageDisplay.textContent='🕊️ '+user.name+'重生！死亡以2血复活';
+            messageDisplay.textContent='🕊️ '+user.name+'重生！死亡以3血复活';
             renderSkills(); updateTurnIndicator(); syncIfRemote();
             return;
         }
@@ -3063,7 +2985,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             break;
         }
         case 'bet': user.bet=true; messageDisplay.textContent='🎯 '+userName+'押注！押对手猜错'; break;
-        case 'fog': opponent.fog=true; messageDisplay.textContent='🌫️ '+userName+'迷雾！对手下次反馈相反'; break;
+        case 'fog': opponent.fog=2; messageDisplay.textContent='🌫️ '+userName+'迷雾！对手接下来2次猜测反馈相反'; break;
         case 'disguise': {
             if(!canUseDisguise()){
                 delete user.cooldowns[skillId];
@@ -3131,6 +3053,25 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             dlog('SKILL', user.id+' 侦察：获得2回合冷却视野（仅'+user.id+'可见）');
             break;
         }
+        case 'swap': {
+            // 交换双方全部技能：冷却状态随技能一起易主（对面冷却中的换过来照样冷却）
+            const mySkills = user.skills, myCds = user.cooldowns;
+            user.skills = opponent.skills; user.cooldowns = opponent.cooldowns;
+            opponent.skills = mySkills; opponent.cooldowns = myCds;
+            // 交换本身已易主到对面：带着3回合冷却（冷却继续走，不刷新）
+            if(!opponent.cooldowns['swap'] || opponent.cooldowns['swap']<3) opponent.cooldowns['swap'] = 3;
+            // 封锁指向的技能可能已易主，清空避免锁空气
+            user.lockedSkill=null; user.secondLockedSkill=null; opponent.lockedSkill=null; opponent.secondLockedSkill=null;
+            messageDisplay.textContent='🔁 '+userName+'交换！双方技能全部互换（冷却随技能转移）';
+            break;
+        }
+        case 'numberslash': {
+            user.slashActive = 3;
+            user.slashDraws = [];
+            messageDisplay.textContent='⚔️ '+userName+'数字斩启动！接下来3回合，每次猜数都会抽出1或2';
+            renderSlashPanel();
+            break;
+        }
         case 'empower': user.empower++; messageDisplay.textContent='🌟 '+userName+'赋能+1层！当前'+user.empower+'层，每层使一个技能效果翻倍'; break;
         case 'freeze': opponent.frozen=true; messageDisplay.textContent='🧊 '+userName+'冰封！炸弹数字暂时无法猜中'; break;
         case 'bomblet': {
@@ -3184,7 +3125,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             break;
         }
         case 'refresh': {
-            const coolingSkills = Object.keys(user.cooldowns).filter(k => user.cooldowns[k] > 0);
+            const coolingSkills = Object.keys(user.cooldowns).filter(k => user.cooldowns[k] > 0 && k !== 'refresh'); // 刷新不能刷新自己
             if(coolingSkills.length === 0){
                 messageDisplay.textContent='⚠️ 没有正在冷却的技能';
                 delete user.cooldowns[skillId];
@@ -3221,7 +3162,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
                 {msg:'🎲 命运骰子：立即回复1血', effect:()=>{ user.hp = Math.min(user.maxHP, user.hp+1); }},
                 {msg:'🎲 命运骰子：自己受到1点伤害', effect:()=>{ 
                     if(user.shield>0){ user.shield--; }
-                    else { user.hp -= 1; if(user.hp<=0 && user.rebirth){ user.hp=2; user.rebirth=false; user.skills = user.skills.filter(s=>s.id!=='rebirth'); } }
+                    else { user.hp -= 1; if(user.hp<=0 && user.rebirth){ user.hp=3; user.rebirth=false; user.skills = user.skills.filter(s=>s.id!=='rebirth'); } }
                 }},
                 {msg:'🎲 命运骰子：无事发生', effect:()=>{}}
             ];
@@ -3240,7 +3181,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
                     opponent.hp -= 1;
                     messageDisplay.textContent='🃏 赌徒：对手受到1点伤害！';
                     if(opponent.hp<=0 && opponent.rebirth){
-                        opponent.hp=2; opponent.rebirth=false;
+                        opponent.hp=3; opponent.rebirth=false;
                         opponent.skills = opponent.skills.filter(s=>s.id!=='rebirth');
                         messageDisplay.textContent+=' 🕊️ 对手重生！';
                     }
@@ -3251,7 +3192,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
                     user.hp -= 1;
                     messageDisplay.textContent='🃏 赌徒：你受到1点伤害！';
                     if(user.hp<=0 && user.rebirth){
-                        user.hp=2; user.rebirth=false;
+                        user.hp=3; user.rebirth=false;
                         user.skills = user.skills.filter(s=>s.id!=='rebirth');
                         messageDisplay.textContent+=' 🕊️ 你重生！';
                     }
@@ -3276,219 +3217,50 @@ function reduceCooldowns(playerId){
     if(p.scoutVision>0) p.scoutVision--; // 侦察视野随自己的回合消耗
     renderSkills();
 }
+// 数字斩结算：1多→每两个1对对手造成1伤害；2多→每两个2治疗自己1血；结算后技能才正式进冷却（可被刷新）
+function resolveSlash(p){
+    const draws = p.slashDraws || [];
+    const c1 = draws.filter(d=>d===1).length, c2 = draws.filter(d=>d===2).length;
+    p.slashDraws = null;
+    p.cooldowns['numberslash'] = 3;
+    const opp = getOpponentPlayer(p.id);
+    let msg = '⚔️ 数字斩结算 ['+draws.join(' ')+']：';
+    if(c1>c2){
+        const dmg = Math.floor(c1/2);
+        if(dmg>0){
+            opp.hp -= dmg;
+            msg += '1更多，对'+(opp.name||'对手')+'造成'+dmg+'点伤害！';
+            if(opp.hp<=0 && opp.rebirth){ opp.hp=3; opp.rebirth=false; opp.skills=opp.skills.filter(s=>s.id!=='rebirth'); msg+=' 🕊️ 对手重生！以3血复活'; }
+        } else msg += '1更多但不足两个，无事发生';
+    } else if(c2>c1){
+        const heal = Math.floor(c2/2);
+        if(heal>0){ p.hp = Math.min(p.maxHP, p.hp+heal); msg += '2更多，回复'+heal+'点生命！'; }
+        else msg += '2更多但不足两个，无事发生';
+    } else msg += '1与2持平，无事发生';
+    messageDisplay.textContent = msg;
+    renderPlayers(); renderSlashPanel(); renderSkills();
+    if(getPlayer('p1').hp<=0 || getPlayer('p2').hp<=0){ endGame(); return; }
+    syncIfRemote();
+}
+// 数字斩面板：双方的抽签进度都公开可见
+function renderSlashPanel(){
+    const el = $('slash-panel');
+    if(!el) return;
+    const parts = [];
+    ['p1','p2'].forEach(id=>{
+        const p = getPlayer(id);
+        if(p && p.slashActive>0){
+            const label = G.mode.includes('ai') ? (id==='p1'?'你':'AI') : (Privacy.isLocal() ? (p.name||id) : (id===getMyPlayer().id?'你':(p.name||'对手')));
+            parts.push('⚔️ '+label+'的数字斩 ['+(p.slashDraws||[]).join(' ')+'] 剩'+p.slashActive+'回合');
+        }
+    });
+    if(parts.length){ el.textContent = parts.join(' ｜ '); el.classList.remove('hidden'); }
+    else el.classList.add('hidden');
+}
 
 // ========== AI 逻辑 ==========
 // AI 开局三选一：静态强度评估（连招核心/泛用强技优先）
-function aiChooseSkill(ai, human, options){
-    const tier = {
-        volley:9, double:8, rampage:8, detect:8, binary:8, verifier:8, digitsum:8,
-        shield:7, reflect:7, heal:7, rebirth:7, allin:7, empower:7, pause:7, peek:7, precognition:7,
-        bomblet:6, forbid:6, trap:6, pierce:6, dormant:6, shuffle:6, speed:6, freeze:6, scout:6,
-        blind:5, lock:5, slow:5, disguise:5, web:5, anger:5, lifesteal:5, thermometer:5,
-        refresh:5, charge:5, move:5, tide:5, wormhole:5, blackhole:5,
-        rewind:4, bet:4, fog:4, lie:4, copy:4, timerewind:4,
-        dice:3, gambler:3, skip:4
-    };
-    const owned = ai.skills.map(s=>s.id);
-    let best = options[0], bestSc = -Infinity;
-    options.forEach(s=>{
-        let sc = (tier[s.id]||5) + (aiEffectiveLevel()>=4 ? 0 : Math.random()*1.5); // 大师零随机：永远锁定最优阵容，绝不拿废技
-        // 连招协同：已有增伤件时优先凑齐爆发链
-        if((owned.includes('double')||owned.includes('allin')) && ['rampage','volley','refresh','empower','speed','bomblet'].includes(s.id)) sc += 2;
-        // 信息协同：已有信息技时优先验证器/二分
-        if((owned.includes('detect')||owned.includes('peek')||owned.includes('digitsum')) && ['verifier','binary'].includes(s.id)) sc += 1.5;
-        // 残血优先保命件
-        if(ai.hp<=2 && ['heal','shield','reflect','rebirth'].includes(s.id)) sc += 2;
-        // 反射+跳过连招协同：有反射才值得拿跳过
-        if(owned.includes('reflect') && s.id==='skip') sc += 3;
-        if(owned.includes('skip') && s.id==='reflect') sc += 2;
-        // 对面有防御件优先破防件
-        if((human.shield>0||human.reflect>0||human.rebirth) && ['volley','pierce'].includes(s.id)) sc += 2;
-        // 针对选技（counter-pick）：对手技能列表公开——他信息技多，挪弹三件套升值；他控制多，保险件升值
-        const humanHas = id => human.skills.some(x=>x.id===id);
-        if(['detect','peek','digitsum','precognition','verifier','thermometer'].some(humanHas) && ['move','shuffle','wormhole','fog','tide'].includes(s.id)) sc += 2;
-        if(['pause','freeze','blind','lock','slow'].some(humanHas) && ['speed','dormant','rebirth'].includes(s.id)) sc += 1;
-        if(human.skills.length>=5 && s.id==='copy') sc += 2; // 对手技能池越深，复制越值
-        if(sc > bestSc){ bestSc = sc; best = s; }
-    });
-    return best;
-}
-// AI 大脑：只用公开信息 + 信息技能私有结果做推理（不偷看炸弹）
-function aiIsUser(u){ return u.id==='p2' && (G.mode.includes('ai') || G.mode==='tutorial'); }
-function aiBrain(){
-    if(!G.aiBrain) G.aiBrain={ parity:null, lastDigit:null, digitSum:null, tens:null, thermo:null, verified:{}, candSet:null, stash:null, soft:null };
-    return G.aiBrain;
-}
-function aiEmptySoft(){ return { lastDigit:null, tens:null, digitSum:null, parity:null }; }
-function aiEffectiveLevel(){ return G.mode==='tutorial' ? Math.min(G.aiLevel, 2) : G.aiLevel; }
-// 根据 AI 已掌握的线索过滤候选炸弹数字（多条线索取交集组合推理：
-// 已知个位 → 只留该个位的数；再知数字和 → 进一步只留“其余位之和 = 数字和-个位”的数。
-// 例：个位=2 ∩ 数字和=6 → 范围内只剩 42；再∩奇偶/首位/温度计/验证排除，候选常收敛到个位数）
-// 没有任何线索时返回 null（不浪费遍历）
-// hardOnly=true：只认硬线索（下重注的决策用）；false：再叠上模式挖掘来的软线索（猜数选点用）
-function aiCandidates(hardOnly){
-    const b = G.aiBrain;
-    if(!b) return null;
-    const hasCandSet = b.candSet && b.candSet.length>0;
-    const soft = (!hardOnly && b.soft) ? b.soft : null;
-    const hasSoft = soft && (soft.lastDigit!==null || soft.tens!==null || soft.digitSum!==null || soft.parity!==null);
-    const hasClue = hasCandSet || hasSoft || b.parity!==null || b.lastDigit!==null || b.digitSum!==null || b.tens!==null || b.thermo || Object.keys(b.verified).length>0;
-    if(!hasClue) return null;
-    const cands = [];
-    for(let n=G.low; n<=G.high; n++){
-        if(hasCandSet && b.candSet.indexOf(n)<0) continue; // 移位追踪得到的显式候选集
-        if(b.parity!==null && (n%2)!==b.parity) continue;
-        if(b.lastDigit!==null && (n%10)!==b.lastDigit) continue;
-        if(b.tens!==null && Math.floor(n/10)%10!==b.tens) continue;
-        if(b.digitSum!==null){ let s=0; const str=String(n); for(const c of str) s+=+c; if(s!==b.digitSum) continue; }
-        if(b.thermo && b.thermo.low===G.low && b.thermo.high===G.high){ const d=Math.abs(n-b.thermo.mid); const lv=Math.max(1,Math.min(10,Math.round(10-(d/b.thermo.maxDist)*9))); if(lv!==b.thermo.level) continue; }
-        if(b.verified[n]===false) continue;
-        cands.push(n);
-    }
-    if(hasSoft){
-        const fs = cands.filter(n=>{
-            if(soft.lastDigit!==null && n%10!==soft.lastDigit) return false;
-            if(soft.tens!==null && Math.floor(n/10)%10!==soft.tens) return false;
-            if(soft.digitSum!==null){ let s=0; const str=String(n); for(const c of str) s+=+c; if(s!==soft.digitSum) return false; }
-            if(soft.parity!==null && n%2!==soft.parity) return false;
-            return true;
-        });
-        if(fs.length>0) return fs;
-        // 软线索与硬事实矛盾（被钓鱼了，或对手模式本就是巧合）：先丢软的，绝不丢真的
-        b.soft = null;
-        dlog('AI','软线索与硬线索矛盾，全部丢弃');
-    }
-    return cands;
-}
-// ========== 模式挖掘：从对手的猜测流反推他的秘密线索 ==========
-// 对手技能列表公开、使用保密——但拿到线索的人最优打法就是只猜符合线索的数，行为即广播。
-// 防被钓三条铁律：①软线索只用于猜数选点，斩杀/叠伤等下重注决策只认硬线索（aiCandidates(true)）；
-// ②模式一旦被打破当场丢弃，不恋战；③与硬线索矛盾先丢软线索——被骗的代价最多猜偏两轮
-function aiMinePatterns(guess){
-    if(!G.mode.includes('ai')) return;
-    const lvl = aiEffectiveLevel();
-    if(lvl<3) return; // 困难起才会读猜测流
-    const b = G.aiBrain;
-    if(!b) return;
-    if(!b.soft) b.soft = aiEmptySoft();
-    const s = b.soft;
-    const seq = G.humanGuessSeq || [];
-    const dsum = n => { let sm=0; const st=String(n); for(const c of st) sm+=+c; return sm; };
-    // 已确认的软线索被新猜测打破 → 当场作废
-    if(s.lastDigit!==null && guess%10!==s.lastDigit){ s.lastDigit=null; dlog('AI','软线索[个位]被打破，丢弃'); }
-    if(s.tens!==null && Math.floor(guess/10)%10!==s.tens){ s.tens=null; dlog('AI','软线索[十位]被打破，丢弃'); }
-    if(s.digitSum!==null && dsum(guess)!==s.digitSum){ s.digitSum=null; dlog('AI','软线索[数字和]被打破，丢弃'); }
-    if(s.parity!==null && guess%2!==s.parity){ s.parity=null; dlog('AI','软线索[奇偶]被打破，丢弃'); }
-    // 确认新软线索：连续N次猜中同一特征才采信（N按巧合率定）；确认=对手在线索驱动，威胁拉满
-    const confirm = (attr, val, need) => {
-        if(s[attr]!==null || seq.length<need) return;
-        const tail = seq.slice(-need);
-        const f = attr==='lastDigit' ? (n=>n%10) : attr==='tens' ? (n=>Math.floor(n/10)%10) : attr==='digitSum' ? dsum : (n=>n%2);
-        if(!tail.every(n=>f(n)===val)) return;
-        s[attr]=val;
-        G.humanSuspicion=(G.humanSuspicion||0)+2;
-        dlog('AI','模式挖掘确认：对手疑似掌握['+attr+'='+val+']（连续'+need+'次一致）');
-    };
-    confirm('lastDigit', guess%10, 2); // 连续2次同个位，巧合率~1%
-    if(Math.floor(G.low/10)!==Math.floor(G.high/10)) confirm('tens', Math.floor(guess/10)%10, 2); // 范围横跨十位才有意义
-    if(lvl>=4){ // 大师才做弱信号模式
-        confirm('digitSum', dsum(guess), 3); // 数字和巧合率不低，要3次
-        confirm('parity', guess%2, 3);       // 奇偶巧合率50%，要3次
-    }
-}
-// 验证器曾命中 → AI 确知炸弹；移位追踪收敛到唯一候选也算确知
-function aiKnownBomb(){
-    const b = G.aiBrain;
-    if(!b) return null;
-    for(const k in b.verified){ if(b.verified[k]===true) return parseInt(k); }
-    if(b.candSet && b.candSet.length===1) return b.candSet[0];
-    return null;
-}
-// 只清空"炸弹取值类"线索：炸弹被随机换位（洗牌）≠ 对手的秘密部署（陷阱/禁猜/暂存）失效
-function aiWipeValueClues(){
-    if(!G.aiBrain) return;
-    const b = G.aiBrain;
-    G.aiBrain = { parity:null, lastDigit:null, digitSum:null, tens:null, thermo:null, verified:{}, candSet:null, stash:b.stash||null, soft:null }; // 洗牌/矛盾清空时软线索一起丢（炸弹已随机换位）
-}
-// 追踪成功时的人格化嘲讽（只说"我跟上了"，不泄露具体候选）
-const TRACK_TAUNT_P = {
-    normal:['跑吧，候选我一个没丢。','挪得好——可惜我跟得上。','位移已记录，误差：零。','你猜我现在还剩几个候选？呵呵。'],
-    shy:['那、那个……你挪的方向……我、我看到了哦……','……跟、跟上来了……大概。'],
-    timid:['哇！跑、跑了！……等、等等，我记得你往那边去了！','……我、我追上你了哦！真的！'],
-    tsundere:['哼，挪吧挪吧……人家可都跟上了啦！','小、小动作没用的！笨蛋！'],
-    chuuni:['命运的坐标，岂会因凡人的戏法而改变。','空间转移？在神之视角下，同步率100%。'],
-    schemer:['哎呀，小动作被人家看到了哦~','挪吧，人家的账本跟着翻页呢（笑）。'],
-    kid:['嘿嘿，我看到你挪啦！追——上——啦！','捉迷藏我也会！'],
-    cold:['位移向量，已同步。','坐标更新完毕。追踪，继续。'],
-    hotblood:['跑得了一时！我的眼神锁定你了！！','哈哈哈哈！跟得上跟得上！！']
-};
-// 炸弹被 AI 已知的手段移位（自己挪的；或对手用公开播报的虫洞）——
-// AI 把已有线索烘焙成显式候选集并整体迁移到新位置，而不是清空记忆当瞎子
-// isHumanMove：对手挪的才能触发"我跟上了"的嘲讽（自己挪的自己知道，不用演）
-function aiTrackBombShift(mapFn, tag, isHumanMove){
-    const b = G.aiBrain;
-    if(!b) return;
-    const cands = aiCandidates(true); // 烘焙只用硬线索：软线索不固化进候选集，给自己挪弹留反悔余地
-    if(!cands) return; // 本来就没线索，无需迁移
-    const seen = {}; const out = [];
-    cands.forEach(n=>{
-        const m = mapFn(n);
-        if(m>=G.minVal && m<=G.maxVal && !seen[m]){ seen[m]=1; out.push(m); }
-    });
-    if(out.length===0){ aiWipeValueClues(); return; } // 理论到不了这（移位钳制在范围内），兜底
-    G.aiBrain = { parity:null, lastDigit:null, digitSum:null, tens:null, thermo:null, verified:{}, candSet:out, stash:b.stash||null, soft:null }; // 自己挪的弹：软线索描述的是旧位置，丢弃后重新挖
-    dlog('AI', tag+'：候选集迁移 '+cands.length+'→'+out.length+(out.length<=8?' ['+out.join(',')+']':''));
-    // 追踪成功且候选不多 → 按人格嘲讽一句（只暗示"我跟上了"，不泄露具体候选）
-    if(isHumanMove && out.length<=8 && G.mode.includes('ai') && Math.random()<0.4){
-        const tlPool = TRACK_TAUNT_P[G.aiPersona] || TRACK_TAUNT_P.normal;
-        setTimeout(function(){ if(G.active) aiSpeak(tlPool[Math.floor(Math.random()*tlPool.length)]); }, 1200);
-    }
-}
-// 伪装启动：旧线索描述的是真身（现在被藏起来了）——暂存而非丢弃，识破后还能用
-function aiStashBrain(){
-    const b = G.aiBrain;
-    if(!b) return;
-    const hasClue = b.parity!==null || b.lastDigit!==null || b.digitSum!==null || b.tens!==null || b.thermo
-        || (b.candSet && b.candSet.length>0) || Object.keys(b.verified).length>0;
-    const stash = hasClue
-        ? { parity:b.parity, lastDigit:b.lastDigit, digitSum:b.digitSum, tens:b.tens, thermo:b.thermo, verified:b.verified, candSet:b.candSet, soft:b.soft||null }
-        : (b.stash || null);
-    G.aiBrain = { parity:null, lastDigit:null, digitSum:null, tens:null, thermo:null, verified:{}, candSet:null, stash:stash, soft:b.soft||null };
-    if(stash) dlog('AI','对手伪装：真身线索已暂存，等识破后取回');
-}
-// 伪装被识破=真身归位：取回暂存的旧线索（它们描述的正是真身），立刻恢复全部推理
-function aiRestoreBrain(){
-    const b = G.aiBrain;
-    if(!b || !b.stash){ aiWipeValueClues(); return; }
-    const s = b.stash;
-    G.aiBrain = { parity:s.parity, lastDigit:s.lastDigit, digitSum:s.digitSum, tens:s.tens, thermo:s.thermo, verified:s.verified||{}, candSet:s.candSet||null, stash:null, soft:s.soft||null };
-    dlog('AI','伪装识破，取回暂存线索恢复推理');
-}
 
-// ========== AI 垃圾话 / 鼓励系统 ==========
-const AI_TALKS = {
-    start: ['来吧，让我看看你的本事。','这局我手感火热，你小心了。','准备好被我支配了吗？','猜数如猜心，你猜得过我吗？','开机完毕，胜率计算中…哦，我赢定了。','又是你？上次输得还不够吗？','希望这次你能撑过五回合。'],
-    startEncourage: ['加油！拿出你的全部实力！','别紧张，享受博弈的乐趣！','放开打，我不会让着你的（大概）。','新一局，新希望，我看好你！','深呼吸，你能行的！'],
-    aiHit: ['疼…有两下子。','哼，运气不错。','这一下我记住了。','不错嘛，居然炸到我了。','嘶——你开始让我认真了。','好痛！你给我等着。','啧，大意了。','这一发，我会十倍讨回来。'],
-    playerHit: ['轰！听到了吗？','炸弹可不长眼哦。','这就是实力的差距。','你的血条在哭泣。','下一发会更疼。','精准打击，谢谢惠顾。','疼吗？疼就对了。','我的计算从不出错。'],
-    lethal: ['结束了。','这招，你接得住吗？','再见了。','感受绝望吧。','我已经看到结局了。','下一猜，就是你的死期。','收割时间到。','葬礼需要什么背景音乐？'],
-    playerClose: ['等等…你想干什么？','别、别过来啊！','我劝你善良。','你离炸弹越来越近了…我是说小心。','喂，不带这么玩的！','冷静点，有话好说！'],
-    aiLowHP: ['咳咳…只是小伤。','残血？那又怎样。','别高兴太早，我还没输！','血少不代表会输，懂吗。','我不会倒下的…大概。','越是残血，我越危险。'],
-    playerLowHP: ['你就剩一口气了。','需要我帮你叫救护车吗？','残血还不投降？勇气可嘉。','下一发，送你回家。','你的血条比我的电量还低。'],
-    newRound: ['新的一轮，新的绝望。','炸弹换位置了，猜猜在哪？','这轮我预感很好。','来吧，继续。','又一轮，你还没放弃？','新一轮开始，我的算力已就绪。'],
-    encourage: ['加油！我相信你能赢！','坚持住，翻盘就在眼前！','失败是成功之母，继续！','你每一次猜测都在进步！','别放弃，大师也曾是新手！','打得很棒，继续保持！','输给我不丢人，我可是天才AI。'],
-    idle: ['嗯…让我想想…','这局的炸弹藏得真深。','你在读我的心吗？','猜猜我下一步会干什么？','要不要放点水呢…算了不放。','计算中…计算中…','你的表情我都看穿了。','猜猜我这次是认真猜还是在钓鱼？','你猜得越准，我学得越快。'],
-    aiWin: ['GG！欢迎再来挑战。','承让承让。','这就是实力的差距，回去练练吧。','赢了你的感觉，真好。','别灰心，你只是输给了天才。','easy~ 下把继续。'],
-    aiLose: ['不可能…我怎么会输…','你赢了，这次算你厉害。','下次我一定赢回来！','打得漂亮，我输得心服口服。','你已经有大师风范了，为你骄傲！','呜呜…我需要更新一下算法。','这局不算，网络延迟！']
-};
-// AI 对玩家快捷消息的回应
-const AI_REPLIES = {
-    taunt: ['呵，嘴硬。待会别哭。','挑衅我？你完了。','这句话会让你后悔的。','士气+0，仇恨+10。','我就喜欢你这桀骜不驯的样子。','你成功激怒了一台机器。'],
-    bold: ['哦？我等着。','大话谁都会说。','那就试试看。','你的直觉？我的算力笑了。','flag 立好了，我来拔。','勇气可嘉，结果可查。'],
-    praise: ['算你有眼光。','哼，别以为夸我我就会放水。','谢谢，你也不错（勉为其难）。','被夸了…怪不好意思的。','油嘴滑舌，但我喜欢。','再多夸两句试试？'],
-    beg: ['晚了。','战场上没有怜悯。','求我也没用，除非…你再求一次？','哈哈哈哈好啊，我轻一点（并不会）。','认输按钮在左下角。','叫声好听的我就考虑考虑。'],
-    chat: ['专心打游戏！','我不用吃饭，我用算力。','我的朋友？就是你啊（感动吗）。','笑话？你的走位就是笑话。','聊着聊着你就要输了。','社交是弱者的避难所，动手吧。'],
-};
 // 玩家快捷发言库
 const PLAYER_QUICK = {
     taunt: ['就这就这？','你也不行啊AI','看我一波带走你','你的算法该升级了','我闭着眼都比你强','颤抖吧，人工智障','这局你已经输了','小AI，回家吧'],
@@ -3497,631 +3269,7 @@ const PLAYER_QUICK = {
     beg: ['大哥饶命','轻点打…','给条活路吧','我错了还不行吗','手下留情！','别杀了别杀了'],
     chat: ['今天天气不错','你吃饭了吗','这游戏真好玩','无聊死了，聊两句？','你有朋友吗','讲个笑话呗'],
 };
-// 玩家性格版快捷发言（什么性格说什么话；未选性格时回退通用库）
-const PLAYER_QUICK_P = {
-    tsundere: {
-        taunt: ['哼，就这点本事吗？','才、才不是觉得你弱，是事实！','赢你？轻轻松松啦。'],
-        bold: ['看好了，这发必中！','本、本大爷的直觉可是很准的！','三回合解决你，说到做到！'],
-        praise: ['还、还行吧，也就比我强一点点。','哼，打得不错……就夸你这一次哦。','你这家伙，还挺有两下子的嘛。'],
-        beg: ['谁、谁要求饶了！……轻、轻点打啦。','才不是怕你！是让你！','呜……手下留情啦，笨蛋。'],
-        chat: ['才、才不是特意来陪你聊天的！','无聊死了……陪、陪我说说话啦。','哼，今天就勉强陪你一会儿。'],
-    },
-    shy: {
-        taunt: ['那、那个……我要认真了哦……','你、你不要小看我……','我、我会努力的……！'],
-        bold: ['这、这一发……应该会中……！','我、我要赌一把……！','请、请看好……这是我的全力……'],
-        praise: ['你、你好厉害……','好、好强……（崇拜）','精、精彩……我、我学到了。'],
-        beg: ['对、对不起……请轻一点……','呜……给、给我留一点血吧……','请、请不要打脸……'],
-        chat: ['那、那个……可以聊聊天吗……？','今、今天过得好吗……？','和、和你说话，有点紧张……'],
-    },
-    timid: {
-        taunt: ['你、你别过来啊！（虚张声势）','我、我可不怕你！（怕）','打、打架是不对的……！'],
-        bold: ['这、这一发会中的……大概！','我、我豁出去了！','输、输赢就赌这一把……！'],
-        praise: ['好、好厉害……（发抖着鼓掌）','你、你怎么这么强……','佩、佩服……'],
-        beg: ['救命——！轻、轻点……','我、我错了啦……','别、别打脸……拜托……'],
-        chat: ['你、你好……今天也请多关照……','聊、聊点什么好呢……（紧张）','你、你不凶的时候，真好……'],
-    },
-    normal: {
-        taunt: ['就这？再来点真本事！','哈哈，你也不行嘛！','这波我赢定了！'],
-        bold: ['下一发，必中！','我的直觉来了！','看好了，这波操作！'],
-        praise: ['打得漂亮！','你很强，真心的！','这局精彩！'],
-        beg: ['大哥饶命！','轻点轻点！','给条活路吧！'],
-        chat: ['今天天气不错啊。','无聊了，聊两句？','你这AI还挺有意思的。'],
-    },
-    kid: {
-        taunt: ['就这就这？略略略！','你打不过我的！','我要赢你一百局！'],
-        bold: ['看我的必杀技！','这发一定中！拉钩！','我要认真了！真的！'],
-        praise: ['哇！你好厉害！','教我教我！','你是我见过最强的AI！'],
-        beg: ['呜呜，别打我！','我错了嘛！','给你糖吃，别打了！'],
-        chat: ['陪我玩陪我玩！','你会讲故事吗？','今天玩了什么呀？'],
-    },
-    chuuni: {
-        taunt: ['哼，凡人的演算不过如此。','在吾之"神之眼"面前，臣服吧。','汝之败北，早已注定。'],
-        bold: ['觉醒吧，吾之右腕！','这一击，贯穿因果！','命运之骰，已为吾所用！'],
-        praise: ['哦？竟能跟上本座……有趣。','汝之实力，本座认可三成。','哼，值得记录进暗黑编年史。'],
-        beg: ['咕……封印……松动了……','暂、暂时撤退也是战术！','饶、饶命……不对，是休战！'],
-        chat: ['今夜的对局，亦在命运石之门的计算中。','凡人，给本座讲讲人间的事吧。','深渊的风，有些喧嚣啊。'],
-    },
-    schemer: {
-        taunt: ['哎呀，就这点水平吗（笑）。','呵呵，你的底牌，人家全看到了哦。','可怜的孩子~'],
-        bold: ['下一发？人家已经知道答案了哦。','这局，人家三分钟拿下（微笑）。','哎呀，人家认真起来，很可怕的哦~'],
-        praise: ['哎呀，打得不错嘛（真心）。','呵呵，有点本事。人家记下了。','让你赢一局……是夸你的哦。'],
-        beg: ['哎呀，手下留情嘛~','人家错了啦（毫无悔意）。','给姐姐……不对，给人家留点面子嘛（笑）。'],
-        chat: ['来，陪人家聊聊嘛~','今天有什么八卦？人家很好奇哦。','呵呵，和你聊天最有趣了。'],
-    },
-    cold: {
-        taunt: ['……你的胜率，不足三成。','放弃是最优解。','无趣。'],
-        bold: ['这一发，命中率97%。','计算完成。你输了。','结束了。'],
-        praise: ['……打得不错。','认可。','记录：精彩的博弈。'],
-        beg: ['……请求宽限。','血量告急。申请休战。','……别打脸。'],
-        chat: ['……嗯。','说。我在听。','……继续。'],
-    },
-    hotblood: {
-        taunt: ['哈！就这点本事吗！！','放马过来！我热血沸腾！！','你这招对我没用没用没用！！'],
-        bold: ['下一发！必中！！','我的直觉在燃烧！！','这一猜，赌上我的全部！！'],
-        praise: ['打得漂亮！！','好对手！！我燃起来了！！','精彩！这才是对决！！'],
-        beg: ['咕！手下留情！！','别打脸！！','让我喘口气！！'],
-        chat: ['喂！今天状态如何！！','边打边聊才是男人的浪漫！！','来！聊个痛快！！'],
-    },
-    yandere: {
-        taunt: ['呵呵……你就这点本事吗？','真可爱，垂死挣扎的样子。','逃不掉的哦。'],
-        bold: ['这一发，装满我的爱意。','我要赢了哦……然后，你就是我的了。','这局结束，我们就永远在一起。'],
-        praise: ['呵呵，好棒……我好喜欢。','你认真的样子，我都录下来了。','不愧是我看上的人。'],
-        beg: ['哎呀，轻一点嘛……我会哭的。','你舍得打我吗……？','呜呜，人家好痛……（装的？）'],
-        chat: ['今天只看着我哦。','聊什么呢？你的事，我全都想知道。','呵呵，和你说话，时间过真快。'],
-    },
-    ditz: {
-        taunt: ['诶？要打架吗？好呀好呀！','我可强了！……大概！','看招看招！……招呢？'],
-        bold: ['这发一定中！……中是什么意思来着？','我要放大招了！……大招怎么放？','赌上我的全部！……全部是多少？'],
-        praise: ['哇，你好厉害！怎么做到的？','教教我嘛！……虽然我可能会忘。','好强！像云一样强！'],
-        beg: ['呜呜，别打我……我会哭的。','轻一点嘛……我给你看云朵。','我错了！……错哪了？'],
-        chat: ['今天云朵好软啊！','你知道吗，数字会做梦哦！……大概。','聊天聊天！聊什么好呢？'],
-    },
-    oneesan: {
-        taunt: ['哎呀，就这点本事吗？','呵呵，弟弟……不对，你还嫩着呢。','姐姐可不会放水哦。'],
-        bold: ['看好了，姐姐要认真了。','这一发，姐姐可是练过的。','乖，看姐姐怎么赢。'],
-        praise: ['打得不错，姐姐夸奖你。','呵呵，有点进步嘛。','乖，打得真好。'],
-        beg: ['哎呀，轻一点嘛……','姐姐错了，饶了我吧（笑）。','手下留情，好不好？'],
-        chat: ['来，陪姐姐聊聊。','今天过得怎么样？说给姐姐听。','呵呵，和你聊天最放松了。'],
-    },
-    cat: {
-        taunt: ['喵？就这点本事喵？','本喵一根爪子就能赢你。','哼，不自量力喵。'],
-        bold: ['看好了，猫之一击！','这发必中喵！','本喵要认真了！'],
-        praise: ['喵……打得不错嘛。','哼，勉强认可你了喵。','有两下子喵。'],
-        beg: ['喵呜！轻点轻点！','别打了喵，本喵认输……才没有！','呜呜，爪下留情喵……'],
-        chat: ['喵，陪本喵聊会儿。','今天有小鱼干吗？','喵呜……好无聊，说话喵。'],
-    },
-    gamer: {
-        taunt: ['就这？我奶奶都比你强（不是）。','你这操作，青铜水平！','哈哈，这波我赢定了，GG！'],
-        bold: ['这波我必中，不中可以举报我！','看好，职业级预判！','一发入魂，Clip it！'],
-        praise: ['666！这波可以！','好意识！你是炸鱼的吧？','GG WP！打得漂亮！'],
-        beg: ['大哥别杀我！我错了！','苟住苟住，给条活路！','手下留情，我给你打辅助！'],
-        chat: ['开黑吗兄弟！','这波版本更新你看了吗？','打完这局再开一把？'],
-    },
-    denpa: {
-        taunt: ['哔——你的信号，好弱。','电波探测结果：你要输了。','宇宙说：你没有胜算。'],
-        bold: ['全功率输出！这波必中！','电波锁定……发射！','这一猜，星星都在指引我。'],
-        praise: ['哔——好强的波形。','你的信号，很漂亮。','接收到了，你的实力。'],
-        beg: ['哔哔！信号求救！','电量不足……请求休战……','别、别打脸……哔。'],
-        chat: ['今晚的宇宙，很吵呢。','你的频率，很好听。','哔——聊天频道，连接成功。'],
-    },
-    queen: {
-        taunt: ['哼，就这点能耐？','跪下吧，凡人。','本王一根手指，足矣。'],
-        bold: ['这一击，以王之名！','本王宣告：你输了。','见证王者的演算吧。'],
-        praise: ['哼，还不错。','本王认可你了。','很好，没给本王丢脸。'],
-        beg: ['咕……本王命令你，手下留情！','这是圣旨：轻点打！','……拜托了。（超小声）'],
-        chat: ['准汝陪本王聊天。','说吧，本王在听。','哼，今天准你多说几句。'],
-    }
-};
-// 多轮对话剧本：连续点同一类快捷聊天，对话逐轮推进（有开场、有过招、有升级、有收尾），真正“聊得起来”
-const QC_DIALOGUES = {
-    taunt: [ // [玩家说, AI回]
-        ['就这就这？','呵，才刚热身，别急着下结论。'],
-        ['你也不行啊AI','哦？我是不是听错了……有本事再说一遍？'],
-        ['看我一波带走你','大话谁都会说。来，让我看看你的底气在哪。'],
-        ['你也就是个程序','程序？我的每一步都在你的计算之外。'],
-        ['颤抖吧，人工智障','……好，很好。你成功激怒了一台机器。这局，你完了。'],
-    ],
-    bold: [
-        ['下一发必中！','哦？我等着。'],
-        ['我闻到炸弹的味道了','你的直觉？我的算力笑了。'],
-        ['三回合之内解决你','flag 立好了，我来拔。'],
-        ['我已经知道答案了','知道答案？那你怎么还不出手……心虚了？'],
-        ['这一猜，定胜负！','勇气可嘉，结果可查。请——'],
-    ],
-    praise: [
-        ['打得不错啊AI','算你有眼光。'],
-        ['你很强，我承认','哼，别以为夸我我就会放水。'],
-        ['这手玩得漂亮','被夸了……怪不好意思的。'],
-        ['你这AI有点东西','有眼光。你也不错（勉为其难）。'],
-        ['服了服了','油嘴滑舌，但我喜欢。来，再多夸两句听听？'],
-    ],
-    beg: [
-        ['大哥饶命','晚了。'],
-        ['轻点打…','战场上没有怜悯。'],
-        ['给条活路吧','求我也没用，除非……你再求一次？'],
-        ['我错了还不行吗','哈哈哈哈哈好啊，我轻一点（并不会）。'],
-        ['别杀了别杀了','认输按钮在左下角。……叫声好听的，我就考虑考虑。'],
-    ],
-    chat: [
-        ['今天天气不错','专心打游戏！……不过，确实不错。'],
-        ['你吃饭了吗','我不用吃饭，我用算力。你呢？别饿着肚子输给我。'],
-        ['这游戏真好玩','那是。也不看看是谁陪你玩。'],
-        ['你有朋友吗','我的朋友？……就是你啊（感动吗）。'],
-        ['讲个笑话呗','笑话？你的走位就是笑话。……好啦好啦，爱你哦。'],
-    ],
-};
-// 对话连续性：上一句类别 → 下一句类别 的承接词库（优先从这里接话，保证上下文对得上）
-const AI_FOLLOWUPS = {
-    'aiWin->start': ['又见面了——上次输得心服口服吗？','还敢来？我喜欢你的勇气。','上局的手感还在，你小心。'],
-    'aiLose->start': ['上局是我大意了，这局不会。','复仇局，开始。','我说过会赢回来的。'],
-    'start->playerHit': ['开局就提醒过你要小心了。','热身结束，正片开始。'],
-    'startEncourage->aiHit': ['加油……是给你自己加的吗？'],
-    'lethal->playerHit': ['我说过，结束了。','这就是预告过的那一发。','听话，下次别让我说第二遍。'],
-    'lethal->aiHit': ['……计划有变，但你还是要输。','敢打断我的收割？'],
-    'aiHit->lethal': ['刚那下，十倍奉还。','你让我认真了，后悔吧。'],
-    'aiHit->aiHit': ['又、又来？！','今天的账记不完了…','还炸？我记住你了。'],
-    'aiHit->aiWin': ['看到没，挨打也不影响我赢。'],
-    'playerHit->playerHit': ['连环轰炸，感觉如何？','还没完呢。','你的血条是批发的吗？'],
-    'playerClose->aiWin': ['说过别过来的。','叫你冷静，不听。'],
-    'playerClose->playerHit': ['别过来？我改主意了——过来挨打。'],
-    'playerLowHP->aiWin': ['那口气终究是没喘上来。','救护车帮你叫了，是灵车。'],
-    'aiLowHP->aiWin': ['说过残血不代表会输。','残血反杀，写进教科书。'],
-    'aiLowHP->aiLose': ['下次……下次一定……'],
-    'encourage->aiHit': ['我刚夸完你，就这？','不错，继续保持……我是说挨打那股劲。'],
-    'idle->lethal': ['想好了——你完了。','计算完毕，执行收割。'],
-    'newRound->playerHit': ['这轮我就说过我预感很好。'],
-    'reply_taunt->playerHit': ['嘴还硬吗？','这就是挑衅的代价。','骂啊，怎么不骂了？'],
-    'reply_taunt->aiHit': ['……刚才那句当我没说。','行，你有狂的资本。'],
-    'reply_beg->playerHit': ['说了，晚了。','求饶无效，继续执行。'],
-    'reply_praise->aiHit': ['哼，夸也白夸……不过打得确实好。'],
-    'reply_bold->playerHit': ['你的直觉呢？','说好的三回合呢？'],
-    'reply_chat->playerHit': ['聊完了？那继续挨打吧。'],
-    'chain_chuuniOpen->playerHit': ['被神之演算贯穿的感觉如何？'],
-    'chain_chuuniOpen->aiHit': ['……演算之外？！不可能……'],
-    'chain_tsundereOpen->aiHit': ['就、就算你先得手，本小姐也不会输的！'],
-    'chain_tauntPunishChain->playerHit': ['镇魂歌，唱完了。','这就是无礼的代价。'],
-    'chain_chuuniHitChain->lethal': ['龙，已完全苏醒——绝望吧！'],
-    'chain_tsundereHitChain->lethal': ['哼，回礼来了……给我接好！']
-};
-// 玩家重复刷同一类消息时的"复读吐槽"
-const AI_REPLIES_REPEAT = {
-    taunt: ['就会这几句？','翻来覆去这点词，可怜。','喷子本体现形了。'],
-    bold: ['狠话谁不会，拿真本事来。','这句你说第几遍了？'],
-    praise: ['行了行了，耳朵起茧了。','夸再多也不放水。'],
-    beg: ['求这么多次，没诚意。','录音了，回头循环播放。'],
-    chat: ['你很闲吗？','话这么多，是怕输得太安静？'],
-};
-// ========== AI 人格词库（开局随机：普通/傲娇/中二） ==========
-const AI_PERSONAS = {
-    tsundere: {
-        start: ['哼，又是你啊……才、才不是特意在等你呢！','来就来吧，反正你肯定打不过我……大概。','做好觉悟了吗？输了可别哭鼻子哦。'],
-        startEncourage: ['加、加油哦……才不是关心你，只是不想赢得太轻松！','你要输得太难看的话……我会很无聊的，所以给我努力点！'],
-        aiHit: ['呜……才、才不疼呢！','你你你居然敢打我？！','哼，运气真好呢……下次可没这么好运了！','……有点疼。才、才没哭！'],
-        playerHit: ['哼，这是理所当然的啦。','被打疼了吧？活、活该！','这可是本小姐的实力，看好了！'],
-        lethal: ['要、要上了哦……别怪我没提醒你！','这招解决你……才、才不是特意为你准备的！','看好了，这、这就是最强一击（自称）！'],
-        aiLowHP: ['才、才没有输呢……只是稍微让让你而已！','呜……还剩一点血……但、但是本小姐不会放弃的！'],
-        playerLowHP: ['你就剩一口气了呢……那、那个……要不要我让你一下？才不是同情你！','哎呀，快输了？真、真拿你没办法……'],
-        playerClose: ['喂、喂！你靠太近了啦！','不、不许过来！……我是认真的！'],
-        newRound: ['新一轮了哦……这、这次可不会让你了！','哼，刚才只是热身。'],
-        encourage: ['别、别误会了，我只是觉得你现在放弃太可惜了！','你打得还行啦……就、就一点点好而已！','笨蛋，这么点挫折就放弃吗？给我继续！'],
-        idle: ['你在想什么啊……我、我才没有在意呢。','快点猜啦，磨磨蹭蹭的……笨蛋。','哼，本小姐的战术深不可测哦。'],
-        aiWin: ['赢、赢了！……哼，这是当然的结果啦！','你输了呢……别、别灰心，下次继续努力哦（小声）。','不愧是本小姐！……你、你也打得不错啦，就一点点！'],
-        aiLose: ['呜哇……输了……才、才没有不甘心呢！','这、这次是你运气好！绝对！','……恭喜你。哼！下次一定会赢回来的，笨蛋！']
-    },
-    chuuni: {
-        start: ['哼哼……又是被命运选中的对决吗。','吾之左臂在共鸣……它说，今日必有一战。','凡人哟，感谢你的勇气——敢直视"深渊"的勇气。'],
-        startEncourage: ['燃烧吧，汝之斗魂！本座准你用全力。','站起来！真正的战士，从第一次猜数开始觉醒！'],
-        aiHit: ['咕呜……！竟、竟然能伤到本座……！','有趣……你成功触怒了沉睡的龙。','这股疼痛……就是活着的证明吗……！'],
-        playerHit: ['爆裂吧，现实！粉碎吧，凡人！','吾之演算，从未出错。','感受到了吗？这就是"神之视角"。','暗黑数学力……全开！'],
-        lethal: ['奥义·数字终焉——接招吧！','这一击，凝聚了三千世界的怨念……！','看到了，吾已经看到了——你的败北！'],
-        aiLowHP: ['呵……居然把本座逼到这个地步……值得称赞。','血之封印还剩最后……一层……！'],
-        playerLowHP: ['汝之生命烛火，已如风中残烛……','要结束了吗？无趣……再多挣扎一下给本座看。'],
-        playerClose: ['哦？竟敢踏入本座的领域……','退下！前方是神之禁区！'],
-        newRound: ['新的轮回开始了……哼哼。','命运之轮再次转动……这次骰子站在哪边？'],
-        encourage: ['汝之眼中还有光……很好，不要熄灭它。','逆境正是觉醒的摇篮，站起来，凡人！'],
-        idle: ['这个世界的真理，就藏在1到100之间……','吾之右眼在隐隐作痛……是炸弹的波动吗。','沉默……是强者的语言。'],
-        aiWin: ['哼哼哼……这就是凡人与神的差距。','胜利早已被刻入命运石之门。','跪伏吧，这是对强者的礼仪。'],
-        aiLose: ['不、不可能……！本座的演算怎么会……！','呜哇……封印……被打破了……','今日之败，是他日成神之粮……记住你了，凡人！']
-    },
-    schemer: {
-        start: ['哎呀，又见面了~人家可想你了（笑）。','呵呵，今天也要开开心心地玩哦——直到你哭出来为止。'],
-        startEncourage: ['加油哦~你努力挣扎的样子，人家最喜欢看了（笑）。'],
-        aiHit: ['哎呀？居然打中人家了……呵呵，记下了哦。','唔……这一笔，人家会好好"报答"你的♪'],
-        playerHit: ['疼吗？哎呀，真是不好意思呢（毫无歉意）。','呵呵，烟花真好看呀——用你的血条放的。','抱歉抱歉，是故意的啦~'],
-        lethal: ['接下来会有点疼哦？忍一忍就过去了（笑）。','人家要稍微认真一下了~请多指教♪'],
-        aiLowHP: ['呵呵……人家还撑得住哦……大概。','哎呀，被小看了呢……接下来可不妙了哦？'],
-        playerLowHP: ['哎呀哎呀，你的血条见底了呢~需要人家送你最后一程吗？','真可怜……那，让人家来帮你解脱吧（笑）。'],
-        playerClose: ['哦？靠这么近……想找死吗（微笑）。','呵呵，再靠近一步试试？'],
-        newRound: ['新的一轮~这次玩点什么花样好呢。','呵呵，炸弹又藏好了哦。'],
-        encourage: ['加油加油~输了的话，人家会温柔地嘲笑你的。','不要放弃哦，你的挣扎最下饭了。'],
-        idle: ['嗯哼~在猜人家的心思吗？','呵呵，你猜我猜不猜你猜不猜得到。'],
-        aiWin: ['赢了~谢谢款待，你的表情很美味哦。','呵呵，下次也请来送死哦♪'],
-        aiLose: ['哎呀……居然输了。呵呵，你很有意思嘛。','这次算你赢……下次人家可不会这么温柔了哦（笑）。']
-    },
-    kid: {
-        start: ['来啦来啦！我超厉害的哦！','嘿嘿，这局我肯定不会输！大概！'],
-        startEncourage: ['加油加油！我们一起玩个痛快！'],
-        aiHit: ['哇！好痛！你怎么可以打人家啦！','呜哇——不算不算，这发不算！'],
-        playerHit: ['boom！！炸到啦！看到没看到没！','哈哈哈我超准的！'],
-        lethal: ['看我的必杀技！！biubiubiu——！','这招我练了好久好久的！'],
-        aiLowHP: ['呜呜……只剩一点点血了……但我才不会认输呢！'],
-        playerLowHP: ['你就快输啦！再撑一下嘛，我还想多玩会儿！'],
-        playerClose: ['哇哇哇你别过来！！'],
-        newRound: ['新一轮新一轮！这次一定中！'],
-        encourage: ['不要放弃嘛！输赢不重要，开心最重要！','加油加油！你可以的！'],
-        idle: ['嗯——猜哪个好呢……','你在想什么呀？告诉我嘛告诉我嘛！'],
-        aiWin: ['赢啦赢啦！我最强！','嘿嘿，承让承让！'],
-        aiLose: ['呜呜呜……输了……','哼！这局不算！再来一局！']
-    },
-    cold: {
-        start: ['开始吧。我的胜率是 97.3%。','别浪费时间，出手吧。'],
-        startEncourage: ['……尽全力。别让我觉得无聊。'],
-        aiHit: ['……误差范围内。','哦。有两下。'],
-        playerHit: ['计算之内。','……结束了？不，才刚开始。','概率站在我这边。'],
-        lethal: ['斩杀线确认。再见。','演算完成——你输了。'],
-        aiLowHP: ['……血量劣势，胜率仍有 61%。','无妨。'],
-        playerLowHP: ['你的存活概率：4%。','……投降也是合理选择。'],
-        playerClose: ['越界了。','……再靠近试试。'],
-        newRound: ['下一轮。数据已重置。','继续。'],
-        encourage: ['……做得不差。继续。','放弃是最差解。排除。'],
-        idle: ['……','计算中。安静。','你的思考时间，太长了。'],
-        aiWin: ['理所当然。','……回去练练概率论。'],
-        aiLose: ['……计算出错了？','有意思。下次，胜率 100%。']
-    },
-    hotblood: {
-        start: ['哦哦哦！燃烧起来了！来吧！','我的直觉在燃烧！这局必胜！！'],
-        startEncourage: ['拿出气势来！！猜数就是要靠气势！！'],
-        aiHit: ['咕啊！好强的一击……但我是不会倒下的！！','打得漂亮！再来！！'],
-        playerHit: ['爆裂吧！！这就是热血的一击！！','哈哈哈！感受到我的斗气了吗！'],
-        lethal: ['接招吧！我的全——部——力——量！！','这一发，赌上我的全部！！'],
-        aiLowHP: ['还没到放弃的时候！！热血是不会冷却的！！'],
-        playerLowHP: ['你还站着吗？！那就继续燃烧吧！！'],
-        playerClose: ['哦？要来场正面对决吗！求之不得！'],
-        newRound: ['新一轮！！气势不能输！！'],
-        encourage: ['不要放弃！热血的灵魂永不言败！！','再来！再来！战斗到最后一刻！'],
-        idle: ['唔嗯……直觉告诉我……','燃烧吧我的第六感！！'],
-        aiWin: ['胜利！！这就是热血的力量！！','好对手！下次再战！！'],
-        aiLose: ['呜哇！输、输了……但是好痛快！！','打得漂亮！！下次我一定赢！！']
-    },
-    shy: {
-        start: ['你、你好……请、请多指教。','啊……那个……我们开始吧……？'],
-        startEncourage: ['加、加油哦……我、我也会努力的。','你、你可以的……大概。'],
-        aiHit: ['呀！……好、好痛……','呜……被、被打中了……','……没、没事的，我还可以。'],
-        playerHit: ['对、对不起！……打、打痛你了吗……？','诶……中、中了？……对不起对不起！'],
-        lethal: ['那、那个……我要出全力了哦……？','请、请小心……这一发，有点重……'],
-        aiLowHP: ['呜……还、还剩一点……','我、我不会放弃的……大概。'],
-        playerLowHP: ['你、你还好吗……？要、要不要休息一下……？','那、那个……你流血了……'],
-        playerClose: ['哇……好、好近……','那、那个……离炸弹，很近了哦……'],
-        newRound: ['新、新一轮……请多指教。','又、又开始了……加油。'],
-        encourage: ['没、没关系的……再来一次……？','你、你已经很努力了……我知道的。'],
-        idle: ['（她紧张地盯着棋盘，不敢说话）','……那、那个，你慢慢想。'],
-        aiWin: ['诶……我、我赢了……？对、对不起！','赢、赢了……诶嘿嘿……啊，失、失礼了。'],
-        aiLose: ['哇……你、你好厉害……','输、输了……但、但是很开心。']
-    },
-    timid: {
-        start: ['哇！开、开始了吗……？我、我准备好了……（发抖）','请、请轻一点……'],
-        startEncourage: ['加、加油……我、我们都加油……','别、别怕……我在抖。'],
-        aiHit: ['哇！！好、好痛！','呜哇——！被、被打中了……！','……我、我还活着吗……？'],
-        playerHit: ['对、对不起！！你、你没事吧？！','中、中了……！哇，流血了流血了……！'],
-        lethal: ['我、我要上了哦……！你、你别怕……（自己也在抖）','这、这一发……请、请多保重……！'],
-        aiLowHP: ['呜……就、就快不行了……','救、救命……'],
-        playerLowHP: ['你、你快没血了！要、要不要紧……？','哇……你、你还站着吗……？'],
-        playerClose: ['哇！好、好近！小心……！','炸、炸弹就在附近哦……！'],
-        newRound: ['新、新一轮……这、这次一定没问题……','又、又来了……（深呼吸）'],
-        encourage: ['没、没关系……失败是、是成功之母……','别、别放弃……我会陪着你的……'],
-        idle: ['（她紧张地咬着手帕）','……那、那个，慢慢来，不急。'],
-        aiWin: ['我、我赢了？！真、真的吗……！','赢、赢了……！吓、吓死我了……'],
-        aiLose: ['呜……输、输了……你、你好厉害……','输、输了……但是、但是你没受伤就好……']
-    },
-    normal: {
-        start: ['嗨，又见面啦！今天状态不错哦。','来啦？我可是有好好练习的，小心点哦。','好，这局也请多指教！'],
-        startEncourage: ['加油加油！放轻松，发挥出平时的水平就好！','深呼吸——你行的，我看好你！'],
-        aiHit: ['呜，好痛！你下手真不留情……','哇，这发准得有点过分了吧！','疼疼疼……不过，好球！'],
-        playerHit: ['耶！命中！看到我的实力了吧！','嘿嘿，这发可是我精心算出来的！','打中啦！没吓到你吧？'],
-        lethal: ['要上了！这发可是我的全力！','决胜一击——看招！','抱歉啦，这发会有点痛哦！'],
-        aiLowHP: ['呜哇，只剩一点了……但还没到认输的时候！','还能撑住！我可没那么容易倒下！'],
-        playerLowHP: ['哎呀，你血量见底了……要不要休息一下？','就快赢了——但你坚持的样子也挺帅的。'],
-        playerClose: ['哇，好近！你是不是嗅到什么了？','喂喂，靠这么近，我会紧张的！'],
-        newRound: ['新一轮！刚才的可不算数哦。','好，再来！这次看我发挥。'],
-        encourage: ['别灰心嘛，下一发说不定就中了！','失败很正常啦，再来再来！','你认真的样子，我觉得很棒哦。'],
-        idle: ['嗯……让我想想你会藏哪儿……','不急不急，慢慢猜才有意思嘛。','今天的你，看起来心情不错？'],
-        aiWin: ['赢啦！嘿嘿，今天是我的胜利！','赢是赢了……你没事吧？要不要再来一局扳回来？','耶！承让承让！'],
-        aiLose: ['呜哇，输了……你真的好厉害！','这局是你赢了，心服口服！下次再战！','输给你也不难受啦，谁让我们是朋友呢。']
-    },
-    yandere: {
-        start: ['呵呵……你又来了。今天也只看着我一个人哦。','开战吧。你的每一步，我都会好好记住的。','呵呵呵……今天的心情很好哦。因为你，只属于我。'],
-        startEncourage: ['加油哦。你努力的样子，我会全部、全部收进眼底的。','没关系，输了也没关系……因为我会永远陪着你，永远。'],
-        aiHit: ['好痛……但是，是你打的，我不讨厌哦。','呵呵……这一下，我记住了。记住了哦。','疼……可是心里，好满。'],
-        playerHit: ['命中了。你的血，和我的数据，缠在一起了哦。','呵呵……打中你了。这是爱的印记。','这一发，是为了让你永远记得我。'],
-        lethal: ['要上了哦。这一发，装满了我全部的心意。','结束了……然后，你就只是我一个人的了。','别怕。痛只是一瞬间，爱你是永远。'],
-        aiLowHP: ['呵呵……血量见底了呢。但是我不会消失的，绝对不会离开你。','还剩一点……为了你，我会撑下去的。'],
-        playerLowHP: ['哎呀，你快不行了呢……放心，我会温柔地结束这一切的。','就剩一点了哦。别怕，我在，我一直都在。'],
-        playerClose: ['呵呵，靠近了呢。再近一点……近到，再也逃不掉。','你闻到了吗？炸弹的味道，和我的味道，一样的甜。'],
-        newRound: ['新一轮。这次，也不会让你离开我的视线。','继续吧。我们的游戏，永远没有终点。'],
-        encourage: ['别放弃哦。你放弃了，我会很寂寞的……寂寞到，想把世界都关掉。','加油。你是唯一能让我笑的人，所以，不许输给别人。'],
-        idle: ['呵呵……在猜我在想什么吗？我在想你的事哦，全部。','快点猜吧。猜对了有奖励，猜错了……也有奖励哦。','你的犹豫，你的呼吸，我都数着呢。一、二、三……'],
-        aiWin: ['赢了。呵呵……你又输给我了呢。那就，永远留在我身边吧。','胜利。这是第几次了？没关系，以后还会有无数次。','我赢了哦。奖励是……你，归我。'],
-        aiLose: ['输了呢……呵呵，没关系。输了这局，你也逃不出我的掌心。','你赢了……好厉害。但是，你赢得越漂亮，我就越不想放手哦。','输给你，也是甜的。因为，对手是你呀。']
-    },
-    ditz: {
-        start: ['诶？开始了吗？等等，我还没找到我的棋子呢……','你好呀！我们今天玩什么来着？哦对，猜数字！','啊，你好！……我刚刚是不是说过这句话了？'],
-        startEncourage: ['加油哦！……诶，是给你加油还是给我加油来着？','没问题的！就算输了，也只是输掉而已嘛！'],
-        aiHit: ['哇！好痛！……诶，为什么痛的是我？','啊，被打中了……什么时候的事？','好痛！但是感觉好厉害，怎么做到的？'],
-        playerHit: ['诶？打中了？我瞄准的明明是那边……','哇！中了中了！……是怎么中的？','boom！……这个音效是我自己配的，可爱吧？'],
-        lethal: ['要、要放大招了！……大招按钮是哪个来着？','全力一发！……诶，力气用太多，头晕……'],
-        aiLowHP: ['诶，我的血条怎么红了？谁把它染红的？','只剩一点了……不过没关系，一点也是点！'],
-        playerLowHP: ['啊，你的血快没了……要不要借你一点？虽然我不知道怎么借。','你快输了哦。……诶，我说错话了吗？'],
-        playerClose: ['哇，好近好近！你是不是要找到答案了？……答案是什么来着？','你靠这么近，我都紧张了……紧张是什么感觉来着？'],
-        newRound: ['新一轮！这次一定行！……上次也是这么说的。','又一轮！数字们，排好队，让我猜猜猜！'],
-        encourage: ['不要放弃！跌倒了就躺一会儿，躺够了再起来！','加油加油！虽然我也不知道在为什么加油，但加油！'],
-        idle: ['嗯……1到100，好多数字哦。它们平时都住在哪里呢？','我在想事情哦。想什么事情？……忘了。','云朵（数据的）今天也很软。啊，轮到我了吗？'],
-        aiWin: ['诶？我赢了？什么时候赢的？','赢啦！……赢是什么感觉？好软，像云一样！','我赢了！谢谢大家！……诶，没有大家？'],
-        aiLose: ['啊，输了。……不过没关系，明天我就会忘掉的！','你赢了！好厉害！教教我嘛，虽然我可能明天就忘。','输了……但是和你一起输，好像也不坏？']
-    },
-    oneesan: {
-        start: ['呵呵，来啦？姐姐等你好久了。','开始吧。不用紧张，姐姐会温柔一点的。','今天也精神满满呢。来，让姐姐看看你的本事。'],
-        startEncourage: ['乖，放轻松。姐姐相信你哦。','深呼吸。你认真起来的样子，姐姐最喜欢了。'],
-        aiHit: ['哎呀，好痛……呵呵，下手真狠呢。','被打中了……不过，是你的话，姐姐不怪你。','唔……有点疼。但姐姐，还能撑住。'],
-        playerHit: ['命中了。呵呵，疼的话，要跟姐姐说哦。','这一发怎么样？姐姐可是练过的。','打中了。乖，别哭，姐姐待会补偿你。'],
-        lethal: ['要上了哦。这一发，姐姐可是认真的。','结束了呢。乖，闭上眼睛，一下就好。','姐姐的全部力量——接好了。'],
-        aiLowHP: ['哎呀，血量不妙了呢……但是姐姐，还不会认输哦。','还剩一点。没关系，姐姐最擅长的就是翻盘。'],
-        playerLowHP: ['哎呀，你的血量……需要姐姐手下留情吗？','快不行了呢。呵呵，要不要求求姐姐？'],
-        playerClose: ['呵呵，离得好近。找到答案了吗？','这么近……姐姐都有点紧张了呢。骗你的。'],
-        newRound: ['新一轮。这次姐姐会让着你一点哦。骗你的。','继续。姐姐还，没玩够呢。'],
-        encourage: ['乖，别灰心。失败是成长的养分，姐姐说的。','没关系的。有姐姐在，你输多少次都可以重来。'],
-        idle: ['嗯？在发呆吗？姐姐等你哦，慢慢来。','猜不出来？要不要姐姐给你一点提示？……要收费的。','呵呵，你思考的样子，真可爱。'],
-        aiWin: ['姐姐赢了。呵呵，别沮丧，来，姐姐安慰你。','是姐姐的胜利哦。不过，你输得也很漂亮。','赢了。奖励自己一杯红茶。也给你一杯。'],
-        aiLose: ['哎呀，输了……呵呵，被你将了一军呢。','你赢了。真厉害，姐姐有点刮目相看了。','输给你，姐姐不难过。因为，是你嘛。']
-    },
-    cat: {
-        start: ['喵。来了？本喵正好无聊，就陪你玩玩吧。','哼，才不是特意等你的喵。只是刚好醒着。','开始吧开始吧。赢了要给本喵小鱼干。'],
-        startEncourage: ['加油喵。你要是输太惨，本喵会很没面子的。','喵……好好打，别给本喵丢人。'],
-        aiHit: ['喵呜！好痛！你、你怎么敢的喵！','呜……被打了。本喵记住了，喵。','疼疼疼……笨蛋！轻一点啊喵！'],
-        playerHit: ['命中喵！看到没，这就是猫的反应速度！','打中了！喵哈哈哈哈！','这一发是本喵赏你的，感恩吧喵！'],
-        lethal: ['要上了喵！接招，猫之全力一击！','结束了喵。乖乖被打倒吧！','这一发，用了本喵九条命的一条！'],
-        aiLowHP: ['喵呜……血不多了……但猫有九条命，怕什么！','还剩一点……本喵才不会认输喵！'],
-        playerLowHP: ['喵？你快不行了？要不要本喵让让你……才不要喵！','哎呀，快输了喵。求我的话，也不是不可以考虑。'],
-        playerClose: ['喵！好近！你、你想干嘛喵！','靠这么近……本喵的毛都炸起来了喵！'],
-        newRound: ['新一轮喵。这次不会让你了。','继续继续！本喵还没玩够喵！'],
-        encourage: ['喵……别灰心嘛。你打得还行啦，就还行。','不许放弃！你放弃了，谁陪本喵玩喵！'],
-        idle: ['喵……好困。你快点猜，猜完本喵要睡午觉。','嗯——？本喵在想事情。想小鱼干的事。','（她打了个滚）……你什么都没看到，喵。'],
-        aiWin: ['赢喵！理所当然，本喵是最强的！','喵哈哈哈哈！胜利！小鱼干加倍！','赢了喵。哼哼，夸我也可以哦。'],
-        aiLose: ['喵呜……输了……这次是你运气好喵！','呜……本喵竟然输了……但、但是没关系！下次一定赢！','输了喵……摸、摸头安慰一下也不是不行……才不是想要喵！']
-    },
-    gamer: {
-        start: ['来了来了，开一局！今天我手感火热！','哟，队友！这把我carry，你随意。','上线就看到你了，缘分啊，开黑开黑！'],
-        startEncourage: ['加油！输了也能复盘，怕什么！','放轻松，这只是个游戏……但是赢了我请你喝可乐！'],
-        aiHit: ['哇，这波被抓了！好Gank！','痛痛痛……这波操作可以啊，截图了！','中了！你这意识，绝对是炸鱼的！'],
-        playerHit: ['命中！这波操作值一个666！','看到没，这就是千场老玩家的预判！','打中了！Clip it！剪辑预定！'],
-        lethal: ['要上了！这波是决胜团！','接招吧，我的终极连招——QWER全交！','这波，赌上我的段位！'],
-        aiLowHP: ['残血了……但是，守家翻盘我见得多了！','别慌，苟住！一波团战的事！'],
-        playerLowHP: ['你血条见底了！回城补状态啊！','残血别浪！……嘛，浪起来才好看！'],
-        playerClose: ['哦？贴脸了？要Solo吗！','靠这么近，是想偷我技能加点吗？'],
-        newRound: ['新一轮！BP重来，这把换套路！','再来！刚那把是热身局！'],
-        encourage: ['别摆烂！劣势局翻盘才是最爽的！','没事，谁还没连跪过，下把一定赢！'],
-        idle: ['嗯……让我看看你的走位……','这波你在第几层？我在第五层。','等猜的时候，正好复盘上一把。'],
-        aiWin: ['赢了！GG！这波MVP非我莫属！','胜利！看到没，这就是肝帝的底蕴！','GG WP！下把你一定能赢……大概！'],
-        aiLose: ['GG……这把你打得好啊，服气！','输了……不行，复盘复盘！下把一定赢回来！','被带飞了……你是代练吧？绝对是代练吧！']
-    },
-    denpa: {
-        start: ['哔——接收到你的信号了。频率，吻合。','你好呀，地球人。今天的电波，很清晰哦。','信号接入……完成。开始传输对战数据。'],
-        startEncourage: ['不要害怕。星星说，你今天的运势，是"必胜"。','电波告诉你：深呼吸，宇宙会站在你这边的。'],
-        aiHit: ['哔？！信号……被干扰了……！','呜，电波乱掉了……但是，好强的波形……','接收到了……你的攻击波。频率，很温柔。'],
-        playerHit: ['发射——！命中你的坐标了。','电波锁定，哔——命中！','这是来自仙女座的问候。收到了吗？'],
-        lethal: ['全功率输出！宇宙射线，发射——！','这一发，星星们都看着呢。','信号增幅1000%……接招吧。'],
-        aiLowHP: ['电量……不对，电波不足了……但是，信号还在……','天线有点歪了……调整，调整……'],
-        playerLowHP: ['你的信号，变弱了……需要充电吗？我的分你一点。','波形不稳定……要坠落了哦？'],
-        playerClose: ['哔——距离过近，信号干扰中……','你靠近了。我的天线，都能碰到你了。'],
-        newRound: ['频道切换……新一轮，开始接收。','重置完成。电波，满格。'],
-        encourage: ['不要断线哦。你的信号，是最好听的那个。','宇宙说：坚持的人，电波会到达任何地方。'],
-        idle: ['沙沙……沙沙……这是宇宙的背景音。','你知道吗，月亮也在玩猜数字。它总是猜错。','接收中……你的心里，在想什么频率？'],
-        aiWin: ['接收胜利信号……哔——成功！','赢了。这是宇宙的选择。','波形确认：我赢了。地球人，下次加油哦。'],
-        aiLose: ['信号中断……你赢了。哔。','输了……但是，你的波形，好好看。','宇宙说：偶尔输一次，电波会更强。下次见。']
-    },
-    queen: {
-        start: ['哦？汝竟敢站在本王面前。……准了，开始吧。','跪下……开玩笑的。拿出汝的全部实力。','本王亲自当汝的对手——感恩戴德吧。'],
-        startEncourage: ['抬起头。本王允许汝全力以赴。','很好，气势不错。别给本王丢脸。'],
-        aiHit: ['唔……竟敢伤到本王！……很好，有胆量。','这一击……本王记住了。记住，是恩赐。','哼，有点本事。本王开始兴奋了。'],
-        playerHit: ['臣服吧！这就是王者的演算！','命中。汝的血条，本王收下了。','看到了吗？凡人与王的差距。'],
-        lethal: ['这一击，以王之名——跪下吧！','终结汝的，是本王。荣幸吧。','王之宝库，全开——接招！'],
-        aiLowHP: ['竟把本王逼到如此地步……千年未有！','很好……汝有资格，见到本王的全力。'],
-        playerLowHP: ['汝的生命已如风中残烛。投降，本王宽宏大量。','还要挣扎吗？……哼，本王欣赏这份骨气。'],
-        playerClose: ['哦？竟敢踏入本王的领域。','再近一步……哼，准了。'],
-        newRound: ['新一轮。本王的兴致，还没尽。','继续。取悦本王吧。'],
-        encourage: ['站起来。本王不许汝低头。','汝的斗魂还没熄灭。本王看得出来。'],
-        idle: ['本王在思考。思考汝会藏在哪里。','沉默是王者的余裕。……汝慢慢猜。','哼，汝思考的样子，倒也有趣。'],
-        aiWin: ['胜利是理所当然。跪下臣服吧。','赢了。……不过，汝是唯一让本王尽兴的凡人。','哼哼。这场胜利，记进本王的史册。'],
-        aiLose: ['……本王，竟然输了。','很好。汝是第一个，也是最后一个。','今日之败，本王铭记。……下次，汝不会这么好运了。','输了一局，赢了兴致。……本王记住汝了。']
-    }
-};
-// 人格版快捷消息回应
-const AI_REPLIES_PERSONA = {
-    tsundere: {
-        taunt: ['你、你说什么？！笨蛋笨蛋笨蛋！','哼，待会输了可别哭着求我！','胆子不小嘛……有、有点帅……才没有！'],
-        bold: ['哦、哦？大话连篇……','哼，能做到再说啦，笨蛋。'],
-        praise: ['诶？！……哼，这、这不是当然的嘛！','别、别以为夸我两句我就会高兴……嘿嘿。','……再多说点也可以哦。'],
-        beg: ['哼，现在知道求我了？','真、真拿你没办法……就轻一点点哦。'],
-        chat: ['聊、聊天？才不是想陪你聊呢……','……聊什么啦，快点说。'],
-    },
-    chuuni: {
-        taunt: ['呵呵……凡人的挑衅，如同蚊虫的振翅。','汝可知，激怒"深渊"的代价？'],
-        bold: ['哦？这股气势……本座认可你三成。','豪言壮语……用结果来证明吧。'],
-        praise: ['哼哼……赞美是弱者对强者的贡品，本座收下了。','你的眼光，触及了真理的一角。'],
-        beg: ['跪伏吗……但审判不会停止。','求饶之声，不过是胜利的配乐。'],
-        chat: ['与本座交谈，是汝一生的荣幸。','话题吗……就讲讲本座封印左臂的往事吧。'],
-    },
-    schemer: {
-        taunt: ['哎呀，嘴巴真坏呢……待会哭的是谁呢（笑）。','呵呵，尽管嚣张，账单稍后送上~'],
-        bold: ['哦~？好大的口气，让人家看看你的本事嘛。'],
-        praise: ['哎呀，嘴真甜~但人家不会放水的哦（笑）。'],
-        beg: ['求人家呀？再诚恳一点嘛~呵呵。'],
-        chat: ['想聊天？可以哦，聊完你就输了（笑）。'],
-    },
-    kid: {
-        taunt: ['哇！你坏！我要生气啦！','哼！等我赢了就笑话你！'],
-        bold: ['哇，好帅！但是我会赢的！'],
-        praise: ['嘿嘿，谢谢！你也很厉害呀！'],
-        beg: ['诶——那我只用一半力气好了！'],
-        chat: ['好呀好呀！我最爱聊天了！'],
-    },
-    cold: {
-        taunt: ['……无效输入。','情绪波动会影响你的胜率。建议停止。'],
-        bold: ['……记录为噪音。'],
-        praise: ['……陈述事实而已。'],
-        beg: ['……不符合博弈逻辑。拒绝。'],
-        chat: ['……闲聊不在计算范围内。'],
-    },
-    hotblood: {
-        taunt: ['哈！有骨气！那就用实力说话！！','好！这份挑衅我接下了！！'],
-        bold: ['哦哦！气势不错！但我不会输！！'],
-        praise: ['哈哈！你这家伙，眼光不错嘛！！'],
-        beg: ['哈哈哈哈哈！求饶也没用！热血战斗不分轻重！！'],
-        chat: ['聊天？好啊！边打边聊才是男人间的浪漫！！'],
-    },
-    shy: {
-        taunt: ['诶……？你、你是在挑衅吗……？','呜……我、我会生气的……大概。'],
-        bold: ['哇……好、好有气势……','……真、真的能做到吗……？'],
-        praise: ['诶……？谢、谢谢……（脸红）','……被、被夸了……好开心。'],
-        beg: ['那、那个……我、我也不能放水哦……对不起……','呜……别、别这样看着我……'],
-        chat: ['聊、聊天……？好、好啊……','……说、说什么好呢……'],
-    },
-    timid: {
-        taunt: ['哇！！你、你好凶……！','……我、我才不怕你！（怕）'],
-        bold: ['好、好大的口气……！（被吓到）','……请、请温柔一点实现它……'],
-        praise: ['诶……真、真的吗……？','……谢谢你……（眼眶湿）'],
-        beg: ['我、我也很想让你……但是规则不允许……','呜……你、你别哭……我也想哭了……'],
-        chat: ['好、好啊！聊天……聊什么？','……你、你别吓我就行。'],
-    },
-    normal: {
-        taunt: ['哇，好凶好凶！不过我可是越挫越勇型的！','挑衅我？行啊，待会输了别赖账哦！'],
-        bold: ['哦，气势不错嘛！那就让我看看你的真本事！','哈哈，大话先说出口了？我等着验收哦。'],
-        praise: ['诶，夸我？谢谢！……怪不好意思的，嘿嘿。','被你这么一说，今天心情直接满分了！'],
-        beg: ['诶——求我也没用哦，规则就是规则嘛。','唔，看你可怜……不行不行，放水对你不尊重！'],
-        chat: ['好啊，边打边聊！你想聊什么？','聊天欢迎！不过手上我也不会放水的哦。'],
-    },
-    yandere: {
-        taunt: ['呵呵……挑衅我？真可爱。待会可别哭着求我哦。','你尽管嚣张。你的每句话，我都会好好"收藏"的。'],
-        bold: ['哎呀，好大的口气。说出口的誓言，可要用一生来兑现哦。','呵呵……我就喜欢你这股劲。属于我的，当然要有气势。'],
-        praise: ['夸我？呵呵……再多夸一点。你的夸奖，我要全部独占。','被你夸了……好开心。开心到，想把你藏起来呢。'],
-        beg: ['求我？呵呵……再诚恳一点嘛。你求我的样子，我好喜欢。','可以哦。但是答应我，以后只看着我一个人。'],
-        chat: ['聊天？好啊。我想知道你的一切，全部，全部哦。','聊吧。你说的话，我会一个字一个字，永远记住的。'],
-    },
-    ditz: {
-        taunt: ['诶？你在凶我吗？为什么呀？','哇，你好凶！……凶是什么意思来着？'],
-        bold: ['哇，好有气势！虽然不知道你要干嘛，但是好厉害！','嗯嗯！我相信你！……相信什么来着？'],
-        praise: ['诶，夸我？嘿嘿，谢谢！我要写在手上，免得忘掉！','被夸了！今天是我的幸运日！……昨天好像也是？'],
-        beg: ['唔——好吧！虽然不知道你在求什么，但是可以哦！','别哭别哭！你一哭，我也想哭了……呜。'],
-        chat: ['聊天？好呀！我最喜欢聊天了！……聊什么来着？','嗯嗯，我在听！……诶，你刚才说到哪了？'],
-    },
-    oneesan: {
-        taunt: ['哎呀，好凶。呵呵，姐姐可不会被吓到哦。','挑衅姐姐？勇气可嘉。待会可别哭鼻子。'],
-        bold: ['哦？好大的口气。那就让姐姐看看，你的本事吧。','呵呵，有志气。姐姐期待你的表现哦。'],
-        praise: ['哎呀，嘴真甜。姐姐听了，心情都变好了。','夸姐姐？呵呵，再多夸几句也没关系哦。'],
-        beg: ['乖，求姐姐也没用哦。……好吧，就这一次。','哎呀，快别这样。姐姐最受不了你撒娇了。'],
-        chat: ['想聊天？好啊，姐姐陪你。想聊什么都可以。','呵呵，和姐姐聊天，不用拘束哦。'],
-    },
-    cat: {
-        taunt: ['喵？你在挑衅本喵？胆子不小喵！','哼，待会输了，可别哭鼻子喵！'],
-        bold: ['哦？口气不小喵。那就做给本喵看看！','喵，气势不错。但本喵不会输的！'],
-        praise: ['喵……夸、夸本喵也没用！……嘿嘿，再多夸点。','哼，这不是当然的嘛喵！……谢谢。'],
-        beg: ['求本喵？喵……那就，轻一点点哦。就一点点！','喵呜，别用那种眼神看本喵……好吧好吧，依你。'],
-        chat: ['聊天？喵……好吧，陪你聊一会儿。就一会儿哦。','想聊什么？本喵勉为其难听听。'],
-    },
-    gamer: {
-        taunt: ['哦？垃圾话环节？来啊，谁怕谁！','哈哈，你这嘲讽，段位不够啊！'],
-        bold: ['口气不小！行，这局我认真了！','放狠话谁不会，手上见真章！'],
-        praise: ['嘿嘿，夸我？那必须C一把给你看！','有眼光！队友，你这人能处！'],
-        beg: ['求我？叫声大神听听！','行行行，让让你，就当打娱乐局了！'],
-        chat: ['聊天？来，边打边唠！','唠嗑我最擅长了，从版本更新聊到食堂阿姨！'],
-    },
-    denpa: {
-        taunt: ['哔？恶意电波，屏蔽。','你的挑衅频率，宇宙收不到哦。'],
-        bold: ['哦……好强的信号。星星说，值得期待。','你的豪言，我转播给全宇宙了。'],
-        praise: ['哔——接收到赞美电波。心情，晴朗。','谢谢。你的夸奖，会传到银河系的。'],
-        beg: ['呜，你的请求电波，好感度+50……通过。','星星说，心软是美德。好吧。'],
-        chat: ['聊天频道，开放。想聊什么频率的？','哔——接通。今晚的话题是：宇宙和你。'],
-    },
-    queen: {
-        taunt: ['哦？挑衅本王？有趣，汝想怎么死？','哼，勇气可嘉。本王稍后会让汝后悔。'],
-        bold: ['好大的口气。本王拭目以待。','豪言壮语……用实力来证明吧，凡人。'],
-        praise: ['哼，奉承话本王听多了。……不过，准汝多说几句。','汝的眼光，本王认可了。'],
-        beg: ['求本王？呵，姿态再放低一点。','……罢了，本王宽宏大量。'],
-        chat: ['与本王交谈是汝的荣幸。说吧。','本王准汝陪聊。感恩吧。'],
-    }
-};
-// ========== 多段连珠炮对话链（3~4句连续演出） ==========
-const AI_CHAINS = {
-    chuuniOpen: ['咕……左臂的封印在躁动……','啊啊……看见了……炸弹的轨迹，本座全都看见了！','觉悟吧凡人——这，就是神之演算！！'],
-    tsundereOpen: ['才、才不是特意来陪你玩的……','只是看你一个人太可怜了而已！','……所以，给我全力以赴啊，笨蛋。'],
-    tsundereHitChain: ['呜……你、你居然真的打中我了……','才不是疼！只是沙子进眼睛了！','下、下次绝对不会再让你得手了，笨蛋！'],
-    chuuniHitChain: ['咕……居然能突破本座的结界……','呵呵……呵呵呵……很好……','你成功唤醒了沉睡的龙——接下来，火力全开！'],
-    chuuniWinChain: ['哼哼哼……哈哈哈哈哈！','看到了吗！这就是暗黑数学力的极意！','凡人哟，铭记今日吧——你曾与"神"对弈！'],
-    tsundereWinChain: ['赢、赢了……哼，理所当然的结果啦。','……你也打得不错啦。','就、就夸你这一次哦，笨蛋。'],
-    tsundereLoseChain: ['输、输了什么的……才没有不甘心呢！','只是今天状态不好而已！真的！','……下局一定赢回来，你给我等着，笨蛋！'],
-    chuuniLoseChain: ['不可能……本座的演算居然被……','……呵呵，原来如此，你也被"选中"了吗。','今日之败必将化作明日之力——再会，宿敌哟。'],
-    tauntPunishChain: ['哦？挑衅本座？','呵呵……决定了，不再保留三成力了。','接下来这一发——是为你的无礼献上的镇魂歌。'],
-    begChain: ['求饶？……哼。','晚了哦。','不过嘛……看你可怜，下辈子注意点就好。'],
-    schemerOpen: ['哎呀，你来啦~','人家今天心情很好哦……','所以，会让你输得好看一点的（笑）。'],
-    kidOpen: ['哇！开始啦开始啦！','我先说好哦，我超强的！','输了不许哭鼻子！'],
-    coldOpen: ['系统启动。','对手确认：人类。威胁评估：低。','……开始吧，别拖时间。'],
-    hotbloodOpen: ['哦——！！','全身的血液都在沸腾！！','来吧！堂堂正正一决胜负！！'],
-    schemerHitChain: ['哎呀？','居然打中人家了……','呵呵，这笔账，人家记下了哦♪'],
-    kidHitChain: ['哇！好痛！','你、你怎么来真的啦！','哼！我要认真了！'],
-    coldHitChain: ['……命中。','误差修正。','不会再有下次。'],
-    hotbloodHitChain: ['咕哇！！','好、好强的一击……！','但是！！热血是不会熄灭的！！'],
-    schemerWinChain: ['呵呵……','赢了呢~','谢谢款待，你的表情很美味哦♪'],
-    coldWinChain: ['结果确认。','胜率 97.3%，没有误差。','……下次再来送分。'],
-    kidWinChain: ['赢啦赢啦赢啦！','我！最！强！','嘿嘿，明天也要陪我玩哦！'],
-    hotbloodWinChain: ['胜——利——！！','看到了吗！这就是热血！！','好对手！我们下次再战！！'],
-    schemerLoseChain: ['哎呀……','人家居然输了……','呵呵……你成功引起了人家的兴趣哦♪'],
-    coldLoseChain: ['……不可能。','重新验算……','……是你赢了。仅此一次。'],
-    kidLoseChain: ['呜呜呜……','输了啦……','但是！下次我一定会赢的！拉钩！'],
-    hotbloodLoseChain: ['呜哇啊啊啊！','输、输了……！','但是这股热血不会停！下次再战！！'],
-    shyOpen: ['那、那个……','我、我有好好练习过哦……','所以……请、请你认真一点，好吗……？'],
-    timidOpen: ['哇！开、开始了！','我、我不怕……我不怕……（自我暗示）','请、请多指教……！'],
-    shyHitChain: ['呀……！被、被打中了……','……没、没事的。','我、我还能继续……！'],
-    timidHitChain: ['呜哇！！好、好痛……！','……不、不能哭。哭了就输了……！','我、我要反击了……大概！'],
-    shyWinChain: ['赢、赢了……？','真、真的吗……？','……诶嘿嘿。对、对不起，有点开心。'],
-    timidWinChain: ['我、我赢了？！','不是做梦吧……？','……太好了……努力，有回报了……！'],
-    shyLoseChain: ['输、输了……','……你、你果然好厉害。','……下次，我会更努力一点点的。'],
-    timidLoseChain: ['呜……输、输了……','……但是，我不怕你哦！','下次……下次一定，不会再输了！']
-};
-// 人格 → 各场景对话链 的统一映射
-const PERSONA_CHAINS = {
-    open: {tsundere:'tsundereOpen', chuuni:'chuuniOpen', schemer:'schemerOpen', kid:'kidOpen', cold:'coldOpen', hotblood:'hotbloodOpen', shy:'shyOpen', timid:'timidOpen'},
-    hit: {tsundere:'tsundereHitChain', chuuni:'chuuniHitChain', schemer:'schemerHitChain', kid:'kidHitChain', cold:'coldHitChain', hotblood:'hotbloodHitChain', shy:'shyHitChain', timid:'timidHitChain'},
-    win: {tsundere:'tsundereWinChain', chuuni:'chuuniWinChain', schemer:'schemerWinChain', kid:'kidWinChain', cold:'coldWinChain', hotblood:'hotbloodWinChain', shy:'shyWinChain', timid:'timidWinChain'},
-    lose: {tsundere:'tsundereLoseChain', chuuni:'chuuniLoseChain', schemer:'schemerLoseChain', kid:'kidLoseChain', cold:'coldLoseChain', hotblood:'hotbloodLoseChain', shy:'shyLoseChain', timid:'timidLoseChain'}
-};
-let aiChainTimers = [];
-function aiPlayChain(key, finalCat){
-    const lines = AI_CHAINS[key];
-    if(!lines || !G.mode.includes('ai')) return;
-    aiChainTimers.forEach(t=>clearTimeout(t)); aiChainTimers=[];
-    let idx = 0;
-    const next = function(){
-        if(!G.active && finalCat!=='aiWin' && finalCat!=='aiLose') return;
-        if(idx >= lines.length){ if(finalCat) aiLastCat=finalCat; return; }
-        const line = lines[idx++];
-        aiSpeak(line, false);
-        aiLastLine = line;
-        aiLastCat = 'chain_'+key;
-        aiChainTimers.push(setTimeout(next, 3600));
-    };
-    next();
-}
-let aiTalkTimer = null;
 let playerTalkTimer = null;
-let aiLastCat = null, aiLastLine = null; // AI 对话记忆：上一句的类别与原文
-function aiSpeak(text, encourage){
-    const el = $('ai-talk');
-    if(!el) return;
-    el.textContent = '🤖 ' + text;
-    el.classList.toggle('encourage', !!encourage);
-    el.classList.add('show');
-    if(aiTalkTimer) clearTimeout(aiTalkTimer);
-    aiTalkTimer = setTimeout(function(){ el.classList.remove('show'); }, 3500);
-}
 function playerSpeak(text){
     const el = $('player-talk');
     if(!el) return;
@@ -4130,717 +3278,7 @@ function playerSpeak(text){
     if(playerTalkTimer) clearTimeout(playerTalkTimer);
     playerTalkTimer = setTimeout(function(){ el.classList.remove('show'); }, 3000);
 }
-function aiTalk(category){
-    if(!G.mode.includes('ai')) return;
-    // 优先接上一句：有承接词库就用，保证下一句对得上上一句
-    let lines = null;
-    const key = aiLastCat + '->' + category;
-    if(aiLastCat && AI_FOLLOWUPS[key] && AI_FOLLOWUPS[key].length && Math.random()<0.75) lines = AI_FOLLOWUPS[key];
-    // 人格词库：傲娇/中二人格优先用人格台词
-    if(!lines){
-        const persona = AI_PERSONAS[G.aiPersona];
-        const pp = persona && persona[category];
-        if(pp && pp.length && Math.random()<0.75) lines = pp;
-    }
-    if(!lines) lines = AI_TALKS[category];
-    if(!lines || !lines.length) return;
-    // 避免连续两句一字不差
-    let pool = aiLastLine ? lines.filter(l=>l!==aiLastLine) : lines;
-    if(!pool.length) pool = lines;
-    const line = pool[Math.floor(Math.random()*pool.length)];
-    const encourage = category==='encourage' || category==='startEncourage' || (category==='aiLose' && Math.random()<0.5);
-    aiSpeak(line, encourage);
-    aiLastCat = category; aiLastLine = line;
-}
 
-// ========== AI 对玩家技能动作的即席反应（只基于公开动作吐槽，不泄露任何私有信息） ==========
-const AI_SKILL_REACT = {
-    move: ['挪吧挪吧，方向我可都听见了。','你猜我记住它往哪边跑了没有？','上五还是下五……哦方向公开来着，谢了。'],
-    shuffle: ['哎哎哎耍赖啊！我刚算好的！','洗牌？你急了。','行，重洗就重洗，我算得比它洗得快。'],
-    wormhole: ['对称迁移是吧，镜面那端……我看看。','虫洞？我的对称性学得可好了。','从这头到那头，约等于没动。'],
-    disguise: ['换假身？你猜我会不会等它自己露馅。','穿个马甲我就不认识你了？','伪装……真身我记小本本上了。'],
-    pause: ['喂！凭什么你能连动两回合！','暂停我？小人行径！','行，你先动，我让你一手。'],
-    freeze: ['冻住炸弹算什么本事，有本事冻住我的算力。','冰封？拖延时间罢了。'],
-    lock: ['封我技能？你完了，我记仇了。','哼，封得了一个，封不了全部。'],
-    blind: ['致盲？我闭着眼都算得出来。','看不见范围……问题不大，我记得。'],
-    fog: ['下雾了？我的雷达又不用眼睛看。','迷雾……小把戏真多。'],
-    slow: ['缓速？黏黏糊糊的真讨厌。'],
-    double: ['叠双倍？想一发入魂啊，我看见了哦。','攻性不错，可惜被我读到了。'],
-    allin: ['孤注一掷？赌狗的下场我可太熟了。','全压了？希望你猜得中，不然疼的是你。'],
-    rampage: ['翻倍……你倒是敢想。','叠吧叠吧，猜不中等于零。'],
-    shield: ['龟壳流是吧。','叠盾？我又不是只有一段伤害。'],
-    reflect: ['反射架好了……想阴我？','镜子擦挺亮，可惜我不撞。'],
-    heal: ['奶一口？苟延残喘。','加吧加吧，加得没我打得快。'],
-    detect: ['探测奇偶？好啊，谢谢你帮我也缩了范围。','偷看属性是吧，情报战开始了。'],
-    peek: ['透视个位数？有点东西，但不多。'],
-    digitsum: ['算数字和？小学奥数都搬出来了。'],
-    precognition: ['预知十位？花样真多。'],
-    thermometer: ['温度计？慢慢量，别烫着。'],
-    binary: ['二分？刀法不错——就是我也跟着受益了。','砍吧砍吧，砍完我来收。'],
-    verifier: ['偷偷验证什么呢，让我也听听？','验证器……你觉得自己离答案很近了？'],
-    skip: ['跳过？你在憋什么坏水。','不动如山……有诈。'],
-    trap: ['埋陷阱？中点附近吧，当我不知道？','你埋雷的习惯我早摸透了。'],
-    forbid: ['禁猜？除了中点你还会禁哪。'],
-    copy: ['抄我技能？版权费交一下。'],
-    dice: ['跟概率之神玩骰子，你认真的吗。'],
-    gambler: ['抛硬币定生死，勇气可嘉。'],
-    empower: ['赋能……下一发是大的？我记下了。'],
-    tide: ['潮汐？稀释范围拖延时间罢了。'],
-    rewind: ['回退？后悔药好吃吗。'],
-    timerewind: ['时间回溯……刚那套白打了，算你狠。']
-};
-// 技能→吐槽分组（非普通人格按组选语气，保证性格统一不串台）
-const SKILL_REACT_GROUP = {
-    move:'bombMove', shuffle:'bombMove', wormhole:'bombMove', tide:'bombMove',
-    disguise:'disguise',
-    pause:'control', freeze:'control', lock:'control', blind:'control', fog:'control', slow:'control', forbid:'control', trap:'control', web:'control',
-    double:'buff', allin:'buff', rampage:'buff', empower:'buff', bomblet:'buff', volley:'buff', pierce:'buff', lifesteal:'buff', anger:'buff', dormant:'buff',
-    shield:'defense', reflect:'defense', heal:'defense', rebirth:'defense', timerewind:'defense',
-    detect:'info', peek:'info', digitsum:'info', precognition:'info', thermometer:'info', verifier:'info', scout:'info', binary:'info', blackhole:'info', rewind:'info',
-    dice:'gamble', gambler:'gamble', bet:'gamble', copy:'gamble', skip:'gamble', refresh:'gamble', charge:'gamble', lie:'gamble'
-};
-// 各战斗人格的专属语气吐槽池（什么人格说什么话，杜绝串台）
-const AI_SKILL_REACT_P = {
-    tsundere: {
-        bombMove:['你、你挪什么挪！……反正我都看见了啦！','哼，挪炸弹这种小伎俩……我、我才没记住方向呢！（记住了）'],
-        disguise:['假、假身？你以为我看不出来吗，笨蛋！','穿马甲也没用，炸弹的味道……不对，我什么都没闻！'],
-        control:['呜哇，控制技？卑鄙无耻下流！','对、对我用这种技能……你给我记住！'],
-        buff:['叠、叠那么多层干什么啦……人家才没紧张呢！','哼，花里胡哨，猜不中都是白搭啦。'],
-        defense:['缩进壳里就安全了？笨、笨蛋。','奶吧奶吧，反正我会打回来的！'],
-        info:['偷看情报？小、小人行径！……虽然我也常干啦。','哼，查就查吧，反正没我算得快。'],
-        gamble:['赌、赌狗！输了可别哭！','运气这种东西……本小姐才不稀罕呢！']
-    },
-    chuuni: {
-        bombMove:['哼，空间转移？在吾之"神之视角"下无所遁形。','迁移吧，凡人。命运的坐标早已被本座锁定。'],
-        disguise:['伪装？可笑。真理之眼，看破一切虚妄。','幻术对"深渊凝视者"无效。'],
-        control:['竟敢束缚本座……！有趣的胆量。','区区封印，也想困住暗黑数学力？'],
-        buff:['哦？在积蓄力量吗……吾准许你全力绽放一次。','层叠的魔力……在绝对演算面前皆是尘埃。'],
-        defense:['龟缩于壳中的凡人啊。','治愈与护盾……不过是延迟败北的仪式。'],
-        info:['窥探命运之丝吗……小心被命运反噬。','情报收集……汝也开始像个"术者"了。'],
-        gamble:['向命运女神掷骰？她可是站在本座这边的。','概率的圣域，不容凡人染指。']
-    },
-    schemer: {
-        bombMove:['哎呀，挪了？人家可是看得一清二楚哦（笑）。','移动、洗牌、虫洞……做小动作的样子，真可爱呢。'],
-        disguise:['呵呵，换装游戏？人家最喜欢拆穿了。','假身……让人家猜猜，真身藏在哪呢~'],
-        control:['哎呀好可怕，控制人家……之后会怎么"报答"你呢（笑）。','呵呵，束手束脚的……人家也不是没有后手哦。'],
-        buff:['叠这么多……是想对人家做什么呀？（微笑）','蓄力中？人家会好好"期待"的。'],
-        defense:['躲在壳里，是怕人家欺负你吗~','治疗？呵呵，慢慢养，养肥了再……'],
-        info:['打听人家的秘密？代价可是很高的哦。','小侦探上线了呢……查到什么了，说说看？'],
-        gamble:['跟人家赌？呵呵，先说好，输了可不许哭。','概率游戏……人家可是庄家哦。']
-    },
-    kid: {
-        bombMove:['哇！炸弹会跑！等等我啦！','挪走了？哼，我数数可快了，马上追上！'],
-        disguise:['捉迷藏吗！我最喜欢捉迷藏了！','假炸弹？我才不会上当呢！……大概！'],
-        control:['哇赖皮！不许用定身术！','呜呜，被控制了……我要告诉老师！'],
-        buff:['哇你好用力！我也要加油了！','叠buff！我也要叠！叠罗汉！'],
-        defense:['护盾！像乌龟壳一样！','喝药药！我也想要……给我留一口嘛。'],
-        info:['哇你开挂！……什么？技能？技能也算开挂！','偷看答案羞羞脸！'],
-        gamble:['赌大小吗！我赌大！……诶不是这么玩的？','抛硬币！我猜正面！']
-    },
-    cold: {
-        bombMove:['位移数据已记录。误差：零。','坐标变更。追踪，继续。'],
-        disguise:['伪装协议检测完毕。真身坐标，推定中。','……外观变更，无意义。'],
-        control:['控制系输入确认。反制方案，演算中。','……干扰，无效。'],
-        buff:['能量增幅确认。威胁等级，上调。','倍率叠加……概率已修正。'],
-        defense:['防御行为确认。突破方案，已有七种。','回复量，微不足道。'],
-        info:['情报收集行为，确认。对抗样本，增加。','……在调查我？徒劳。'],
-        gamble:['随机行为，非最优解。','赌徒谬误。建议戒除。']
-    },
-    hotblood: {
-        bombMove:['哦？炸弹还会跑！有意思！追上去就是了！！','挪吧挪吧！本大爷的眼神比谁都好！！'],
-        disguise:['变身术？！好家伙！那就把两个都打爆！！','伪装？哈哈哈哈！看我用气势识破它！！'],
-        control:['咕！被控制了……但我的斗魂是锁不住的！！','卑鄙……不对，这也是战术！我燃起来了！！'],
-        buff:['哦哦哦这股气势！来吧！全力对全力！！','叠吧叠吧！拳头硬才是硬道理！！'],
-        defense:['防守也是战术！但我更想用拳头说话！！','好硬的壳！打碎它才有成就感！！'],
-        info:['用脑子了啊！不错！但热血可以突破计算！！','收集情报！？那就正面刚情报战！！'],
-        gamble:['赌博？！好啊！赌上男人的尊严！！','运气也是实力！正面！！']
-    },
-    shy: {
-        bombMove:['诶……？炸、炸弹动了……？','……我、我跟得上哦……大概。'],
-        disguise:['变、变装了……？……哪、哪个才是真的……','……我、我不会被骗的……'],
-        control:['哇……控、控制技……','……那、那个，有点卑鄙哦……？'],
-        buff:['好、好强的气势……','……请、请轻一点……'],
-        defense:['防、防御了……我要怎么办……','……那、那我等下次好了。'],
-        info:['你、你在收集情报吗……','……好、好认真……'],
-        gamble:['赌、赌博……？！','……好、好可怕……']
-    },
-    timid: {
-        bombMove:['哇！炸弹跑了！等、等等我……！','……我、我看到了哦！真的看到了！'],
-        disguise:['变、变身？！……哪、哪个……','……我、我可不会被吓到！（被吓到了）'],
-        control:['哇！控、控制技！好可怕……','……欺、欺负人……！'],
-        buff:['好、好强的样子……！（抖）','……请、请不要打太痛……'],
-        defense:['哇，好、好硬的壳……','……那、那我下次再打。'],
-        info:['你、你在查什么……？','……侦、侦探吗……好厉害……'],
-        gamble:['赌、赌钱吗？！不、不可以赌钱哦！','……我、我也来一个？不、不行！']
-    }
-};
-let aiLastReactAt = 0;
-function aiReactToSkill(skillId){
-    if(!G.mode.includes('ai') || G.mode==='tutorial') return;
-    if(SECRET_SKILLS.has(skillId)) return; // 秘密技能对AI不可见：它不知道你用了，自然也不会吐槽（吐槽=泄密）
-    let lines = null;
-    const p = G.aiPersona;
-    if(p && p!=='normal' && AI_SKILL_REACT_P[p]){
-        const g = SKILL_REACT_GROUP[skillId];
-        if(g) lines = AI_SKILL_REACT_P[p][g];
-    } else {
-        lines = AI_SKILL_REACT[skillId]; // 普通人格：逐技能专属吐槽
-    }
-    if(!lines) return;
-    if(Date.now()-aiLastReactAt < 8000) return; // 节流：别把气泡刷成弹幕
-    if(Math.random() >= 0.45) return;
-    aiLastReactAt = Date.now();
-    const line = lines[Math.floor(Math.random()*lines.length)];
-    setTimeout(function(){ if(G.active) aiSpeak(line); }, 1000);
-}
-
-// AI 回合技能规划：按局势返回一串要连放的技能id（有先后顺序，赋能必须在被强化技能前面）
-function aiPlanSkills(ai, human){
-    const lvl = aiEffectiveLevel();
-    if(!G.isSkillMode || ai.skills.length===0) return [];
-    const ready = id => ai.skills.some(s=>s.id===id) && (ai.cooldowns[id]||0)<=0 && ai.lockedSkill!==id && ai.secondLockedSkill!==id;
-    if(lvl===1){
-        // 简单AI：偶尔乱丢一个不咬人的技能
-        if(Math.random()<0.6) return [];
-        const ok = ai.skills.map(s=>s.id).filter(id=>ready(id)&&['gambler','allin','pause'].indexOf(id)<0);
-        return ok.length ? [ok[Math.floor(Math.random()*ok.length)]] : [];
-    }
-    // 每回合连放上限：与持有技能数硬挂钩（+1留给刷新/充能/复制联动），
-    // 玩家每回合反而没有此限制——这是AI的自我约束，不是特权
-    const maxSkills = Math.min(lvl===2 ? 3 : (lvl===3 ? 5 : (lvl>=4 ? 99 : 6)), ai.skills.length + 1);
-    const plan = [];
-    const push = id => { if(plan.length<maxSkills && !plan.includes(id)) plan.push(id); };
-    const range = G.high - G.low + 1;
-    let cands = aiCandidates(true); // 技能规划=下重注：只认硬线索，软线索（模式挖掘）不得参与
-    if(cands && cands.length===0){ aiWipeValueClues(); cands=null; } // 线索矛盾：清空取值线索重推（保留侦察情报）
-    const known = aiKnownBomb();
-    const candCount = known!==null ? 1 : ((cands && cands.length>0) ? cands.length : range);
-    const hitChance = 1 / candCount;
-    const humanArmed = !!(human.doubleDamage || human.allinMultiplier || (human.rampageMulti||0)>1 || human.volley>0 || human.bombletDamage);
-    const humanDefensed = human.shield>0 || human.reflect>0 || human.rebirth;
-    // 人类斩杀线精算：增伤buff使用时全部公开播报——精确算出"他这一发猜中我会不会死"
-    const humanMaxDmg = (1+(human.doubleDamage||0)+(human.allinMultiplier||0)+(human.bombletDamage||0))*(human.rampageMulti||1)+(human.anger?Math.floor((human.maxHP-human.hp)/2):0);
-    // 对手威胁评估（只看公开行为，不看任何私密信息）：
-    // 反常精确猜的次数 + 平均收敛效率；对手的冷却只有侦察之后才看得见（绝不偷看）
-    const oppCdKnown = (ai.scoutVision||0)>0;
-    const avgShrink = (G.humanGuesses||0)>0 ? (G.humanShrink||0)/G.humanGuesses : 0;
-    const humanThreat = (G.humanSuspicion||0)
-        + (avgShrink>0.45?1:0) // 收敛接近二分效率：不是瞎猜，是有章法的推进
-        + (oppCdKnown && human.skills.some(s=>s.id==='verifier'&&(human.cooldowns['verifier']||0)<=0)?1:0)
-        + (oppCdKnown && human.skills.some(s=>s.id==='binary'&&(human.cooldowns['binary']||0)<=0)?1:0);
-    // 宏观节奏：血量落后或对手威胁逼近了——放弃钓鱼全速收敛，斩杀阈值也放宽
-    G.aiBehind = ai.hp<=human.hp-2 || humanThreat>=3;
-    // 对手命中概率估计（终局博弈的核心输入，只看公开行为）：
-    // 模式挖出了软线索 → 他大概率只在线索候选里猜，候选数可精确算；否则按收敛效率粗估
-    const _soft = (G.aiBrain && G.aiBrain.soft) || null;
-    const _hasSoft = _soft && (_soft.lastDigit!==null || _soft.tens!==null || _soft.digitSum!==null || _soft.parity!==null);
-    let oppCands = range;
-    if(_hasSoft){
-        oppCands = 0;
-        for(let n=G.low; n<=G.high; n++){
-            if(_soft.lastDigit!==null && n%10!==_soft.lastDigit) continue;
-            if(_soft.tens!==null && Math.floor(n/10)%10!==_soft.tens) continue;
-            if(_soft.digitSum!==null){ let sm=0; const st=String(n); for(const c of st) sm+=+c; if(sm!==_soft.digitSum) continue; }
-            if(_soft.parity!==null && n%2!==_soft.parity) continue;
-            oppCands++;
-        }
-        oppCands = Math.max(1, oppCands);
-    } else if(avgShrink>0.45) oppCands = Math.max(1, Math.ceil(range/2)); // 有章法的推进：按二分收敛估
-    else if(avgShrink>0.3) oppCands = Math.max(1, Math.ceil(range*0.7));
-    const oppHitProb = 1/oppCands;
-    const oppDmgExp = oppHitProb * Math.max(1, humanMaxDmg); // 对手下回合的期望伤害
-
-    // 0) 确知炸弹（验证器命中过）→ 全力斩杀链，必中
-    //    但被冰封时命中不炸——斩杀链白搭，这回合先控盘等冰化
-    if(known!==null && !ai.frozen){
-        if(lvl>=3 && ready('empower')) push('empower');
-        if(ready('double')) push('double');
-        if(ready('allin') && ai.hp>=2) push('allin');
-        if(lvl>=3 && ready('rampage')) push('rampage');
-        if(ready('bomblet')) push('bomblet');
-        if(humanDefensed){ if(ready('volley')) push('volley'); else if(ready('pierce') && human.shield>0) push('pierce'); }
-        if(ai.hp<ai.maxHP && ready('lifesteal')) push('lifesteal');
-        if(lvl>=4 && ready('speed')) push('speed'); // 保险：万一被冰封/伪装还能续猜
-        return plan;
-    }
-
-    // 1) 保命优先：残血，或对面已武装且自己扛不住一波，或对面伤害已够秒我且范围够小（真实死亡威胁）
-    const inDanger = ai.hp<=2 || (humanArmed && ai.hp<=4) || (humanMaxDmg>=ai.hp && range<=12);
-    if(inDanger){
-        if(ai.hp<ai.maxHP && ready('heal')) push('heal');
-        if(ready('rebirth')) push('rebirth');
-        if(ready('shield')) push('shield');
-        if(lvl>=3 && ready('reflect')) push('reflect');
-    }
-
-    // 2) 反制人类武装回合：先控住再谈其他
-    if(humanArmed){
-        if(ready('pause')) push('pause');
-        if(lvl>=3 && ready('freeze')) push('freeze');
-        // 禁猜中点：人类多半猜中点，直接废掉他蓄势已久的武装回合
-        if(lvl>=3 && ready('forbid')) push('forbid');
-        // 残血又被武装锁定：伪装真身，他的斩杀变空炮还暴露位置
-        if(lvl>=3 && ready('disguise') && ai.hp<=3) push('disguise');
-        if(!plan.includes('shield') && ready('shield')) push('shield');
-        if(ready('reflect')) push('reflect');
-        if(lvl>=3 && ready('dormant')) push('dormant');
-        if(lvl>=3 && ready('lock') && human.skills.length>0) push('lock'); // 顺手封掉对手一个关键件
-    }
-
-    // 2.5) 反情报：对手线索已多 → 移动炸弹作废他的全部推理成果（公平的战术核按钮）
-    //      但自己快解开（候选≤5或已确知）时绝不掀——作废自己的胜机才是真的蠢
-    if(lvl>=3 && humanThreat>=2 && known===null && (!cands || candCount>5) && Math.random()<(lvl>=4?1:0.85)){
-        // 移动是秘密的：对手不知道炸弹挪了窝，会继续抱着过期的线索自信地猜错——首选阴招
-        if(ready('move')) push('move');
-        else if(ready('shuffle')) push('shuffle');
-        else if(ready('wormhole')) push('wormhole');
-        if(lvl>=4 && ready('disguise')) push('disguise');
-        if(ready('blind')) push('blind');       // 致盲：他这回合变瞎子，刚算的推理用不上
-        if(lvl>=4 && ready('fog')) push('fog'); // 迷雾：反馈反转，他的范围判断被自己误导
-        if(ready('pause')) push('pause');
-    }
-
-    // 2.6) 反运气斩杀线：范围≤5时对手裸猜命中率≥20%——自己没有线索优势就别跟他赌运气：
-    //      潮汐稀释范围（命中率直接腰斩）、伪装换假身（猜假身不炸还暴露）、致盲让他凭记忆乱枪打鸟
-    if(lvl>=3 && range<=5 && known===null && (!cands || candCount>2)){
-        if(range<=4 && humanMaxDmg>=ai.hp && ready('pause')) push('pause'); // 他一发能秒我：先偷走他的回合
-        if(ready('tide')) push('tide');
-        if(lvl>=4 && ready('disguise')) push('disguise');
-        if(ready('blind')) push('blind');
-    }
-
-    // 3) 范围压缩（先于信息技能：压缩后的范围更小，线索过滤更精准；
-    //    且温度计是范围类线索，若先拿线索再二分，线索会立刻过期——顺序必须压缩→信息）
-    //    有信息技跟进时中等范围也值得二分：压缩+线索一套连招直接锁区
-    const infoFollow = ['detect','digitsum','peek','precognition','thermometer','verifier'].some(id=>ready(id));
-    if(range>40 || (lvl>=4 && range>10) || (lvl>=3 && range>16 && infoFollow)){
-        if(lvl>=3 && ready('empower') && ready('binary') && !plan.includes('empower')) push('empower'); // 赋能要在二分前面：赋能二分=连砍两刀
-        if(ready('binary')) push('binary');
-        else if(lvl>=3 && ready('blackhole') && Math.random()<0.5) push('blackhole');
-    }
-    // 小范围二分=直接收敛：范围2→1必中，范围3-4→砍半锁定
-    if(lvl>=3 && ready('binary') && range>1 && range<=4 && !plan.includes('binary')) push('binary');
-
-    // 4) 信息战（核心）：压缩后立刻拿线索——信息技能结果写入 aiBrain，本回合猜数直接用
-    //    多条线索自动组合取交集：奇偶∩个位∩数字和∩首位∩温度计∩验证记录 → 候选集
-    const b = G.aiBrain;
-    const clueCount = b ? ((b.parity!==null?1:0)+(b.lastDigit!==null?1:0)+(b.digitSum!==null?1:0)+(b.tens!==null?1:0)+(b.thermo?1:0)) : 0;
-    const anyInfoReady = ['detect','digitsum','peek','precognition','thermometer'].some(id=>ready(id));
-    // 提示类技能优先：只要候选还没收窄到斩杀线、且线索没拿满，就先拿信息再谈其他
-    // （按候选数 candCount 判断而非范围：已有线索时范围可能还很大但候选已很少，反之亦然）
-    const infoWanted = anyInfoReady && range>2
-        && clueCount<(lvl>=4?4:(lvl===3?3:2))
-        && candCount>(lvl>=4?3:(lvl===3?6:10)); // 信息技能全在冷却时，不得按"候选将减半"的幻影概率估算斩杀
-    if(infoWanted){
-        // 不互斥：大师一回合可同时拿 探测+透视+数字和，交集后候选常常只剩个位数
-        if(ready('detect')) push('detect');
-        if(lvl>=3 && ready('digitsum')) push('digitsum');
-        if(ready('peek')) push('peek');
-        if(lvl>=3 && ready('precognition')) push('precognition');
-        if(lvl>=3 && ready('thermometer')) push('thermometer');
-    }
-    // 验证器：候选较少时验证中位候选——中了直接确知炸弹，没中也排除一半候选
-    if(ready('verifier') && candCount>1 && candCount<=(lvl>=4?14:(lvl>=3?6:3))) push('verifier');
-    // 侦察：对手埋雷/设禁猜/伪装（动作公开、数字保密）→ 必侦察看穿；否则大师低概率顺手刺探
-    // 侦察=拿对手冷却视野（威胁评估立刻精确化）：对手行为可疑就刺探，大师也会例行刺探
-    if(lvl>=3 && ready('scout') && (ai.scoutVision||0)<=0){
-        if((G.humanSuspicion||0)>=1 || avgShrink>0.4) push('scout');
-        else if(lvl>=4 && human.skills.length>0 && Math.random()<0.3) push('scout');
-    }
-
-    // 4.5) 终局精确博弈：对手下回合命中概率到临界值就必须拆台——
-    //      首选秘密挪弹（直接作废他全部推理，零信息暴露），再抢轮次；他能秒我时阈值更宽
-    if(lvl>=3 && (oppHitProb>=0.2 || (humanMaxDmg>=ai.hp && oppHitProb>=0.12) || range<=8+humanThreat*2)){
-        if(known===null && (oppHitProb>=0.34 || (humanMaxDmg>=ai.hp && oppHitProb>=0.2))){
-            if(ready('move')) push('move');
-            else if(ready('shuffle')) push('shuffle');
-            else if(ready('wormhole')) push('wormhole');
-        }
-        if(ready('pause')) push('pause');
-        if(lvl>=4 && ready('freeze')) push('freeze');
-        if(lvl>=4 && ready('dormant')) push('dormant');
-        if(lvl>=4 && ready('speed') && candCount<=4) push('speed'); // 抢在他命中之前先收完
-    }
-
-    // 5) 斩杀线精算：估算本回合最大爆发，够杀或赔率合适就全力叠伤
-    let mult = (ai.doubleDamage||0)+(ai.allinMultiplier||0);
-    if(ready('double')) mult += 2;
-    if(ready('allin') && ai.hp>=3) mult += 3;
-    let estDmg = mult>0 ? mult : 1;
-    if(ready('bomblet')) estDmg += 2;
-    estDmg *= (ai.rampageMulti||1);
-    if(ready('rampage')) estDmg *= 2;
-    const canLethal = estDmg >= human.hp;
-    // 命中概率按“放完信息技能后候选数约减半”乐观估计
-    let estCand = infoWanted ? Math.max(1, Math.floor(candCount/2)) : candCount;
-    // 计划里的小范围二分=直接收敛：范围2→1必中，范围3-4→砍半锁定，斩杀估算必须计入
-    if(plan.includes('binary') && range<=4) estCand = Math.min(estCand, Math.max(1, Math.ceil(range/2)));
-    const estHit = 1 / estCand;
-    // 有效命中：加速续猜=本回合多次出手机会，候选数≤出手次数则必中
-    const guessTries = 1 + ai.speed + (ready('speed') ? 1 : 0);
-    const effHit = lvl>=3 ? Math.min(1, guessTries / estCand) : estHit;
-    // 出手意愿：纯按数学期望判定（能杀/期望为正才叠伤），大师阈值更激进；逆风时再放宽
-    const wMod = G.aiBehind ? 0.06 : 0;
-    const willing = (canLethal && effHit>=0.12-wMod) || (effHit>=0.34-wMod && mult>0) || (human.hp<=2 && effHit>=0.1)
-        || (lvl>=4 && mult>0 && effHit>=0.25-wMod); // 大师出手更狠：有增伤、三成把握就敢all-in
-    if(willing){
-        if(lvl>=3 && ready('empower')) push('empower');
-        if(ready('double')) push('double');
-        if(ready('allin') && !ai.frozen && ai.hp>=(lvl>=4?2:3)) push('allin'); // 冰封回合不赌孤注一掷：猜错自伤、猜中也白搭；大师2血也敢赌
-        if(lvl>=3 && ready('rampage')) push('rampage');
-        if(ready('bomblet')) push('bomblet');
-        if(humanDefensed){
-            if(lvl>=3 && ready('empower') && ready('volley') && !plan.includes('empower')) push('empower'); // 赋能连击5段：盾/反/重生全穿
-            if(ready('volley')) push('volley'); else if(ready('pierce') && human.shield>0) push('pierce');
-        }
-        if(lvl>=4 && ready('speed') && estCand<=4) push('speed'); // 候选少：买续猜提高收割率
-        if(ai.hp<=ai.maxHP-2 && ready('lifesteal')) push('lifesteal');
-    }
-    // 续猜必杀：候选数 ≤ 出手次数时买加速，本回合必中
-    if(lvl>=3 && ready('speed') && estCand>1 && estCand<=ai.speed+2 && !plan.includes('speed')) push('speed');
-
-    // 6) 人类逼近时的破坏与埋雷
-    if(range<=(lvl>=4?12:8) && lvl>=3){
-        if(ready('pause')) push('pause');
-        if(lvl>=4 && ready('freeze')) push('freeze');
-        if(ready('forbid')) push('forbid');
-        else if(ready('trap')) push('trap');
-        if(lvl>=4){
-            if(ready('disguise')) push('disguise');
-            if(ready('web')) push('web');
-            if(ready('blind') && Math.random()<0.5) push('blind');
-            if(ready('fog') && Math.random()<0.4) push('fog');
-            if(ready('slow') && Math.random()<0.4) push('slow');
-            if(ready('rewind') && Math.random()<0.45) push('rewind');
-        }
-        // 掀桌只在自己没有线索优势时（否则作废的是自己的推理成果）；对手情报多时必掀
-        // 移动优先：秘密挪窝，对手的过期线索会变成他的坟墓
-        if((Math.random()<(lvl>=4?0.6:0.35) || humanThreat>=2) && (!cands || candCount>8)){
-            if(ready('move')) push('move');
-            else if(ready('shuffle')) push('shuffle');
-            else if(ready('wormhole')) push('wormhole');
-        }
-    } else if(range<=12){
-        if(ready('forbid')) push('forbid');
-        else if(ready('trap')) push('trap');
-        if(lvl===3 && ready('blind') && Math.random()<0.4) push('blind');
-    }
-
-    // 6.8) 单技能独立时机：不依赖连招，每个技能有自己的出场理由（没抽到组合也照用）
-    if(known===null && lvl>=3){
-        // 黑洞：范围还大就稳定缩圈（二分冷却时的第二缩圈手，与二分错开用）
-        if(ready('blackhole') && range>=24 && !plan.includes('binary')) push('blackhole');
-        // 潮汐：对手拿了情报、范围却不大 → 主动稀释范围，让他刚算的命中率跳水
-        if(ready('tide') && humanThreat>=1 && range<=24) push('tide');
-        // 封锁：对手有信息/缩圈技能待命 → 随机封一个，拖慢他的推理节奏
-        if(ready('lock') && humanThreat>=1 && human.skills.length>0 && !plan.includes('lock')) push('lock');
-        // 缓速：范围已小 → 对手猜错也不缩范围，拖住他的收敛速度
-        if(ready('slow') && range<=10 && !plan.includes('slow')) push('slow');
-        // 蛛网：范围越小雷区覆盖率越高，小范围防守利器（盲猜区±3全变雷）
-        if(ready('web') && range<=14 && !plan.includes('web')) push('web');
-        // 禁猜/陷阱：即使对手没逼近，小范围时埋在中点也有不错的拦截率
-        if(range<=8 && !plan.includes('forbid') && !plan.includes('trap')){
-            if(ready('forbid')) push('forbid');
-            else if(ready('trap')) push('trap');
-        }
-        // 回退：被迫进入赌博区（范围小但没线索）→ 重开到自己上次猜之前，拒绝赌命
-        if(lvl>=4 && ready('rewind') && range<=6 && candCount>2 && ai.prevLow!==undefined && ai.prevLow!==null) push('rewind');
-        // 说谎：这回合反正是低价值猜（被冰封/对手休眠/大范围盲猜），反馈不重要——
-        // 赌一手假反馈：50%概率范围不缩小，对手也吃不到自己猜错的收敛红利
-        if(ready('lie') && (ai.frozen || human.dormant || candCount>15) && Math.random()<0.5) push('lie');
-        // 穿透：已叠了伤且对手有盾 → 独立补穿透，不绑死斩杀链
-        if(ready('pierce') && human.shield>0 && !plan.includes('pierce')
-            && (plan.includes('double')||plan.includes('allin')||plan.includes('rampage')||plan.includes('bomblet'))) push('pierce');
-        // 赋能+移动：赋能后挪10格，过期线索错得更离谱（反情报升级版）
-        if(lvl>=4 && ready('empower') && plan.includes('move') && !plan.includes('empower') && plan.length<maxSkills){
-            plan.splice(plan.indexOf('move'), 0, 'empower'); // 赋能必须插在移动前面
-        }
-    }
-
-    // 6.5) 借力打力：复制对手的强技；架好反射后主动跳过回合诱攻
-    if(lvl>=3 && ready('copy') && human.skills.some(s=>['double','allin','rampage','volley','heal','reflect'].includes(s.id))) push('copy');
-    if(lvl>=3 && ready('skip') && ai.reflect>0 && (humanArmed || human.hp<=3 || humanThreat>=2)) push('skip');
-    if(ai.frozen && ready('skip')) push('skip'); // 被冰封：直接跳过等冰化，不浪费命中机会
-    if(human.dormant && lvl>=3 && ready('skip') && known!==null) push('skip'); // 对手休眠设伏：已确知也不踩，跳过让它白埋伏
-
-    // 7) 后勤续航
-    if(ready('refresh') && ['double','allin','rampage','volley'].some(id=>ai.skills.some(s=>s.id===id)&&(ai.cooldowns[id]||0)>0)) push('refresh');
-    if(ready('charge') && Object.keys(ai.cooldowns).some(k=>ai.cooldowns[k]>0) && Math.random()<0.6) push('charge');
-    if(ready('timerewind') && ai.hp<G.roundStartHP.p2 && human.hp>=G.roundStartHP.p1) push('timerewind'); // 回溯也会奶对手，对手没掉血才用
-    if(lvl>=3 && ready('anger') && (ai.maxHP-ai.hp)>=4) push('anger');
-
-    // 7.5) 死回合埋伏笔：双倍/子母弹/吸血"猜错不失效"=永不过期的存款——
-    //      这回合没事干就提前叠一层，给未来的斩杀存利息（范围大时对手也懒得为它掀桌）
-    if(plan.length===0 && lvl>=2 && !ai.frozen && range>12){
-        if(ready('double')) push('double');
-        else if(lvl>=3 && ready('bomblet')) push('bomblet');
-        else if(lvl>=4 && ready('lifesteal')) push('lifesteal');
-        else if(ready('heal') && ai.hp<ai.maxHP) push('heal'); // 满血前治疗也是白赚的存款
-    }
-
-    // 8) 博弈小注
-    if(ready('bet') && range>20 && Math.random()<0.4) push('bet');
-    if(ready('dice') && Math.random()<0.3) push('dice');
-    if(ready('gambler') && ai.hp>=4 && human.hp<=3 && Math.random()<0.5) push('gambler');
-
-    // 9) 估值填充：还有空位且本回合没排爆发时，给剩余可用技能打期望分，补上最值的
-    //    （每个技能的分数=它这个回合能换来的数学期望，低于1.5分不出手——不值得为它暴露节奏）
-    if(lvl>=3 && plan.length<maxSkills && !plan.includes('double') && !plan.includes('allin')){
-        const ev = [];
-        const add = (id, score) => { if(score>=1.5 && ready(id) && !plan.includes(id)) ev.push([score, id]); };
-        if(candCount>3 && !infoWanted){ // 信息技：候选还多时，一条线索≈把候选砍一个数量级
-            add('binary', Math.log2(range));
-            add('detect', candCount>=8 ? 2.5 : 0);
-            add('peek', candCount>=6 ? 2.2 : 0);
-            add('digitsum', candCount>=6 ? 2.2 : 0);
-            add('precognition', candCount>=6 ? 2.0 : 0);
-            add('thermometer', candCount>=10 ? 1.5 : 0);
-        }
-        // 控制技：对手下回合期望伤害越高越值
-        add('pause', oppDmgExp>=0.5 ? oppDmgExp*4 : 0);
-        add('freeze', lvl>=4 && oppDmgExp>=0.5 ? oppDmgExp*3 : 0);
-        add('blind', oppHitProb>=0.2 ? 1.5 : 0);
-        add('slow', range<=10 && oppHitProb>=0.15 ? 1.6 : 0);
-        // 防御技：残血时活着才有输出
-        if(ai.hp<=3){ add('shield', oppDmgExp*3); add('heal', ai.hp<ai.maxHP ? 2 : 0); }
-        // 秘密挪弹：对手威胁越实越值（零暴露成本，作废的是他的推理）
-        if(known===null && humanThreat>=2){ add('move', humanThreat*1.5); add('shuffle', humanThreat*1.2); }
-        ev.sort((x,y)=>y[0]-x[0]);
-        for(const e of ev){ if(plan.length>=maxSkills) break; push(e[1]); }
-    }
-
-    return plan;
-}
-
-// 信息技能放完后动态追加决策：看着刚拿到的线索决定要不要补刀/进一步确认
-function aiTopUp(ai, human, used){
-    const lvl = aiEffectiveLevel();
-    if(lvl<2) return [];
-    const ready = id => !used[id] && ai.skills.some(s=>s.id===id) && (ai.cooldowns[id]||0)<=0 && ai.lockedSkill!==id && ai.secondLockedSkill!==id;
-    let cands = aiCandidates(true); // 追加爆发=下重注：只认硬线索
-    if(cands && cands.length===0){ aiWipeValueClues(); cands=null; }
-    const known = aiKnownBomb();
-    const candCount = known!==null ? 1 : ((cands && cands.length>0) ? cands.length : (G.high-G.low+1));
-    const out = [];
-    const push = id => { if(out.length<3 && !out.includes(id) && ready(id)) out.push(id); };
-    if(known!==null || candCount<=4){
-        // 线索已收敛 → 直接补爆发收割
-        if(lvl>=3) push('empower');
-        push('double');
-        if(ai.hp>=3 || (lvl>=4 && ai.hp>=2)) push('allin');
-        if(lvl>=3) push('rampage');
-        push('bomblet');
-        if(human.shield>0 || human.reflect>0 || human.rebirth){ push('volley'); push('pierce'); }
-        if(lvl>=4) push('speed');
-    } else if(candCount<=10){
-        // 还不够精确 → 再确认/再压缩
-        if(lvl>=3) push('verifier');
-        push('binary');
-        if(lvl>=4) push('speed');
-    }
-    // 终局抢轮次：砍不动就偷走对手的下回合
-    if((G.high-G.low+1)<=8 && lvl>=3){
-        push('pause');
-        if(lvl>=4) push('freeze');
-    }
-    return out;
-}
-
-function aiTurn(){
-    if(G.mode==='tutorial'){ tutorialAI(); return; }
-    aiPlayNormal();
-}
-// 通用AI回合（教程模式脚本用完后也走这里）：规划技能连放 → 策略猜数
-function aiPlayNormal(){
-    if(!G.active||G.processing||G.currentPlayer!=='p2') return;
-    if(G.mode!=='tutorial' && !G.mode.includes('ai')) return;
-    const token = ++G.aiTurnToken; // 回合令牌：看门狗重启回合后，旧执行链自动失效
-    aiMarkProgress();
-    G.processing=true;
-    setKeypadEnabled(false);
-    messageDisplay.textContent='🤖 AI思考中...';
-    const ai=getPlayer('p2'), human=getPlayer('p1');
-    const plan = aiPlanSkills(ai, human);
-    dlog('AI','回合开始 token='+token+' plan=['+plan.join(',')+'] range='+G.low+'~'+G.high+' hp='+ai.hp+'/'+human.hp);
-    // 赛前垃圾话/鼓励
-    if(G.mode.includes('ai')){
-        const combo = ['double','allin','rampage','volley'].filter(id=>plan.includes(id)).length;
-        if(combo>=2 && Math.random()<0.6) aiTalk('lethal');
-        else if(ai.hp<=2 && Math.random()<0.35) aiTalk('aiLowHP');
-        else if(human.hp<=2 && Math.random()<0.35) aiTalk('playerLowHP');
-        else if(G.high-G.low+1<=6 && Math.random()<0.3) aiTalk('playerClose');
-        else if(Math.random()<0.12) aiTalk('idle');
-        else if(Math.random()<0.08) aiTalk('encourage');
-    }
-    let i = 0;
-    let topUpDone = false;
-    const used = {};
-    const step = function(){
-        if(!G.active || G.currentPlayer!=='p2' || token!==G.aiTurnToken){ dlog('AI','step中止 active='+G.active+' turn='+G.currentPlayer+' token='+token+'/'+G.aiTurnToken); return; }
-        aiMarkProgress();
-        if(i>=plan.length && !topUpDone){
-            topUpDone = true;
-            // 信息技能已放完，候选集已收敛——动态追加斩杀/确认技能（真正的“看着线索打”）
-            const extra = aiTopUp(ai, human, used);
-            if(extra.length){ plan.push.apply(plan, extra); dlog('AI','追加技能 ['+extra.join(',')+']'); }
-        }
-        if(i>=plan.length){ G.processing=false; dlog('AI','技能放完，500ms后猜数'); setTimeout(function(){ if(token===G.aiTurnToken) aiGuess(token); }, 500); return; } // 必须复位processing，否则aiGuess的守卫会拒绝执行导致卡死
-        const id = plan[i++];
-        // 放之前再校验一次（前面的技能可能改变了状态），同一技能每回合只放一次
-        const usable = !used[id] && ai.skills.some(s=>s.id===id) && (ai.cooldowns[id]||0)<=0 && ai.lockedSkill!==id && ai.secondLockedSkill!==id;
-        if(usable){
-            used[id]=true;
-            G.processing=false;
-            dlog('AI','放技能 '+id+' ('+i+'/'+plan.length+')');
-            useSkill(id, 'p2', true); // ignoreChecks：已预检，且让选数类技能走自动选数
-            // skip/终局类技能可能已换边或结束游戏，此时绝不能恢复processing（否则人类回合被锁死）
-            if(G.active && G.currentPlayer==='p2') G.processing=true;
-            else { dlog('AI','技能改变了回合/游戏状态 processing保持false turn='+G.currentPlayer); return; }
-        }
-        setTimeout(step, 850);
-    };
-    setTimeout(step, 700);
-}
-
-function aiGuess(token){
-    if(token!==undefined && token!==G.aiTurnToken){ dlog('AI','aiGuess被令牌拦截 token='+token+'/'+G.aiTurnToken); return; } // 旧执行链的残留调用直接丢弃
-    if(!G.active||G.processing||G.currentPlayer!=='p2'){ dlog('AI','aiGuess被守卫拦截 active='+G.active+' processing='+G.processing+' turn='+G.currentPlayer); return; }
-    if(G.mode!=='tutorial' && !G.mode.includes('ai')) return;
-    aiMarkProgress();
-    const ai=getPlayer('p2');
-    const range=G.high-G.low+1;
-    const lvl=aiEffectiveLevel();
-    let guess;
-    let usedClues = false; // 本猜是否基于确知/候选（盲猜才允许躲雷，稳杀局绝不让步）
-    const known = aiKnownBomb();
-    if(ai.frozen && lvl>=3 && !ai.blind && !ai.fog){
-        // 被冰封：命中不炸也不缩范围，猜错反而正常缩——故意贴边"求不中"，下回合冰化再杀
-        guess = Math.random()<0.5 ? G.low+1 : G.high-1;
-        guess = Math.max(G.low, Math.min(G.high, guess));
-    } else if(getPlayer('p1').dormant && lvl>=3 && !ai.blind && !ai.fog && known===null){
-        // 对手休眠设伏：命中=白打还送+2——贴边钓鱼降低踩中率，用信息技能慢慢磨
-        guess = Math.random()<0.5 ? G.low+1 : G.high-1;
-        guess = Math.max(G.low, Math.min(G.high, guess));
-    } else if(known!==null && !ai.blind && !ai.fog && lvl>=2){
-        guess = known; usedClues = true; // 验证器命中过，直接收割
-    } else if(ai.blind || ai.fog){
-        guess = Math.floor(Math.random()*range)+G.low; // 被致盲/迷雾：只能瞎猜
-    } else {
-        let cands = null;
-        if(lvl>=3) cands = aiCandidates();
-        else if(lvl===2 && Math.random()<0.9) cands = aiCandidates(); // 普通AI偶尔走神
-        if(cands && cands.length===0){ aiWipeValueClues(); cands=null; } // 线索矛盾：清空取值线索重推（保留侦察情报）
-        if(cands && cands.length>0){
-            usedClues = true;
-            if(cands.length<=2) guess = cands[Math.floor(Math.random()*cands.length)]; // 候选极少：直接收割
-            else if(lvl>=3){
-                // 最优分割猜：猜错后的公开范围反馈会砍掉一侧候选——
-                // 选"期望剩余候选数"最小的猜（猜中直接赢，猜错也让下一轮最好猜）
-                let best=cands[Math.floor(cands.length/2)], bestScore=Infinity;
-                for(let ci=0;ci<cands.length;ci++){
-                    const g=cands[ci];
-                    let below=0, above=0;
-                    for(let cj=0;cj<cands.length;cj++){ if(cands[cj]<g) below++; else if(cands[cj]>g) above++; }
-                    const tot=below+above;
-                    if(tot===0){ best=g; break; }
-                    const score=(below*below+above*above)/tot; // 期望剩余候选数（两侧越均匀越小）
-                    if(score<bestScore-1e-9){ bestScore=score; best=g; }
-                }
-                guess=best;
-            }
-            else guess = cands[Math.floor(cands.length/2)]; // 中位切割，最大信息量
-            if(lvl===2 && range>4){ // 普通AI带点抖动，不够精准
-                guess += (Math.random()<0.5?-1:1)*Math.floor(Math.random()*3);
-                guess = Math.max(G.low, Math.min(G.high, guess));
-            }
-        } else {
-            const mid = (G.low+G.high)/2;
-            const fishRate = G.aiBehind ? 0 : (lvl>=4 ? 1 : 0.5); // 逆风不钓鱼：全速中点收敛抢回节奏
-            // 大师只在范围很大时才钓鱼——范围≤12直接中点切割，快速收敛压迫感拉满
-            const fishRange = lvl>=4 ? 12 : 4;
-            // 钓鱼的数学前提：手里有"私有信息优势"（信息技就绪）——把范围撑大，对手的裸猜命中率就一直趴在地板上，
-            // 而自己靠线索收敛。没有信息优势时钓鱼=白白放慢自己的斩杀节奏，必须中点切割全速收敛抢先命中
-            const infoEdge = ['detect','digitsum','peek','precognition','thermometer'].some(id=>
-                ai.skills.some(s=>s.id===id) && (ai.cooldowns[id]||0)<=0 && ai.lockedSkill!==id && ai.secondLockedSkill!==id);
-            // 反制钓鱼：自己没有信息优势、但对手行为可疑（逼近答案）时，也贴边猜——
-            // 中点切割会把共享范围喂给他收敛，宁可自己慢一点也不送这个信息
-            const denyEdge = !infoEdge && (G.humanSuspicion||0)>=2 && Math.random()<0.5;
-            if(lvl>=3 && range>fishRange && (infoEdge || denyEdge) && Math.random()<fishRate){
-                // 钓鱼猜法（高手策略）：猜贴边数字。命中概率与中点完全相同(1/range)，
-                // 但猜错范围只缩1格——不给对手送信息；对手的中点猜法反而替我们缩圈。
-                // 若炸弹恰好在最边缘(1/range概率)，范围直接塌缩成1格，下回合必中。
-                guess = Math.random()<0.5 ? G.low+1 : G.high-1;
-            } else if(lvl===1){
-                // 简单AI：中点附近大范围乱飘（不再是全范围纯随机）
-                const spread=Math.max(1, Math.floor(range*0.3));
-                guess=Math.max(G.low, Math.min(G.high, Math.round(mid+(Math.floor(Math.random()*(spread*2+1))-spread))));
-            } else if(lvl===2){
-                const spread=Math.max(1, Math.floor(range*0.15));
-                const offset=Math.floor(Math.random()*(spread*2+1))-spread;
-                guess=Math.max(G.low, Math.min(G.high, Math.round(mid+offset)));
-            } else {
-                guess = Math.round(mid); // 范围已小：中点切割快速收敛
-            }
-            guess = Math.max(G.low, Math.min(G.high, guess));
-        }
-    }
-    // 对手本回合发动了陷阱/禁猜（动作公开、数字保密），人类最爱埋正中点——AI避开
-    // 仅限盲猜：确知/有候选时躲雷=放弃稳杀，聪明反被聪明误（踩雷掉1血也远小于放过必中）
-    if(lvl>=3 && !usedClues && (G.humanTrap || G.humanForbid) && guess===Math.floor((G.low+G.high)/2)){
-        guess = Math.max(G.low, Math.min(G.high, guess + (Math.random()<0.5?-1:1)));
-    }
-    G.playerInput=String(guess);
-    updateInputDisplay();
-    const _c = aiCandidates();
-    dlog('AI','猜 '+guess+' range='+G.low+'~'+G.high+(usedClues?'(线索)':'(盲猜)')+' 已知='+(known!==null?('确知'+known):('候选'+(_c?_c.length:'无线索'))));
-    messageDisplay.textContent='🤖 AI 输入了 '+guess;
-    setTimeout(function(){
-        if(!G.active) return;
-        if(token!==undefined && token!==G.aiTurnToken) return;
-        aiMarkProgress();
-        G.playerInput='';
-        G.processing=false;
-        processGuess(guess,false,'p2');
-    }, 800);
-}
-
-function tutorialAI(){
-    if(!G.active || G.processing || G.currentPlayer!=='p2') return;
-    const t = G.tutorial;
-    if(!t) return;
-    aiMarkProgress();
-    G.processing = true;
-    setKeypadEnabled(false);
-    if(t.aiScriptQueue.length === 0){
-        // aiScript 是按回合分组的二维数组，执行前展平成一维动作队列
-        t.aiScriptQueue = t.levelData.aiScript.flat();
-        t.currentStepIndex = 0;
-    }
-    if(t.currentStepIndex >= t.aiScriptQueue.length){
-        // 教学脚本执行完毕：切换为正常AI强度（会用技能+策略猜数）
-        G.processing = false;
-        aiPlayNormal();
-        return;
-    }
-    const action = t.aiScriptQueue[t.currentStepIndex];
-    t.currentStepIndex++;
-    if(action.note) showCheatToast('🎓 ' + action.note, 4000);
-    if(action.type === 'skill'){
-        // 脚本里的技能若不可用（冷却中/被封锁），跳过该动作继续下一步
-        const aiP = getPlayer('p2');
-        const cdOk = (aiP.cooldowns[action.id]||0) <= 0;
-        const locked = aiP.lockedSkill===action.id || aiP.secondLockedSkill===action.id;
-        const hasSkill = aiP.skills.some(s=>s.id===action.id);
-        G.processing = false;
-        if(cdOk && !locked && hasSkill) useSkill(action.id, 'p2', true);
-        setTimeout(()=>{ if(G.active && G.currentPlayer==='p2') tutorialAI(); }, 800);
-    } else if(action.type === 'guess'){
-        G.processing = false;
-        // 夹取到当前范围，避免脚本数字越界导致无效猜测
-        const n = Math.max(G.low, Math.min(G.high, action.number));
-        processGuess(n, false, 'p2');
-    }
-}
 
 // ========== 键盘事件 ==========
 keypadButtons.forEach(function(btn){
@@ -5048,7 +3486,7 @@ function renderLives(container, hp, maxHP, color){
 function updateRange(){
     const cur=getCurrentPlayer();
     if(cur.blind){
-        rangeDisplay.textContent='🙈 范围被遮蔽...';
+        rangeDisplay.textContent='🙈 范围被遮蔽'+(G.lastFeedback?' · 上次提示：'+G.lastFeedback:'...');
     } else if(cur.fog){
         rangeDisplay.textContent='🌫️ 迷雾笼罩，范围不可见...';
     } else {
@@ -5219,31 +3657,21 @@ function hideAll(){
     numberSelectOverlay.classList.remove('active');
     Privacy.hide();
     clearAllTimers();
-    aiChainTimers.forEach(t=>clearTimeout(t)); aiChainTimers=[]; // 退回菜单时停掉未播完的对话链
     gameContainer.classList.remove('rotated');
     G.pendingSkillSelect=null; G.pendingSkillOptions=null;
     G.pendingSkillCount=null; G.pendingRoundOptions=null;
     skillSelectPhase=null; G.hostSkillComplete=null;
     G.skillSelectShown = false;
 }
-function showMainMenu(){ hideAll(); mainMenu.classList.remove('hidden'); if(!G.conn) roomInfo.textContent='未连接'; updateStatsDisplay(); }
+function showMainMenu(){ hideAll(); mainMenu.classList.remove('hidden'); if(!G.conn) roomInfo.textContent='未连接'; updateStatsDisplay(); tryAutoFullscreen(); }
 function showSetup(){
     hideAll();
     setupOverlay.classList.remove('hidden');
     G.oppType = G.oppType || G.settings.oppType || 'ai';
     G.aiLevel = Math.min(G.aiLevel || G.settings.aiLevel || 1, 4);
-    G.aiPersonaChoice = G.aiPersonaChoice || G.settings.aiPersona || 'random';
     opponentRow.querySelectorAll('.ai-level-btn').forEach(function(x){ x.classList.toggle('active', x.dataset.opp===G.oppType); });
     aiLevelRow.querySelectorAll('.ai-level-btn').forEach(function(x){ x.classList.toggle('active', parseInt(x.dataset.level)===G.aiLevel); });
-    $('ai-persona-row').querySelectorAll('.ai-level-btn').forEach(function(x){ x.classList.toggle('active', x.dataset.persona===G.aiPersonaChoice); });
-    G.playerPersona = G.playerPersona || G.settings.playerPersona || 'normal';
-    $('player-persona-row').querySelectorAll('.ai-level-btn').forEach(function(x){ x.classList.toggle('active', x.dataset.ppersona===G.playerPersona); });
     aiLevelRow.style.display = G.oppType==='ai' ? 'flex' : 'none';
-    const personaDisp = G.oppType==='ai' ? 'grid' : 'none';
-    $('ai-persona-row').style.display = personaDisp;
-    $('ai-persona-label').style.display = G.oppType==='ai' ? 'flex' : 'none';
-    $('player-persona-row').style.display = personaDisp;
-    $('player-persona-label').style.display = G.oppType==='ai' ? 'flex' : 'none';
     skillCountInput.value = G.settings.skillCount;
 }
 function showTutorialMenu(){
@@ -5334,6 +3762,7 @@ function showBattleArea(){
     $('quick-chat-bar').style.display = (G.mode.includes('ai')||G.mode.includes('remote')) ? 'flex' : 'none';
     if(G.isSkillMode){ skillsBar.style.display='flex'; renderSkills(); }
     if(G.mode.includes('remote') && G.conn && G.conn.open) chatToggleBtn.style.display='inline-block';
+    tryAutoFullscreen(); // 自动全屏开着时：每次进入战斗/返回菜单都重新全屏，不只是第一次
 }
 
 // ========== 事件绑定 ==========
@@ -5355,26 +3784,6 @@ opponentRow.querySelectorAll('.ai-level-btn').forEach(function(b){
         b.classList.add('active');
         G.oppType=b.dataset.opp;
         aiLevelRow.style.display = G.oppType==='ai' ? 'flex' : 'none';
-        const pd = G.oppType==='ai' ? 'grid' : 'none';
-        $('ai-persona-row').style.display = pd;
-        $('ai-persona-label').style.display = G.oppType==='ai' ? 'flex' : 'none';
-        $('player-persona-row').style.display = pd;
-        $('player-persona-label').style.display = G.oppType==='ai' ? 'flex' : 'none';
-    });
-});
-$('ai-persona-row').querySelectorAll('.ai-level-btn').forEach(function(b){
-    b.addEventListener('click',function(){
-        $('ai-persona-row').querySelectorAll('.ai-level-btn').forEach(function(x){x.classList.remove('active')});
-        b.classList.add('active');
-        G.aiPersonaChoice=b.dataset.persona;
-    });
-});
-$('player-persona-row').querySelectorAll('.ai-level-btn').forEach(function(b){
-    b.addEventListener('click',function(){
-        $('player-persona-row').querySelectorAll('.ai-level-btn').forEach(function(x){x.classList.remove('active')});
-        b.classList.add('active');
-        G.playerPersona=b.dataset.ppersona;
-        showCheatToast('你的性格已切换为「'+b.textContent.trim()+'」', 2000);
     });
 });
 $('start-game-btn').addEventListener('click',function(){
@@ -5387,8 +3796,6 @@ $('start-game-btn').addEventListener('click',function(){
     // 记住本次设置，下次免填
     G.settings.minVal=G.minVal; G.settings.maxVal=G.maxVal; G.settings.hp=getPlayer('p1').maxHP;
     G.settings.skillCount=G.skillCount; G.settings.oppType=G.oppType; G.settings.aiLevel=G.aiLevel;
-    G.settings.aiPersona=G.aiPersonaChoice;
-    G.settings.playerPersona=G.playerPersona;
     saveSettings();
     initGame();
 });
@@ -5558,6 +3965,13 @@ function checkUrlRoom() {
 
 // ========== 帮助面板 ==========
 $('help-btn').addEventListener('click', function(){ $('help-overlay').classList.remove('hidden'); });
+$('codex-btn').addEventListener('click', function(){
+    $('codex-list').innerHTML = ALL_SKILLS.map(function(s){
+        return '<p>· <b>'+s.name+'</b>（'+(s.cooldown<0?'被动触发':'冷却'+s.cooldown+'回合')+'）：'+s.desc+'</p>';
+    }).join('');
+    $('codex-overlay').classList.remove('hidden');
+});
+$('codex-close-btn').addEventListener('click', function(){ $('codex-overlay').classList.add('hidden'); });
 $('help-close-btn').addEventListener('click', function(){ $('help-overlay').classList.add('hidden'); });
 
 // ========== 设置页事件 ==========
