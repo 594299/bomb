@@ -302,13 +302,99 @@
             .chat-close-btn:hover { color:#fff; }
             #surrender-btn:hover, #rematch-btn:hover, #game-over-btn:hover { filter:brightness(1.3); }
         }
+
+        /* ========== 开场动画 ========== */
+        #intro-overlay { position:fixed; inset:0; background:#000; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; }
+        #intro-overlay.fade-out { opacity:0; transition:opacity 0.5s ease; pointer-events:none; }
+        .intro-hand { position:absolute; bottom:-20px; left:50%; transform:translateX(-50%); font-size:5rem; animation:handThrow 0.8s ease-out forwards; z-index:2; }
+        @keyframes handThrow {
+            0% { bottom:-20px; transform:translateX(-50%) rotate(0deg); }
+            40% { bottom:30%; transform:translateX(-50%) rotate(-15deg); }
+            100% { bottom:60%; transform:translateX(-50%) rotate(-30deg); opacity:0; }
+        }
+        .intro-bomb { position:absolute; bottom:10%; left:50%; transform:translateX(-50%); font-size:3rem; opacity:0; animation:bombFly 0.9s ease-out 0.15s forwards; z-index:3; }
+        @keyframes bombFly {
+            0% { bottom:10%; opacity:1; }
+            70% { bottom:65%; opacity:1; }
+            100% { bottom:65%; opacity:0; transform:translateX(-50%) scale(0.5); }
+        }
+        .intro-explosion { position:absolute; top:30%; left:50%; transform:translate(-50%,-50%) scale(0); font-size:6rem; opacity:0; animation:boom 0.5s ease-out 1s forwards; z-index:4; }
+        @keyframes boom {
+            0% { transform:translate(-50%,-50%) scale(0.2); opacity:0; }
+            30% { transform:translate(-50%,-50%) scale(1.4); opacity:1; }
+            100% { transform:translate(-50%,-50%) scale(2.5); opacity:0; }
+        }
+        .intro-flash { position:absolute; inset:0; background:#fff; opacity:0; animation:flash 0.4s ease-out 1s forwards; z-index:1; }
+        @keyframes flash {
+            0% { opacity:0; }
+            20% { opacity:0.9; }
+            100% { opacity:0; }
+        }
+
+        /* ========== 打雷效果 ========== */
+        #thunder-layer { position:fixed; inset:0; pointer-events:none; z-index:50; opacity:0; }
+        #thunder-layer.flash { animation:thunderFlash 0.15s ease-out; }
+        @keyframes thunderFlash {
+            0% { opacity:0; background:rgba(180,200,255,0); }
+            15% { opacity:1; background:rgba(180,200,255,0.35); }
+            30% { opacity:0.2; background:rgba(180,200,255,0.1); }
+            45% { opacity:0.9; background:rgba(200,220,255,0.3); }
+            100% { opacity:0; background:rgba(180,200,255,0); }
+        }
+        #game-container.thunder-shake { animation:thunderShake 0.25s ease-out; }
+        @keyframes thunderShake {
+            0%,100% { transform:translate(0,0); }
+            20% { transform:translate(-3px,2px); }
+            40% { transform:translate(3px,-2px); }
+            60% { transform:translate(-2px,-3px); }
+            80% { transform:translate(2px,3px); }
+        }
+        .thunder-bolt { position:fixed; top:0; width:3px; background:linear-gradient(180deg,rgba(255,255,255,0.9),rgba(150,200,255,0)); pointer-events:none; z-index:51; opacity:0; }
+        .thunder-bolt.show { animation:boltFlicker 0.2s ease-out; }
+        @keyframes boltFlicker {
+            0%,100% { opacity:0; }
+            20% { opacity:1; }
+            50% { opacity:0.3; }
+            70% { opacity:0.9; }
+        }
+
+        /* ========== 音乐喇叭按钮 ========== */
+        #music-btn { background:none; border:1.5px solid rgba(255,255,255,0.2); border-radius:8px; padding:4px 8px; font-size:0.9rem; cursor:pointer; color:#ccc; line-height:1; }
+        #music-btn:active { transform:scale(0.9); }
+        #music-btn.muted { opacity:0.5; }
+
+        /* ========== 虚拟鼠标（演示用） ========== */
+        .virtual-cursor { position:fixed; width:28px; height:28px; z-index:5000; pointer-events:none; transform:translate(-4px,-4px); transition:left 0.5s ease, top 0.5s ease; }
+        .virtual-cursor svg { width:100%; height:100%; filter:drop-shadow(0 0 4px rgba(0,240,255,0.8)); }
+        .virtual-cursor.clicking { transform:translate(-4px,-4px) scale(0.8); }
+        .virtual-cursor.clicking svg { filter:drop-shadow(0 0 8px rgba(255,200,0,1)); }
+        @keyframes cursorClick {
+            0% { transform:translate(-4px,-4px) scale(1); }
+            50% { transform:translate(-4px,-4px) scale(0.6); }
+            100% { transform:translate(-4px,-4px) scale(1); }
+        }
+
+        /* ========== 头像选择 ========== */
+        .avatar-picker { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width:320px; margin:8px 0; }
+        .avatar-option { width:44px; height:44px; border:2px solid rgba(255,255,255,0.2); border-radius:10px; background:rgba(255,255,255,0.05); font-size:1.5rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+        .avatar-option:hover { border-color:var(--neon); transform:scale(1.1); }
+        .avatar-option.selected { border-color:var(--neon); background:rgba(0,240,255,0.15); box-shadow:0 0 10px rgba(0,240,255,0.4); }
     </style>
 </head>
 <body>
+<div id="intro-overlay">
+    <div class="intro-flash"></div>
+    <div class="intro-hand">✋</div>
+    <div class="intro-bomb">💣</div>
+    <div class="intro-explosion">💥</div>
+</div>
+<div id="thunder-layer"></div>
+<audio id="bgm" src="123.mp3" loop preload="auto"></audio>
 <div id="game-container">
     <div id="header">
         <h1>💣 数字炸弹</h1>
         <div id="header-right">
+            <button id="music-btn" title="音乐">🔊</button>
             <button id="fullscreen-btn" title="全屏">⛶</button>
             <button id="chat-toggle-btn">💬<span id="chat-badge" class="chat-badge">0</span></button>
             <div id="room-info">未连接</div>
@@ -348,6 +434,10 @@
         <div style="font-size:0.6rem;color:#888;margin-top:-2px;">浏览器限制：打开页面后首次点击/触摸屏幕时自动进入全屏</div>
         <div class="setting-row">
             <label>默认名称：</label><input type="text" id="set-name-input" maxlength="10" placeholder="开房/进房自动填入" style="width:160px;">
+        </div>
+        <div class="setting-row" style="flex-direction:column;align-items:center;gap:6px;">
+            <label>默认头像：</label>
+            <div class="avatar-picker" id="avatar-picker"></div>
         </div>
         <div class="setting-row">
             <label>默认最小值：</label><input type="number" id="set-min-input" value="1" min="1">
@@ -880,6 +970,155 @@ function vibrate(pattern) {
     if(navigator.vibrate) navigator.vibrate(pattern);
 }
 
+// ========== 头像选择 ==========
+const AVATAR_LIST = ['🙂','😎','🤠','🥷','👻','🤖','👾','🦊','🐱','🐶','🐼','🦁','🐯','🐸','🦄','🐙','🦉','🐲','🦖','🐳','🦋','🐝','🌙','⭐','🔥','💎','🎮','🎯','🎲','⚔️','🛡️','💀'];
+let selectedAvatar = null;
+function renderAvatarPicker(){
+    const picker = $('avatar-picker');
+    if(!picker) return;
+    picker.innerHTML = '';
+    selectedAvatar = G.settings.avatar || '🙂';
+    AVATAR_LIST.forEach(function(av){
+        const btn = document.createElement('button');
+        btn.className = 'avatar-option' + (av===selectedAvatar ? ' selected' : '');
+        btn.textContent = av;
+        btn.addEventListener('click', function(){
+            selectedAvatar = av;
+            picker.querySelectorAll('.avatar-option').forEach(function(b){ b.classList.remove('selected'); });
+            btn.classList.add('selected');
+        });
+        picker.appendChild(btn);
+    });
+}
+
+// ========== 背景音乐系统 ==========
+const bgm = $('bgm');
+const musicBtn = $('music-btn');
+bgm.volume = 0.5;
+function updateMusicBtn(){
+    if(!G.settings.music){ musicBtn.textContent='🔇'; musicBtn.classList.add('muted'); }
+    else { musicBtn.textContent='🔊'; musicBtn.classList.remove('muted'); }
+}
+function tryPlayBgm(){
+    if(G.settings.music && bgm.paused){
+        const p = bgm.play();
+        if(p && p.catch) p.catch(function(){}); // 浏览器可能拦截自动播放，等用户交互后再试
+    }
+}
+function toggleMusic(){
+    G.settings.music = !G.settings.music;
+    saveSettings();
+    updateMusicBtn();
+    if(G.settings.music){ tryPlayBgm(); }
+    else { bgm.pause(); }
+}
+musicBtn.addEventListener('click', toggleMusic);
+updateMusicBtn();
+
+// ========== 开场动画 ==========
+function startIntro(){
+    const intro = $('intro-overlay');
+    if(!intro) return;
+    // 2秒后淡出开场动画，显示主菜单
+    setTimeout(function(){
+        intro.classList.add('fade-out');
+        setTimeout(function(){ intro.style.display='none'; }, 500);
+        // 动画结束后开始打雷
+        startThunder();
+        // 尝试播放音乐（此时已有动画交互，浏览器可能允许了）
+        tryPlayBgm();
+    }, 2000);
+}
+
+// ========== 打雷效果（主菜单背景持续打雷，配合音乐节奏卡点） ==========
+let thunderTimer = null;
+let thunderBeat = 0;
+function startThunder(){
+    if(thunderTimer) return;
+    const layer = $('thunder-layer');
+    const gc = $('game-container');
+    // 节奏感模式：模拟暴风雨，强弱交替卡点
+    const beatPattern = [1200, 800, 1400, 600, 2200, 1000, 700, 1600]; // 毫秒间隔，制造节奏感
+    function strike(){
+        if(mainMenu.classList.contains('hidden')) { thunderTimer=null; return; }
+        const isStrong = thunderBeat % 3 === 0; // 每3次一次强雷
+        // 闪电闪烁
+        layer.classList.remove('flash');
+        void layer.offsetWidth;
+        layer.classList.add('flash');
+        if(isStrong){
+            // 强雷：震屏 + 多闪电柱
+            gc.classList.remove('thunder-shake');
+            void gc.offsetWidth;
+            gc.classList.add('thunder-shake');
+            for(let i=0;i<3;i++){
+                const bolt = document.createElement('div');
+                bolt.className='thunder-bolt';
+                bolt.style.left = (Math.random()*100)+'%';
+                bolt.style.height = (40+Math.random()*50)+'%';
+                bolt.style.transform = 'rotate('+(Math.random()*20-10)+'deg)';
+                document.body.appendChild(bolt);
+                setTimeout(function(){ bolt.classList.add('show'); }, 10);
+                setTimeout(function(){ bolt.remove(); }, 300);
+            }
+        } else {
+            // 弱雷：小闪电
+            const bolt = document.createElement('div');
+            bolt.className='thunder-bolt';
+            bolt.style.left = (Math.random()*100)+'%';
+            bolt.style.height = (25+Math.random()*30)+'%';
+            bolt.style.transform = 'rotate('+(Math.random()*15-7)+'deg)';
+            document.body.appendChild(bolt);
+            setTimeout(function(){ bolt.classList.add('show'); }, 10);
+            setTimeout(function(){ bolt.remove(); }, 200);
+        }
+        // 按节奏模式取下一个间隔，加一点随机抖动保持自然
+        const base = beatPattern[thunderBeat % beatPattern.length];
+        const jitter = (Math.random()-0.5) * 400;
+        const next = Math.max(500, base + jitter);
+        thunderBeat++;
+        thunderTimer = setTimeout(strike, next);
+    }
+    strike();
+}
+function stopThunder(){
+    if(thunderTimer){ clearTimeout(thunderTimer); thunderTimer=null; }
+}
+
+// ========== 虚拟鼠标（技能演示用） ==========
+let vCursor = null;
+function ensureVCursor(){
+    if(vCursor) return vCursor;
+    vCursor = document.createElement('div');
+    vCursor.className = 'virtual-cursor';
+    vCursor.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M5 3l14 8-6 2-2 6L5 3z" fill="#00f0ff" stroke="#fff" stroke-width="1"/></svg>';
+    vCursor.style.display='none';
+    document.body.appendChild(vCursor);
+    return vCursor;
+}
+function moveVCursor(x, y, cb){
+    const c = ensureVCursor();
+    c.style.display='block';
+    c.style.left = x+'px';
+    c.style.top = y+'px';
+    if(cb) setTimeout(cb, 500);
+}
+function clickVCursor(cb){
+    const c = ensureVCursor();
+    c.classList.add('clicking');
+    setTimeout(function(){ c.classList.remove('clicking'); if(cb) cb(); }, 200);
+}
+function clickElement(el, cb){
+    if(!el){ if(cb) cb(); return; }
+    const rect = el.getBoundingClientRect();
+    const x = rect.left + rect.width/2;
+    const y = rect.top + rect.height/2;
+    moveVCursor(x, y, function(){
+        clickVCursor(cb);
+    });
+}
+function hideVCursor(){ if(vCursor) vCursor.style.display='none'; }
+
 // ========== 战绩存储 ==========
 function loadStats() {
     try {
@@ -902,7 +1141,7 @@ function loadSettings() {
         const s = localStorage.getItem('bomb_settings');
         if(s) return JSON.parse(s);
     } catch(e) {}
-    return { theme:'neon', name:'', minVal:1, maxVal:100, hp:5, skillCount:1, oppType:null, aiLevel:null, autoFs:false };
+    return { theme:'neon', name:'', avatar:'🙂', minVal:1, maxVal:100, hp:5, skillCount:1, oppType:null, aiLevel:null, autoFs:false, music:true };
 }
 function saveSettings() {
     try { localStorage.setItem('bomb_settings', JSON.stringify(G.settings)); } catch(e) {}
@@ -959,6 +1198,7 @@ function showSettings(){
     $('set-min-input').value=s.minVal; $('set-max-input').value=s.maxVal;
     $('set-hp-input').value=s.hp; $('set-skill-input').value=s.skillCount;
     applyTheme(s.theme);
+    renderAvatarPicker();
 }
 
 // ========== 调试日志（仅内存收集，AI 推理自洽性用，无界面入口） ==========
@@ -1939,7 +2179,7 @@ function initGame(){
     if(G.mode.includes('remote')&&!G.isHost){
         showBattleArea();
         getPlayer('p1').name='Host'; getPlayer('p1').avatar='🙂';
-        getPlayer('p2').name='我'; getPlayer('p2').avatar='🙂';
+        getPlayer('p2').name='我'; getPlayer('p2').avatar=G.settings.avatar||'🙂';
         roomInfo.textContent='房间: '+G.roomCode;
         renderPlayers(); updateRange(); updateInputDisplay();
         messageDisplay.textContent='等待Host同步游戏状态...';
@@ -1954,7 +2194,7 @@ function initGame(){
         getPlayer('p2').name='红方'; getPlayer('p2').avatar='🔴';
         roomInfo.textContent='📱 本地双人';
     } else if(G.mode.includes('ai')){
-        getPlayer('p1').name='我'; getPlayer('p1').avatar='🙂';
+        getPlayer('p1').name='我'; getPlayer('p1').avatar=G.settings.avatar||'🙂';
         getPlayer('p2').name='AI'; getPlayer('p2').avatar='🤖';
         G.aiAvatarUrl='https://yunapi.cn/api/sjecytx?r='+Date.now()+Math.floor(Math.random()*100000); // 每局随机二次元头像
         G.aiAvatarOk=false;
@@ -1964,7 +2204,7 @@ function initGame(){
             aiTalk(Math.random()<0.7?'start':'startEncourage');
         }, 1200);
     } else if(G.mode==='tutorial'){
-        getPlayer('p1').name='玩家'; getPlayer('p1').avatar='🙂';
+        getPlayer('p1').name='玩家'; getPlayer('p1').avatar=G.settings.avatar||'🙂';
         getPlayer('p2').name='教程AI'; getPlayer('p2').avatar='🤖';
         roomInfo.textContent='🎓 教程关卡 '+G.tutorial.levelData.level;
         showCheatToast(G.tutorial.levelData.hint, 5000);
@@ -3712,8 +3952,9 @@ function hideAll(){
     G.pendingSkillCount=null; G.pendingRoundOptions=null;
     skillSelectPhase=null; G.hostSkillComplete=null;
     G.skillSelectShown = false;
+    stopThunder();
 }
-function showMainMenu(){ hideAll(); mainMenu.classList.remove('hidden'); if(!G.conn) roomInfo.textContent='未连接'; updateStatsDisplay(); tryAutoFullscreen(); }
+function showMainMenu(){ hideAll(); mainMenu.classList.remove('hidden'); if(!G.conn) roomInfo.textContent='未连接'; updateStatsDisplay(); tryAutoFullscreen(); startThunder(); }
 function showSetup(){
     hideAll();
     setupOverlay.classList.remove('hidden');
@@ -3752,7 +3993,7 @@ function startTutorial(levelIndex) {
     getPlayer('p2').maxHP = levelData.aiHP;
     getPlayer('p1').name = '玩家';
     getPlayer('p2').name = '教程AI';
-    getPlayer('p1').avatar = '🙂';
+    getPlayer('p1').avatar = G.settings.avatar||'🙂';
     getPlayer('p2').avatar = '🤖';
     getPlayer('p1').skills = levelData.playerSkills.map(id => getSkillById(id));
     getPlayer('p2').skills = levelData.aiSkills.map(id => getSkillById(id));
@@ -4350,7 +4591,7 @@ function startSkillDemo(skillId){
     getPlayer('p1').maxHP = def.maxhp?def.maxhp[0]:5; // maxhp=血条上限；hp=开场当前血量（演示残血场景用）
     getPlayer('p2').maxHP = def.maxhp?def.maxhp[1]:5;
     getPlayer('p1').name='你'; getPlayer('p2').name='演示AI';
-    getPlayer('p1').avatar='🙂'; getPlayer('p2').avatar='🤖';
+    getPlayer('p1').avatar=G.settings.avatar||'🙂'; getPlayer('p2').avatar='🤖';
     getPlayer('p1').skills = (def.p1skills||[skillId]).map(getSkillById).filter(s=>s);
     getPlayer('p2').skills = (def.p2skills||[]).map(getSkillById).filter(s=>s);
     G.tutorial = { levelData:{ level:'演', name:sk.name, min:G.minVal, max:G.maxVal,
@@ -4365,7 +4606,7 @@ function startSkillDemo(skillId){
     G.currentPlayer = 'p1';
     if(def.hp){ getPlayer('p1').hp=def.hp[0]; getPlayer('p2').hp=def.hp[1]; }
     syncViews();
-    renderPlayers(); updateRange(); updateInputDisplay();
+    renderPlayers(); renderSkills(); updateRange(); updateInputDisplay();
     roomInfo.textContent = '🎬 技能演示：'+sk.name;
     messageDisplay.textContent = '🎬 演示开始：'+sk.name+' —— '+sk.desc;
     surrenderBtn.style.display='none';
@@ -4387,18 +4628,19 @@ function startSkillDemo(skillId){
 }
 function demoStep(){
     if(!G.demo || !G.active) return;
-    if(battleArea.style.display!=='flex'){ G.demo=null; $('demo-card').classList.add('hidden'); return; } // 已退回菜单：终止演示
+    if(battleArea.style.display!=='flex'){ G.demo=null; $('demo-card').classList.add('hidden'); hideVCursor(); return; }
     setKeypadEnabled(false);
     const s = G.demo.script[G.demo.idx++];
     if(!s){
         const name = G.demo.skillName;
         G.demo = null;
         $('demo-card').classList.add('hidden');
+        hideVCursor();
         showCheatToast('🎬 演示结束！'+name+' 就是这么用的', 5000);
         messageDisplay.textContent='🎬 演示结束。点"返回主菜单"退出，或留在这局自由对局练练手';
         G.processing = false;
         updateTurnIndicator();
-        if(G.currentPlayer==='p2') setTimeout(aiTurn, 1200); // 演示若停在AI回合：接管过来变成自由对局
+        if(G.currentPlayer==='p2') setTimeout(aiTurn, 1200);
         return;
     }
     const next = s.t || 2400;
@@ -4406,21 +4648,67 @@ function demoStep(){
     if(s.setBomb!==undefined) G.bombNumber = s.setBomb;
     if(s.hp){ getPlayer('p1').hp=s.hp[0]; getPlayer('p2').hp=s.hp[1]; renderPlayers(); }
     if(s.buff){ getPlayer(s.buff.who)[s.buff.field]=s.buff.val; renderPlayers(); }
+
+    const NUMBER_SKILLS = ['verifier','trap','blackhole','forbid'];
+
     if(s.use){
         G.processing=false;
-        useSkill(s.use, s.who||'p1', true);
-        if(s.pick!==undefined){
-            setTimeout(function(){ // 选数类技能：自动填入并确认
-                if(numberPickerCallback){ numberSelectInput.value=s.pick; numberSelectConfirm.click(); }
-                G.processing=true;
-            }, 400);
+        // 找到技能按钮，用虚拟鼠标点击
+        const skillBtns = skillsBar.querySelectorAll('.skill-btn');
+        let targetBtn = null;
+        const sk = getSkillById(s.use);
+        for(const b of skillBtns){
+            if(b.textContent.includes(sk.name)){ targetBtn = b; break; }
+        }
+        if(targetBtn){
+            clickElement(targetBtn, function(){
+                targetBtn.click(); // 虚拟鼠标点击后触发真实点击
+                if(NUMBER_SKILLS.includes(s.use) && s.pick!==undefined){
+                    // 选数类技能：等待浮层弹出，虚拟鼠标操作
+                    setTimeout(function(){
+                        if(numberPickerCallback){
+                            numberSelectInput.value = s.pick;
+                            // 虚拟鼠标移动到确定按钮并点击
+                            clickElement(numberSelectConfirm, function(){
+                                numberSelectConfirm.click();
+                                G.processing=true;
+                            });
+                        } else { G.processing=true; }
+                    }, 700);
+                } else {
+                    G.processing=true;
+                }
+            });
         } else {
-            G.processing=true;
+            // 找不到按钮（技能已用完等），直接调用
+            useSkill(s.use, s.who||'p1', true);
+            if(s.pick!==undefined){
+                setTimeout(function(){
+                    if(numberPickerCallback){ numberSelectInput.value=s.pick; numberSelectConfirm.click(); }
+                    G.processing=true;
+                }, 400);
+            } else { G.processing=true; }
         }
     } else if(s.guess!==undefined){
         G.processing=false;
         const n = s.guess==='bomb' ? G.bombNumber : s.guess;
-        processGuess(n, s.skillAttack||false, s.who||'p1');
+        const digits = String(n).split('');
+        // 依次点击数字键，再点确定
+        function clickDigit(i){
+            if(i >= digits.length){
+                const confirmBtn = document.querySelector('#keypad .key-btn[data-action="confirm"]');
+                clickElement(confirmBtn, function(){
+                    processGuess(n, s.skillAttack||false, s.who||'p1');
+                });
+                return;
+            }
+            const btn = document.querySelector('#keypad .key-btn[data-value="'+digits[i]+'"]');
+            clickElement(btn, function(){
+                if(btn) btn.click();
+                setTimeout(function(){ clickDigit(i+1); }, 250);
+            });
+        }
+        clickDigit(0);
     }
     setTimeout(demoStep, next);
 }
@@ -4462,6 +4750,7 @@ document.querySelectorAll('#theme-row .ai-level-btn').forEach(function(b){
 $('settings-save-btn').addEventListener('click', function(){
     const s=G.settings;
     s.name=$('set-name-input').value.trim();
+    s.avatar = selectedAvatar || s.avatar || '🙂';
     s.minVal=parseInt($('set-min-input').value)||1;
     s.maxVal=parseInt($('set-max-input').value)||100;
     s.hp=Math.max(1,Math.min(100,parseInt($('set-hp-input').value)||5));
@@ -4519,6 +4808,16 @@ if(G.oppType==='local') G.oppType='ai'; // 本地双人已下线：旧存档兜�
 showMainMenu();
 checkUrlRoom();
 updateStatsDisplay();
+startIntro();
+// 首次用户交互时尝试播放音乐（浏览器自动播放限制）
+let _bgmTried = false;
+function _tryBgmOnInteract(){
+    if(_bgmTried) return;
+    _bgmTried = true;
+    tryPlayBgm();
+}
+document.addEventListener('pointerdown', _tryBgmOnInteract, { once:true });
+document.addEventListener('keydown', _tryBgmOnInteract, { once:true });
 
 // ========== AI 模块桥接 ==========
 // 主脚本是 IIFE 闭包：外部 ai*.js 是独立脚本，访问不到闭包内部。
