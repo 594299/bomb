@@ -64,7 +64,7 @@ function aiPlayNormal(){
     aiMarkProgress();
     G.processing=true;
     setKeypadEnabled(false);
-    messageDisplay.textContent='🤖 AI思考中...';
+    messageDisplay.textContent=G.aiDisguise?'对方思考中...':'🤖 AI思考中...';
     const ai=getPlayer('p2'), human=getPlayer('p1');
     const plan = aiPlanSkills(ai, human);
     dlog('AI','回合开始 token='+token+' plan=['+plan.join(',')+'] range='+_aiRLo()+'~'+_aiRHi()+' hp='+ai.hp+'/'+human.hp);
@@ -90,7 +90,7 @@ function aiPlayNormal(){
             const extra = aiTopUp(ai, human, used);
             if(extra.length){ plan.push.apply(plan, extra); dlog('AI','追加技能 ['+extra.join(',')+']'); }
         }
-        if(i>=plan.length){ G.processing=false; dlog('AI','技能放完，500ms后猜数'); setTimeout(function(){ if(token===G.aiTurnToken) aiGuess(token); }, 500); return; } // 必须复位processing，否则aiGuess的守卫会拒绝执行导致卡死
+        if(i>=plan.length){ G.processing=false; const _think = G.aiDisguise ? 1500+Math.random()*2500 : 500; dlog('AI','技能放完，'+_think+'ms后猜数'); setTimeout(function(){ if(token===G.aiTurnToken) aiGuess(token); }, _think); return; } // 必须复位processing，否则aiGuess的守卫会拒绝执行导致卡死；伪装模式加真人思考延迟
         const id = plan[i++];
         // 放之前再校验一次（前面的技能可能改变了状态），同一技能每回合只放一次
         const usable = !used[id] && ai.skills.some(s=>s.id===id) && (ai.cooldowns[id]||0)<=0 && ai.lockedSkill!==id && ai.secondLockedSkill!==id;
@@ -126,7 +126,7 @@ function aiGuess(token){
     const _c = aiCandidates();
     const known = aiKnownBomb();
     dlog('AI','猜 '+guess+' range='+_aiRLo()+'~'+_aiRHi()+(pick.usedClues?'(线索)':'(盲猜)')+' 已知='+(known!==null?('确知'+known):('候选'+(_c?_c.length:'无线索'))));
-    messageDisplay.textContent='🤖 AI 输入了 '+guess;
+    messageDisplay.textContent=(G.aiDisguise?'对方输入了 ':'🤖 AI 输入了 ')+guess;
     setTimeout(function(){
         if(!G.active) return;
         if(token!==undefined && token!==G.aiTurnToken) return;
@@ -134,7 +134,7 @@ function aiGuess(token){
         G.playerInput='';
         G.processing=false;
         processGuess(guess,false,'p2');
-    }, 800);
+    }, G.aiDisguise ? 900+Math.random()*1500 : 800); // 伪装模式：输入后也像真人一样停顿一下才确定
 }
 
 function tutorialAI(){

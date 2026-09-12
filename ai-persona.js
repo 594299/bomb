@@ -80,7 +80,7 @@ let aiLastCat = null, aiLastLine = null; // AI 对话记忆：上一句的类别
 function aiSpeak(text, encourage){
     const el = $('ai-talk');
     if(!el) return;
-    el.textContent = '🤖 ' + text;
+    el.textContent = (G.aiDisguise ? G.aiDisguise.avatar : '🤖') + ' ' + text; // 伪装房用真人头像，不露🤖
     el.classList.toggle('encourage', !!encourage);
     el.classList.add('show');
     if(aiTalkTimer) clearTimeout(aiTalkTimer);
@@ -98,6 +98,10 @@ function aiTalk(category){
     // 避免连续两句一字不差
     let pool = aiLastLine ? lines.filter(l=>l!==aiLastLine) : lines;
     if(!pool.length) pool = lines;
+    if(G.aiDisguise){ // 伪装成真人时：过滤掉暴露AI身份的台词（算力/算法/机器/AI等字眼）
+        const safe = pool.filter(l=>!/AI|算力|算法|机器|程序|开机|更新/.test(l));
+        pool = safe.length ? safe : ['打得不错。','继续继续。','嗯，有点意思。','这局我手感很好。'];
+    }
     const line = pool[Math.floor(Math.random()*pool.length)];
     const encourage = category==='encourage' || category==='startEncourage' || (category==='aiLose' && Math.random()<0.5);
     aiSpeak(line, encourage);

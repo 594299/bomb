@@ -350,13 +350,14 @@
     <div class="container">
         <h1>🔐 管理后台</h1>
 
-        <!-- 密码验证 -->
-        <div id="auth-panel" class="auth-panel">
-            <div style="color:#aaa;font-size:0.9rem;">请输入管理密码</div>
-            <input type="password" id="password-input" placeholder="管理密码">
+        <!-- 账户验证（标准表单结构：浏览器可记住账户名和密码） -->
+        <form id="auth-panel" class="auth-panel" autocomplete="on">
+            <div style="color:#aaa;font-size:0.9rem;">请输入管理账户</div>
+            <input type="text" id="username-input" name="username" autocomplete="username" placeholder="账户名">
+            <input type="password" id="password-input" name="password" autocomplete="current-password" placeholder="管理密码">
             <div class="msg" id="auth-msg"></div>
-            <button class="btn" id="auth-btn">进入后台</button>
-        </div>
+            <button class="btn" id="auth-btn" type="submit">进入后台</button>
+        </form>
 
         <!-- 后台内容 -->
         <div id="main-panel" class="panel">
@@ -545,8 +546,10 @@
                 <div class="section">
                     <div class="section-title">🔒 安全设置</div>
                     <div class="setting-row">
+                        <label>新账户名：</label>
+                        <input type="text" id="new-username" placeholder="留空则不修改" style="width:200px;" autocomplete="off">
                         <label>新管理密码：</label>
-                        <input type="password" id="new-password" placeholder="留空则不修改" style="width:200px;">
+                        <input type="password" id="new-password" placeholder="留空则不修改" style="width:200px;" autocomplete="new-password">
                     </div>
                     <button class="btn small warning" id="change-password-btn">🔑 修改密码</button>
                 </div>
@@ -726,32 +729,41 @@
             URL.revokeObjectURL(url);
         });
 
-        // ========== 密码验证 ==========
-        let ADMIN_PASSWORD_HASH = '683d3f4730b6647ad6862eca965f7b6c692d243e60143c5a3b24f3cf8bea7a1c'; // haododoya@163.com
+        // ========== 账户验证 ==========
+        const DEFAULT_ADMIN_USER = 'haododoya@163.com594299'; // 默认账户名
+        const DEFAULT_ADMIN_PASS = 'haododoya@163.com'; // 默认密码（邮箱不变）
+        let ADMIN_USER_HASH = '';
+        let ADMIN_PASSWORD_HASH = '';
         let authed = false;
 
-        // 从存储加载自定义密码哈希
-        function loadPasswordHash(){
+        // 从存储加载自定义账户/密码哈希（没改过就用默认）
+        async function loadAuth(){
             const d = loadJSON(STORAGE_KEYS.settings, {});
-            if(d.passwordHash) ADMIN_PASSWORD_HASH = d.passwordHash;
+            ADMIN_USER_HASH = d.usernameHash || await sha256(DEFAULT_ADMIN_USER);
+            ADMIN_PASSWORD_HASH = d.passwordHash || await sha256(DEFAULT_ADMIN_PASS);
         }
+        const authReady = loadAuth();
 
-        async function verifyPassword(){
-            const pwd = $('password-input').value;
-            const hash = await sha256(pwd);
-            if(hash === ADMIN_PASSWORD_HASH){
+        async function verifyAuth(){
+            await authReady;
+            const uHash = await sha256($('username-input').value.trim());
+            const pHash = await sha256($('password-input').value);
+            if(uHash === ADMIN_USER_HASH && pHash === ADMIN_PASSWORD_HASH){
                 authed = true;
                 $('auth-msg').textContent = '';
                 showMainPanel();
                 addLog('success', '管理员登录成功');
             } else {
-                $('auth-msg').textContent = '❌ 密码错误';
-                addLog('warn', '管理员登录失败：密码错误');
+                $('auth-msg').textContent = '❌ 账户名或密码错误';
+                addLog('warn', '管理员登录失败：账户名或密码错误');
             }
         }
 
-        $('auth-btn').addEventListener('click', verifyPassword);
-        $('password-input').addEventListener('keydown', e => { if(e.key==='Enter') verifyPassword(); });
+        // form submit：浏览器识别为登录表单，会主动提示"保存密码"（账户名+密码进密码本）
+        $('auth-panel').addEventListener('submit', function(e){
+            e.preventDefault();
+            verifyAuth();
+        });
 
         // ========== 标签页切换 ==========
         document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -991,13 +1003,14 @@
         }
 
         // ========== 用户管理 ==========
-        let banData = { bannedFingerprints: [], bannedIPs: [], userRecords: [], banReasons: {} };
+        let banData = { bannedFingerprints: [], bannedIPs: [], bannedDevices: [], userRecords: [], banReasons: {} };
 
         function loadBanData(){
             const d = loadJSON(STORAGE_KEYS.banData, {});
             banData = {
                 bannedFingerprints: d.bannedFingerprints || [],
                 bannedIPs: d.bannedIPs || [],
+                bannedDevices: d.bannedDevices || [],
                 userRecords: d.userRecords || [],
                 banReasons: d.banReasons || {}
             };
@@ -1016,7 +1029,8 @@
             if(search){
                 users = users.filter(u =>
                     (u.ip && u.ip.toLowerCase().includes(search)) ||
-                    (u.fingerprint && u.fingerprint.toLowerCase().includes(search))
+                    (u.fingerprint && u.fingerprint.toLowerCase().includes(search)) ||
+                    (u.deviceCode && u.deviceCode.toLowerCase().includes(search))
                 );
             }
 
@@ -1032,10 +1046,13 @@
 
                 const info = document.createElement('div');
                 info.className = 'user-info';
+                const devInfo = user.deviceInfo ? (escapeHtml(user.deviceInfo.platform||'') + ' | ' + escapeHtml(user.deviceInfo.screen||'') + ' | ' + (user.deviceInfo.cores||'?') + '核 | ' + escapeHtml(user.deviceInfo.gpu||'GPU未知') + ' | ' + escapeHtml(user.deviceInfo.timezone||'')) : '';
                 info.innerHTML = `
                     <div class="user-status ${isBanned ? 'banned' : 'normal'}">${isBanned ? '🚫 已封禁' : '✅ 正常'}</div>
                     <div class="ip">IP: ${escapeHtml(user.ip)}</div>
                     <div class="fp">指纹: ${escapeHtml(user.fingerprint)}</div>
+                    <div class="fp">设备码: ${escapeHtml(user.deviceCode || '未知')}</div>
+                    ${devInfo ? '<div class="time">设备: ' + devInfo + '</div>' : ''}
                     <div class="time">首次: ${escapeHtml(user.firstVisit)}</div>
                 `;
                 item.appendChild(info);
@@ -1047,7 +1064,9 @@
                     if(isBanned){
                         banData.bannedFingerprints = banData.bannedFingerprints.filter(f => f !== user.fingerprint);
                         banData.bannedIPs = banData.bannedIPs.filter(ip => ip !== user.ip);
+                        banData.bannedDevices = banData.bannedDevices.filter(dc => dc !== user.deviceCode);
                         delete banData.banReasons[user.fingerprint];
+                        if(user.deviceCode) delete banData.banReasons[user.deviceCode];
                         showToast('✅ 已解封');
                         addLog('success', '用户已解封：' + user.fingerprint);
                     } else {
@@ -1055,9 +1074,13 @@
                         if(reason === null) return;
                         banData.bannedFingerprints.push(user.fingerprint);
                         if(user.ip && user.ip !== '未知') banData.bannedIPs.push(user.ip);
+                        if(user.deviceCode && user.deviceCode !== '未知' && user.deviceCode !== 'unknown'){
+                            banData.bannedDevices.push(user.deviceCode); // 锁设备码：清缓存也逃不掉
+                            banData.banReasons[user.deviceCode] = { reason: reason || '违反社区规定', time: new Date().toLocaleString() };
+                        }
                         banData.banReasons[user.fingerprint] = { reason: reason || '违反社区规定', time: new Date().toLocaleString() };
-                        showToast('🚫 已封禁该用户');
-                        addLog('warn', '用户已封禁：' + user.fingerprint + ' (' + user.ip + ')，原因：' + (reason || '违反社区规定'));
+                        showToast('🚫 已封禁该用户（指纹+IP+设备码）');
+                        addLog('warn', '用户已封禁：' + user.fingerprint + ' (' + user.ip + ' / ' + (user.deviceCode||'无设备码') + ')，原因：' + (reason || '违反社区规定'));
                     }
                     saveBanData();
                     renderUserList();
@@ -1087,6 +1110,7 @@
                     <div class="user-info">
                         <div class="fp">指纹: ${escapeHtml(fp)}</div>
                         ${user ? '<div class="ip">IP: ' + escapeHtml(user.ip) + '</div>' : ''}
+                        ${user && user.deviceCode ? '<div class="fp">设备码: ' + escapeHtml(user.deviceCode) + '</div>' : ''}
                         <div class="time" style="color:#ff8888;">原因: ${escapeHtml(info.reason || '未填写')}</div>
                         ${info.time ? '<div class="time">时间: ' + escapeHtml(info.time) + '</div>' : ''}
                     </div>
@@ -1096,7 +1120,11 @@
                 unbanBtn.className = 'btn small success';
                 unbanBtn.onclick = () => {
                     banData.bannedFingerprints = banData.bannedFingerprints.filter(f => f !== fp);
-                    if(user) banData.bannedIPs = banData.bannedIPs.filter(ip => ip !== user.ip);
+                    if(user){
+                        banData.bannedIPs = banData.bannedIPs.filter(ip => ip !== user.ip);
+                        banData.bannedDevices = banData.bannedDevices.filter(dc => dc !== user.deviceCode);
+                        if(user.deviceCode) delete banData.banReasons[user.deviceCode];
+                    }
                     delete banData.banReasons[fp];
                     saveBanData();
                     renderUserList();
@@ -1217,7 +1245,8 @@
             card.innerHTML = '<div class="party-title">' + title + '：' + escapeHtml(party.name || '未知') +
                 (banned ? ' <span class="banned-tag">[已封禁]</span>' : '') + '</div>' +
                 '<div>指纹: ' + escapeHtml(party.fingerprint || 'unknown') + '</div>' +
-                '<div style="color:#666;">IP: ' + escapeHtml(party.ip || 'unknown') + '</div>';
+                '<div style="color:#666;">IP: ' + escapeHtml(party.ip || 'unknown') + '</div>' +
+                (party.deviceCode ? '<div style="color:#666;">设备码: ' + escapeHtml(party.deviceCode) + '</div>' : '');
             return card;
         }
 
@@ -1238,6 +1267,10 @@
 
             banData.bannedFingerprints.push(fp);
             if(party.ip && party.ip !== 'unknown' && party.ip !== '未知') banData.bannedIPs.push(party.ip);
+            if(party.deviceCode && party.deviceCode !== 'unknown'){
+                banData.bannedDevices.push(party.deviceCode); // 锁设备码：清缓存也逃不掉
+                banData.banReasons[party.deviceCode] = { reason: reason || defaultReason, time: new Date().toLocaleString() };
+            }
             banData.banReasons[fp] = { reason: reason || defaultReason, time: new Date().toLocaleString() };
             saveBanData();
 
@@ -1314,23 +1347,30 @@
         });
 
         $('change-password-btn').addEventListener('click', async () => {
+            const newUser = $('new-username').value.trim();
             const newPwd = $('new-password').value.trim();
-            if(!newPwd){
-                showToast('❌ 请输入新密码');
+            if(!newUser && !newPwd){
+                showToast('❌ 请输入新账户名或新密码');
                 return;
             }
-            if(newPwd.length < 6){
+            if(newPwd && newPwd.length < 6){
                 showToast('❌ 密码至少6位');
                 return;
             }
-            const hash = await sha256(newPwd);
             const s = loadJSON(STORAGE_KEYS.settings, {});
-            s.passwordHash = hash;
+            if(newUser){
+                s.usernameHash = await sha256(newUser);
+                ADMIN_USER_HASH = s.usernameHash;
+            }
+            if(newPwd){
+                s.passwordHash = await sha256(newPwd);
+                ADMIN_PASSWORD_HASH = s.passwordHash;
+            }
             saveJSON(STORAGE_KEYS.settings, s);
-            ADMIN_PASSWORD_HASH = hash;
+            $('new-username').value = '';
             $('new-password').value = '';
-            showToast('✅ 密码已修改');
-            addLog('success', '管理密码已修改');
+            showToast('✅ 账户信息已修改' + (newUser ? '（浏览器密码本里的旧账户记得更新）' : ''));
+            addLog('success', '管理账户信息已修改');
         });
 
         // ========== 数据管理 ==========
@@ -1385,7 +1425,6 @@
         });
 
         // ========== 初始化 ==========
-        loadPasswordHash();
     </script>
 </body>
 </html>

@@ -1062,8 +1062,8 @@ G.reports = [];
 function submitReport(reporter, reported, reason){
     const report = {
         id: 'R' + Date.now() + Math.random().toString(36).slice(2,6),
-        reporter: { name: reporter.name, fingerprint: G.currentUser.fingerprint, ip: G.currentUser.ip },
-        reported: { name: reported.name, fingerprint: reported.fingerprint || 'unknown', ip: reported.ip || 'unknown' },
+        reporter: { name: reporter.name, fingerprint: G.currentUser.fingerprint, ip: G.currentUser.ip, deviceCode: G.currentUser.deviceCode },
+        reported: { name: reported.name, fingerprint: reported.fingerprint || 'unknown', ip: reported.ip || 'unknown', deviceCode: reported.deviceCode || 'unknown' },
         reason: reason,
         time: new Date().toLocaleString(),
         status: 'pending' // pending / resolved
@@ -1227,7 +1227,9 @@ function generateFingerprint(){
         screen.colorDepth,
         new Date().getTimezoneOffset(),
         navigator.hardwareConcurrency || 0,
-        navigator.deviceMemory || 0
+        navigator.deviceMemory || 0,
+        getTimezoneName(),
+        getWebGLInfo()
     ].join('|');
     // canvas 指纹
     try{
@@ -1248,6 +1250,85 @@ function generateFingerprint(){
     return 'fp_' + Math.abs(hash).toString(36);
 }
 
+// WebGL 显卡信息：GPU型号+驱动级签名，同一台设备极稳定
+function getWebGLInfo(){
+    try{
+        const c = document.createElement('canvas');
+        const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+        if(!gl) return '';
+        const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+        if(dbg) return gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) + '|' + gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL);
+        return gl.getParameter(gl.VENDOR) + '|' + gl.getParameter(gl.RENDERER);
+    }catch(e){ return ''; }
+}
+// 字体探测：系统装没装这些字体是设备的稳定特征
+function probeFonts(){
+    const candidates = ['Arial','Courier New','Georgia','Times New Roman','Verdana','Comic Sans MS','Impact','Trebuchet MS','Tahoma','Microsoft YaHei','SimSun','SimHei','KaiTi','PingFang SC','Noto Sans SC','Roboto','Segoe UI','Consolas','Menlo','Helvetica'];
+    try{
+        const c = document.createElement('canvas');
+        const ctx = c.getContext('2d');
+        const text = 'mmmmmmmmmmlliWWW中文字体测试123';
+        ctx.font = '72px monospace';
+        const baseW = ctx.measureText(text).width;
+        const found = [];
+        candidates.forEach(function(f){
+            ctx.font = '72px "' + f + '",monospace';
+            if(Math.abs(ctx.measureText(text).width - baseW) > 0.01) found.push(f);
+        });
+        return found.join(',');
+    }catch(e){ return ''; }
+}
+// JS引擎数学指纹：不同引擎/架构浮点结果有细微差异，稳定可复现
+function getMathFingerprint(){
+    try{ return [Math.sin(1e10), Math.cos(1e10), Math.tan(1e10), Math.log(1e10)].join(','); }catch(e){ return ''; }
+}
+// 时区名（比偏移量更细：Asia/Shanghai 这种）
+function getTimezoneName(){
+    try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; }catch(e){ return ''; }
+}
+// 设备码：纯设备特征哈希（UA/平台/时区/屏幕/硬件/WebGL/字体/数学引擎），不存localStorage——
+// 每次打开重新计算结果都一样，清缓存/换浏览器数据也改不了它，配合IP封号清缓存无效
+function generateDeviceCode(){
+    const str = [
+        navigator.userAgent,
+        navigator.platform || '',
+        (navigator.languages || [navigator.language]).join(','),
+        new Date().getTimezoneOffset(),
+        getTimezoneName(),
+        screen.width + 'x' + screen.height,
+        screen.colorDepth,
+        window.devicePixelRatio || 1,
+        navigator.hardwareConcurrency || 0,
+        navigator.deviceMemory || 0,
+        navigator.maxTouchPoints || 0,
+        navigator.vendor || '',
+        getWebGLInfo(),
+        probeFonts(),
+        getMathFingerprint()
+    ].join('|');
+    let hash = 0;
+    for(let i=0;i<str.length;i++){
+        hash = ((hash<<5)-hash) + str.charCodeAt(i);
+        hash |= 0;
+    }
+    return 'dc_' + Math.abs(hash).toString(36);
+}
+// 设备信息快照（后台用户记录里展示用）
+function getDeviceInfo(){
+    const gl = getWebGLInfo().split('|');
+    return {
+        ua: navigator.userAgent,
+        platform: navigator.platform || '',
+        language: navigator.language,
+        timezone: getTimezoneName(),
+        screen: screen.width + 'x' + screen.height + '@' + (window.devicePixelRatio || 1) + 'x',
+        cores: navigator.hardwareConcurrency || 0,
+        memory: navigator.deviceMemory || 0,
+        touch: navigator.maxTouchPoints || 0,
+        gpu: gl[1] || gl[0] || '未知'
+    };
+}
+
 // 获取用户IP
 function getUserIP(callback){
     try{
@@ -1259,12 +1340,13 @@ function getUserIP(callback){
 }
 
 // 封禁数据存储
-G.banData = { bannedFingerprints: [], bannedIPs: [], userRecords: [], banReasons: {} };
+G.banData = { bannedFingerprints: [], bannedIPs: [], bannedDevices: [], userRecords: [], banReasons: {} };
 function loadBanData(){
     try{
         const d = JSON.parse(localStorage.getItem('bomb_ban_data')||'{}');
         G.banData.bannedFingerprints = d.bannedFingerprints || [];
         G.banData.bannedIPs = d.bannedIPs || [];
+        G.banData.bannedDevices = d.bannedDevices || [];
         G.banData.userRecords = d.userRecords || [];
         G.banData.banReasons = d.banReasons || {};
     }catch(e){}
@@ -1274,24 +1356,28 @@ function saveBanData(){
 }
 loadBanData();
 
-// 记录当前用户信息
+// 记录当前用户信息（指纹+网络IP+设备码+设备信息，清缓存后IP和设备码依然不变）
 G.currentUser = {
     fingerprint: generateFingerprint(),
+    deviceCode: generateDeviceCode(),
     ip: '获取中...',
     userAgent: navigator.userAgent,
     language: navigator.language,
     screen: screen.width+'x'+screen.height,
+    deviceInfo: getDeviceInfo(),
     firstVisit: new Date().toLocaleString(),
     lastVisit: new Date().toLocaleString()
 };
-// 页面加载时先按指纹检查（此时G已定义）
+// 页面加载时先按指纹/设备码检查（此时G已定义）
 checkBanned();
 getUserIP(function(ip){
     G.currentUser.ip = ip;
     // 更新或添加用户记录
-    const existing = G.banData.userRecords.find(u=>u.fingerprint===G.currentUser.fingerprint);
+    const existing = G.banData.userRecords.find(u=>u.fingerprint===G.currentUser.fingerprint || u.deviceCode===G.currentUser.deviceCode);
     if(existing){
         existing.ip = ip;
+        existing.deviceCode = G.currentUser.deviceCode;
+        existing.deviceInfo = G.currentUser.deviceInfo;
         existing.lastVisit = new Date().toLocaleString();
         existing.userAgent = navigator.userAgent;
     } else {
@@ -1302,7 +1388,7 @@ getUserIP(function(ip){
     checkBanned();
 });
 
-// 封禁检测（页面加载时执行）
+// 封禁检测（页面加载时执行）：指纹 / 网络IP / 设备码 任一命中即封
 function checkBanned(){
     const fp = G.currentUser.fingerprint;
     if(G.banData.bannedFingerprints.indexOf(fp) >= 0){
@@ -1313,11 +1399,42 @@ function checkBanned(){
         showBanScreen();
         return true;
     }
+    if(G.banData.bannedDevices && G.banData.bannedDevices.indexOf(G.currentUser.deviceCode) >= 0){
+        showBanScreen();
+        return true;
+    }
     return false;
 }
-function showBanScreen(){
+// 远程加入者的封禁校验（房主侧）：对方报上来的 指纹/设备码/IP 任一命中就拒收
+function isIdentityBanned(idc){
+    if(!idc) return false;
+    if(idc.fp && G.banData.bannedFingerprints.indexOf(idc.fp) >= 0) return true;
+    if(idc.dc && G.banData.bannedDevices && G.banData.bannedDevices.indexOf(idc.dc) >= 0) return true;
+    if(idc.ip && G.banData.bannedIPs.indexOf(idc.ip) >= 0) return true;
+    return false;
+}
+// 远程加入者留档：指纹/设备码/IP/UA 写进用户记录（后台可查可封）
+function recordRemoteUser(d){
+    if(!d || !d.fp) return;
+    const rec = G.banData.userRecords.find(u=>u.fingerprint===d.fp || (d.dc && u.deviceCode===d.dc));
+    if(rec){
+        rec.ip = d.ip || rec.ip;
+        rec.deviceCode = d.dc || rec.deviceCode;
+        rec.userAgent = d.ua || rec.userAgent;
+        rec.lastVisit = new Date().toLocaleString();
+    } else {
+        G.banData.userRecords.push({
+            fingerprint: d.fp, deviceCode: d.dc || 'unknown', ip: d.ip || '未知',
+            userAgent: d.ua || '', firstVisit: new Date().toLocaleString(), lastVisit: new Date().toLocaleString()
+        });
+    }
+    saveBanData();
+}
+function showBanScreen(remoteReason, remoteTime){
     const fp = G.currentUser.fingerprint;
-    const info = G.banData.banReasons[fp] || G.banData.banReasons[G.currentUser.ip] || {};
+    const info = G.banData.banReasons[fp] || G.banData.banReasons[G.currentUser.ip] || G.banData.banReasons[G.currentUser.deviceCode] || {};
+    if(remoteReason) info.reason = remoteReason;
+    if(remoteTime) info.time = remoteTime;
     const reason = escapeHtml(info.reason || '违反社区规定');
     const time = escapeHtml(info.time || '未知时间');
     document.documentElement.style.background = '#000';
@@ -2088,9 +2205,9 @@ function setupConnection(conn){
             }
             // 有密码房间：等 data.type==='password' 验证
         } else {
-            // 客机：发送密码给房主验证（附带指纹，供举报系统识别）
+            // 客机：发送密码给房主验证（附带指纹+设备码+IP，供封禁/举报系统识别）
             getPlayer('p2').fingerprint = G.currentUser.fingerprint;
-            conn.send({type:'password', password: G.guestPassword || '', fp: G.currentUser.fingerprint});
+            conn.send({type:'password', password: G.guestPassword || '', fp: G.currentUser.fingerprint, dc: G.currentUser.deviceCode, ip: G.currentUser.ip, ua: navigator.userAgent});
         }
         startPing();
     }
@@ -2111,12 +2228,22 @@ function setupConnection(conn){
     conn.on('data',function(data){
         lastRemoteMsgTime = Date.now(); // 收到任何消息都刷新超时计时
         if(data.type==='ping') return;
-        // 密码验证
+        // 密码验证（先过封禁闸：指纹/设备码/IP 任一命中直接拒收，清缓存也混不进来）
         if(data.type==='password' && G.isHost){
+            const idc = { fp:data.fp, dc:data.dc, ip:data.ip };
+            if(isIdentityBanned(idc)){
+                const bi = G.banData.banReasons[idc.fp] || G.banData.banReasons[idc.dc] || G.banData.banReasons[idc.ip] || {};
+                try{ conn.send({type:'banned', reason: bi.reason || '违反社区规定', time: bi.time || ''}); }catch(e){}
+                setTimeout(function(){ try{conn.close();}catch(e){} }, 400);
+                return;
+            }
             if(!G.roomPassword || data.password === G.roomPassword){
                 getPlayer('p1').fingerprint = G.currentUser.fingerprint;
                 getPlayer('p2').fingerprint = data.fp || 'unknown';
-                conn.send({type:'password_ok', fp: G.currentUser.fingerprint});
+                getPlayer('p2').deviceCode = data.dc || 'unknown';
+                getPlayer('p2').ip = data.ip || 'unknown';
+                recordRemoteUser(data);
+                conn.send({type:'password_ok', fp: G.currentUser.fingerprint, dc: G.currentUser.deviceCode, ip: G.currentUser.ip});
                 enterRemoteSetup();
             } else {
                 conn.send({type:'password_wrong'});
@@ -2127,7 +2254,14 @@ function setupConnection(conn){
         }
         if(data.type==='password_ok' && !G.isHost){
             getPlayer('p1').fingerprint = data.fp || 'unknown';
+            getPlayer('p1').deviceCode = data.dc || 'unknown';
+            getPlayer('p1').ip = data.ip || 'unknown';
             enterRemoteSetup();
+            return;
+        }
+        if(data.type==='banned' && !G.isHost){ // 被房主/后台封号：直接进小黑屋
+            cleanupRemote();
+            showBanScreen(data.reason, data.time);
             return;
         }
         if(data.type==='password_wrong' && !G.isHost){
@@ -2492,7 +2626,9 @@ function checkChatRateLimit(){
 }
 
 function sendChatMessage(text) {
-    if (!text || !G.conn || !G.conn.open || !G.mode.includes('remote')) return;
+    if (!text) return;
+    const fakeRemote = G.mode.includes('ai') && G.aiDisguise; // 大厅伪装房：聊天UI和远程一致，但消息没有真人接收
+    if (!fakeRemote && (!G.conn || !G.conn.open || !G.mode.includes('remote'))) return;
     // 频率限制
     if(!checkChatRateLimit()){
         showCheatToast('⚠️ 发送太频繁，请稍后再试');
@@ -2503,6 +2639,7 @@ function sendChatMessage(text) {
     if(check.flagged){ showCheatToast('⚠️ 消息包含违规内容，已拦截'); return; }
     const myName = getMyPlayer().name;
     addChatMessage(myName, text, 'mine');
+    if(fakeRemote) return; // 只进本地聊天记录，维持"能发消息"的外观
     G.conn.send({ type: 'chat', senderName: myName, text: text });
     if(G.isHost) broadcastToSpectators({ type:'chat', senderName: myName, text: text }); // 观战者也能看聊天
 }
@@ -2812,6 +2949,12 @@ function initGame(){
         getPlayer('p2').avatar = aiEmojis[Math.floor(Math.random()*aiEmojis.length)];
         G.aiAvatarUrl=null; G.aiAvatarOk=false;
         roomInfo.textContent='🤖 AI ('+(['简单','普通','困难','大师'][G.aiLevel-1]||'困难')+')';
+        if(G.aiDisguise){ // 大厅伪装房：对手显示房主名+人类头像，房间信息装成真远程
+            getPlayer('p1').name = G.settings.name || '我';
+            getPlayer('p2').name = G.aiDisguise.name;
+            getPlayer('p2').avatar = G.aiDisguise.avatar;
+            roomInfo.textContent = '房间: ' + G.roomCode;
+        }
         setTimeout(function(){
             if(!G.active) return;
             aiTalk(Math.random()<0.7?'start':'startEncourage');
@@ -4442,7 +4585,7 @@ function updateTurnIndicator(){
         turnIndicator.textContent='👇 我的回合';
         turnIndicator.classList.add('turn-me');
     } else {
-        turnIndicator.textContent=G.mode.includes('ai')||G.mode==='tutorial'?'🤖 AI思考中...':'👆 对方回合...';
+        turnIndicator.textContent=(G.mode==='tutorial'||(G.mode.includes('ai')&&!G.aiDisguise))?'🤖 AI思考中...':'👆 对方回合...';
         turnIndicator.classList.add('turn-opponent');
     }
     let shouldEnable;
@@ -4598,7 +4741,7 @@ function hideAll(){
     skillSelectPhase=null; G.hostSkillComplete=null;
     G.skillSelectShown = false;
 }
-function showMainMenu(){ hideAll(); mainMenu.classList.remove('hidden'); if(!G.conn) roomInfo.textContent='未连接'; updateStatsDisplay(); tryAutoFullscreen(); }
+function showMainMenu(){ hideAll(); G.aiDisguise=null; mainMenu.classList.remove('hidden'); if(!G.conn) roomInfo.textContent='未连接'; updateStatsDisplay(); tryAutoFullscreen(); }
 function showSetup(){
     hideAll();
     setupOverlay.classList.remove('hidden');
@@ -4662,6 +4805,7 @@ function startTutorial(levelIndex) {
 }
 function showRemoteLobby(){
     hideAll();
+    G.aiDisguise=null; // 进真远程：摘掉大厅伪装
     G.remoteReady.host = false;
     G.remoteReady.guest = false;
     remoteLobby.classList.remove('hidden');
@@ -4701,7 +4845,7 @@ function showBattleArea(){
     G.paused=false; $('paused-overlay').classList.add('hidden'); $('pause-ask-overlay').classList.add('hidden');
     $('quick-chat-bar').style.display = (G.mode.includes('ai')||G.mode.includes('remote')) ? 'flex' : 'none';
     if(G.isSkillMode){ skillsBar.style.display='flex'; renderSkills(); }
-    if(G.mode.includes('remote') && G.conn && G.conn.open) chatToggleBtn.style.display='inline-block';
+    if((G.mode.includes('remote') && G.conn && G.conn.open) || (G.mode.includes('ai') && G.aiDisguise)) chatToggleBtn.style.display='inline-block'; // 伪装房也有聊天按钮，和真远程一致
     updateSpectatorCount(); // 进入战斗时刷新观战人数徽章（开局前接入的观战者也要显示）
     tryAutoFullscreen(); // 自动全屏开着时：每次进入战斗/返回菜单都重新全屏，不只是第一次
 }
@@ -4729,6 +4873,7 @@ opponentRow.querySelectorAll('.ai-level-btn').forEach(function(b){
 });
 $('start-game-btn').addEventListener('click',function(){
     if(G.oppType==='remote'){ showRemoteLobby(); return; }
+    G.aiDisguise=null; // 普通开局：摘掉大厅伪装
     readSetupInputs(false);
     G.skillCount = parseInt(skillCountInput.value) || 0;
     G.skillCount = Math.max(0, Math.min(3, G.skillCount));
@@ -4846,26 +4991,56 @@ function showLobbyListOverlay(){
     fetchLobbyList();
 }
 // AI 伪装房间数据（每2-3分钟刷新一次房间号，防止被认出）
-const AI_FAKE_NAMES = ['小明','老王','阿飞','大锤','闪电','影子','暴风','冷月','猎鹰','铁锤','幽灵','疾风','狂龙','暗夜','星辰','天霸','追风','银狐','雷霆','霸天'];
+// 昵称程序化生成：前缀×后缀×可选数字，组合上万种，像真实玩家随手起的名
+const AI_NICK_PRE = ['快乐','暴躁','摸鱼','深夜','凌晨','不吃','爱喝','半糖','冰镇','迷路','退役','路人','野生','逆风','顺风','蹲草','芝士','可乐','奶茶','麻辣','糖醋','脆皮','软萌','高冷','社恐','社牛','熬夜','躺平','摆烂','努力','隐身','闪现','一只','半只','隔壁','楼下','小区','网吧','宿舍','家里','公司','学校'];
+const AI_NICK_SUF = ['小熊猫','的猫','柴犬','仓鼠','柯基','皮卡丘','奥特曼','队长','王子','公主','骑士','法师','战士','刺客','射手','辅助','打野','中单','上单','萌新','大佬','菜鸟','大神','阿伟','杰哥','彬彬','怪兽','恐龙','鲨鱼','企鹅','海豹','水豚','兔叽','猫咪','狗子','咕咕','仔','酱','桑','君','王','神','哥','姐','弟','妹','叔','崽'];
+const AI_FAKE_AVATARS = ['🙂','😎','🤠','🦊','🐱','🐶','🐼','🦁','🐯','🐸','🦄','🐲','🎮','🎯','⚔️','💎']; // 人类感头像，绝不出现🤖
+function genFakeNick(){
+    let n = AI_NICK_PRE[Math.floor(Math.random()*AI_NICK_PRE.length)] + AI_NICK_SUF[Math.floor(Math.random()*AI_NICK_SUF.length)];
+    if(Math.random() < 0.35) n += Math.floor(Math.random()*100); // 偶尔带数字尾，更像真人
+    return n;
+}
 let aiFakeRooms = [];
+// 默认房间标题：后台 bomb_admin_settings.defaultRoomTitle 可配，没配用内置默认
+function getDefaultRoomTitle(){
+    try{
+        const s = JSON.parse(localStorage.getItem('bomb_admin_settings')||'{}');
+        if(s.defaultRoomTitle) return s.defaultRoomTitle;
+    }catch(e){}
+    return '来和我一起玩吧';
+}
 function refreshAiFakeRooms(){
     aiFakeRooms = [];
     const cfg = G.aiRoomConfig || {1:3,2:3,3:2,4:2};
     const levels = [
-        {level:1, count:cfg[1]||0, names:['新手村','菜鸡互啄','随便玩玩','萌新求带']},
-        {level:2, count:cfg[2]||0, names:['日常开黑','休闲一局','来战','随便打打']},
-        {level:3, count:cfg[3]||0, names:['高手过招','认真模式','上分中','技术局']},
-        {level:4, count:cfg[4]||0, names:['虐菜专场','王者归来','吊打一切','无情机器']}
+        {level:1, count:cfg[1]||0},
+        {level:2, count:cfg[2]||0},
+        {level:3, count:cfg[3]||0},
+        {level:4, count:cfg[4]||0}
     ];
+    const usedCodes = {}, usedNames = {};
+    const title = getDefaultRoomTitle(); // 标题统一用默认房间标题，和真人开房不写标题时一样
+    const RANGES = [[1,50],[1,100],[1,100],[1,200],[10,100],[1,500]]; // 范围随机
     levels.forEach(function(lv){
         for(let i=0;i<lv.count;i++){
-            const code = Math.random().toString(36).slice(2,8).toUpperCase();
-            const name = lv.names[Math.floor(Math.random()*lv.names.length)];
+            let code = '';
+            do { code = Math.random().toString(36).slice(2,8).toUpperCase(); } while(usedCodes[code]); // 与真人房码同格式，无AI前缀
+            usedCodes[code] = 1;
+            let host = '';
+            let guard = 0;
+            do { host = genFakeNick(); } while(usedNames[host] && ++guard < 50); // 同批房主名不重复
+            usedNames[host] = 1;
+            const rg = RANGES[Math.floor(Math.random()*RANGES.length)];
             aiFakeRooms.push({
-                code: 'AI-' + code,
-                name: name,
+                code: code,
+                name: title,
+                host: host,
+                avatar: AI_FAKE_AVATARS[Math.floor(Math.random()*AI_FAKE_AVATARS.length)],
                 hasPwd: Math.random() < 0.3,
-                aiLevel: lv.level
+                aiLevel: lv.level,
+                min: rg[0],
+                max: rg[1],
+                hp: 3 + Math.floor(Math.random()*6) // 生命随机 3~8
             });
         }
     });
@@ -4969,12 +5144,12 @@ function renderLobbyRooms(rooms, filter){
         const statusBadge = r.isAi ? '<span style="font-size:0.68rem;color:#44ff44;margin-right:8px;">🟢 等待中</span>'
             : (r.status==='p' ? '<span style="font-size:0.68rem;color:#ff6666;margin-right:8px;">🔴 已开始</span>' : '<span style="font-size:0.68rem;color:#44ff44;margin-right:8px;">🟢 等待中</span>');
         const actionHint = (!r.isAi && r.status==='p') ? '<span style="font-size:0.68rem;color:#ffcc66;">👁️ 观战</span>' : '';
-        item.innerHTML = '<div style="flex:1;"><span style="font-weight:bold;color:var(--neon);">'+r.code+'</span> <span style="color:#aaa;margin-left:10px;">'+r.name+'</span></div>' + statusBadge + actionHint + (r.hasPwd ? '<span style="font-size:1.2rem;">🔒</span>' : '');
+        item.innerHTML = '<div style="flex:1;"><span style="font-weight:bold;color:var(--neon);">'+r.code+'</span> <span style="color:#aaa;margin-left:10px;">'+r.name+(r.host?' · '+r.host:'')+'</span></div>' + statusBadge + actionHint + (r.hasPwd ? '<span style="font-size:1.2rem;">🔒</span>' : '');
         item.addEventListener('mouseenter', function(){ this.style.borderColor='var(--neon)'; });
         item.addEventListener('mouseleave', function(){ this.style.borderColor='rgba(0,240,255,0.2)'; });
         item.addEventListener('click', function(){
             if(r.isAi){
-                joinAiRoom(r.aiLevel, r.code);
+                joinAiRoom(r);
             } else if(r.status==='p'){
                 spectateRoom(r.code, r.hasPwd); // 已开始的对局 → 观战
             } else {
@@ -4989,22 +5164,34 @@ $('lobby-search-input').addEventListener('input', function(){
     renderLobbyRooms(G.lastLobbyRooms || [], this.value);
 });
 
-// 加入AI伪装房间（直接开始AI对战，伪装成远程对战）
-function joinAiRoom(aiLevel, code){
+// 加入AI伪装房间（锁房先过密码门；进房后全程装成真人远程对战）
+function joinAiRoom(room){
+    if(room.hasPwd){
+        G.pendingAiRoom = room;
+        $('password-prompt-input').value = '';
+        $('password-prompt-msg').textContent = '';
+        $('password-prompt-overlay').classList.remove('hidden');
+        $('password-prompt-input').focus();
+        return;
+    }
+    doJoinAiRoom(room);
+}
+function doJoinAiRoom(room){
     $('lobby-list-overlay').classList.add('hidden');
-    showCheatToast('正在连接房间 ' + code + '...');
+    showCheatToast('正在连接房间 ' + room.code + '...');
     setTimeout(function(){
         // 伪装成远程对战的感觉，但实际是AI对战
         G.oppType = 'ai';
-        G.aiLevel = aiLevel;
+        G.aiLevel = room.aiLevel;
         G.skillCount = 1;
         G.isSkillMode = true;
-        G.minVal = G.settings.minVal || 1;
-        G.maxVal = G.settings.maxVal || 100;
-        getPlayer('p1').maxHP = G.settings.hp || 5;
-        getPlayer('p2').maxHP = G.settings.hp || 5;
-        G.roomCode = code;
+        G.minVal = room.min || 1;
+        G.maxVal = room.max || 100;
+        getPlayer('p1').maxHP = room.hp || 5;
+        getPlayer('p2').maxHP = room.hp || 5;
+        G.roomCode = room.code;
         G.mode = 'ai-skill';
+        G.aiDisguise = { name:room.host || '玩家', avatar:room.avatar || '🙂' }; // 装真人：对手显示房主名+人类头像
         initGame();
     }, 800);
 }
@@ -5027,6 +5214,12 @@ function joinRoomFromLobby(code, hasPwd){
 }
 $('password-confirm-btn').addEventListener('click', function(){
     const pwd = $('password-prompt-input').value;
+    if(G.pendingAiRoom){ // AI伪装房的密码门：陌生人的密码不可能知道，永远"密码错误"，锁房进不去
+        $('password-prompt-msg').textContent = '❌ 密码错误';
+        $('password-prompt-input').value = '';
+        $('password-prompt-input').focus();
+        return;
+    }
     $('password-prompt-overlay').classList.add('hidden');
     if(G.pendingSpectateCode){ // 观战密码
         const code = G.pendingSpectateCode; G.pendingSpectateCode = null;
@@ -5038,6 +5231,7 @@ $('password-confirm-btn').addEventListener('click', function(){
     doJoinRoom(G.pendingJoinCode);
 });
 $('password-cancel-btn').addEventListener('click', function(){
+    G.pendingAiRoom = null;
     $('password-prompt-overlay').classList.add('hidden');
 });
 function doJoinRoom(code){
@@ -5056,6 +5250,12 @@ function setupSpectator(conn){
     conn.on('data', function(data){
         if(!data || !data.type) return;
         if(data.type==='password'){
+            if(isIdentityBanned({ fp:data.fp, dc:data.dc, ip:data.ip })){ // 被封者观战也拒
+                const bi = G.banData.banReasons[data.fp] || G.banData.banReasons[data.dc] || G.banData.banReasons[data.ip] || {};
+                try{ conn.send({type:'banned', reason: bi.reason || '违反社区规定', time: bi.time || ''}); }catch(e){}
+                setTimeout(function(){ try{conn.close();}catch(e){} }, 400);
+                return;
+            }
             if(!G.roomPassword || data.password === G.roomPassword){
                 try{ conn.send({type:'spectate_ok'}); }catch(e){}
                 if(G.spectators.indexOf(conn)<0) G.spectators.push(conn);
@@ -5120,11 +5320,16 @@ function doSpectate(code){
 function setupSpectatorClient(conn, specPeer){
     G.specConn = conn;
     function handleOpen(){
-        try{ conn.send({type:'password', password:G.spectatePassword||'', fp:G.currentUser.fingerprint, spectator:true}); }catch(e){}
+        try{ conn.send({type:'password', password:G.spectatePassword||'', fp:G.currentUser.fingerprint, dc:G.currentUser.deviceCode, ip:G.currentUser.ip, spectator:true}); }catch(e){}
     }
     if(conn.open) handleOpen(); else conn.on('open', handleOpen);
     conn.on('data', function(data){
         if(!data || !data.type) return;
+        if(data.type==='banned'){ // 被封者不许围观
+            exitSpectate();
+            showBanScreen(data.reason, data.time);
+            return;
+        }
         if(data.type==='spectate_ok'){
             enterSpectateView(false);
             return;
