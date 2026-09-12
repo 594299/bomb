@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 管理后台</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #0a0a12;
+            color: #fff;
+            font-family: 'Microsoft YaHei', sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #ff6b6b, #00f0ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .auth-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            padding: 40px;
+        }
+        .auth-panel input {
+            width: 280px;
+            padding: 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid #00f0ff;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1.1rem;
+            text-align: center;
+            outline: none;
+        }
+        .auth-panel .msg {
+            color: #ff6666;
+            font-size: 0.8rem;
+            min-height: 20px;
+        }
+        .btn {
+            padding: 10px 30px;
+            background: linear-gradient(135deg, #00f0ff, #0080ff);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn:hover { transform: scale(1.05); }
+        .btn.secondary {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .btn.small {
+            padding: 4px 10px;
+            font-size: 0.7rem;
+        }
+        .btn.danger {
+            background: linear-gradient(135deg, #ff4444, #cc0000);
+        }
+        .btn.success {
+            background: linear-gradient(135deg, #44ff44, #00cc00);
+        }
+        .btn.warning {
+            background: linear-gradient(135deg, #ffaa00, #ff6600);
+        }
+        .panel {
+            display: none;
+        }
+        .panel.active { display: block; }
+        .section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #00f0ff;
+        }
+        .setting-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+            flex-wrap: wrap;
+        }
+        .setting-row label {
+            min-width: 80px;
+        }
+        .setting-row input, .setting-row select {
+            padding: 6px 10px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            color: #fff;
+        }
+        .toggle-btn {
+            padding: 6px 16px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .toggle-btn.active {
+            background: #00f0ff;
+            color: #000;
+        }
+        .avatar-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 8px 0;
+        }
+        .avatar-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+        }
+        .avatar-card img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .avatar-card .info {
+            font-size: 0.6rem;
+            color: #888;
+        }
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            margin: 4px 0;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            font-size: 0.75rem;
+        }
+        .user-item.banned { border-left: 3px solid #ff4444; }
+        .user-item.normal { border-left: 3px solid #44ff44; }
+        .user-info {
+            flex: 1;
+            overflow: hidden;
+        }
+        .user-info .ip {
+            color: #aaa;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .user-info .fp {
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .user-info .time {
+            color: #666;
+        }
+        .user-status {
+            font-weight: bold;
+        }
+        .user-status.banned { color: #ff6666; }
+        .user-status.normal { color: #44ff44; }
+        .hidden { display: none !important; }
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid #00f0ff;
+            border-radius: 10px;
+            color: #fff;
+            z-index: 9999;
+        }
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: #888;
+            text-decoration: none;
+        }
+        .back-link:hover { color: #fff; }
+        /* 新增样式 */
+        .tab-bar {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .tab-btn.active {
+            background: #00f0ff;
+            color: #000;
+            border-color: #00f0ff;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00f0ff;
+        }
+        .stat-label {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 5px;
+        }
+        .log-list {
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 0.75rem;
+            font-family: monospace;
+        }
+        .log-item {
+            padding: 4px 8px;
+            margin: 2px 0;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.03);
+        }
+        .log-item.warn { border-left: 3px solid #ffaa00; }
+        .log-item.error { border-left: 3px solid #ff4444; }
+        .log-item.info { border-left: 3px solid #00f0ff; }
+        .log-item.success { border-left: 3px solid #44ff44; }
+        .data-preview {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 0.7rem;
+            max-height: 200px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .danger-zone {
+            border: 1px solid #ff4444;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .danger-zone .section-title { color: #ff4444; }
+        .export-import {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .export-import textarea {
+            width: 100%;
+            min-height: 100px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            color: #fff;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">← 返回游戏</a>
+    <div class="container">
+        <h1>🔐 管理后台</h1>
+
+        <!-- 密码验证 -->
+        <div id="auth-panel" class="auth-panel">
+            <div style="color:#aaa;font-size:0.9rem;">请输入管理密码</div>
+            <input type="password" id="password-input" placeholder="管理密码">
+            <div class="msg" id="auth-msg"></div>
+            <button class="btn" id="auth-btn">进入后台</button>
+        </div>
+
+        <!-- 后台内容 -->
+        <div id="main-panel" class="panel">
+            <!-- 标签页导航 -->
+            <div class="tab-bar">
+                <button class="tab-btn active" data-tab="dashboard">📊 仪表盘</button>
+                <button class="tab-btn" data-tab="moderation">🛡️ 内容审核</button>
+                <button class="tab-btn" data-tab="users">👥 用户管理</button>
+                <button class="tab-btn" data-tab="ai-rooms">🤖 AI房间</button>
+                <button class="tab-btn" data-tab="settings">⚙️ 系统设置</button>
+                <button class="tab-btn" data-tab="logs">📝 日志</button>
+                <button class="tab-btn" data-tab="data">💾 数据管理</button>
+            </div>
+
+            <!-- 仪表盘 -->
+            <div class="tab-content active" id="tab-dashboard">
+                <div class="section">
+                    <div class="section-title">📊 数据统计</div>
+                    <div class="stat-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-total-users">0</div>
+                            <div class="stat-label">总用户</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-banned-users">0</div>
+                            <div class="stat-label">已封禁</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-pending-avatars">0</div>
+                            <div class="stat-label">待审核头像</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-approved-avatars">0</div>
+                            <div class="stat-label">已保留头像</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-blocked-avatars">0</div>
+                            <div class="stat-label">已违规头像</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-total-games">0</div>
+                            <div class="stat-label">总对局数</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="section">
+                    <div class="section-title">🎮 游戏状态</div>
+                    <div class="setting-row">
+                        <label>审核状态：</label>
+                        <span id="dash-mod-status">-</span>
+                    </div>
+                    <div class="setting-row">
+                        <label>AI房间总数：</label>
+                        <span id="dash-ai-rooms">-</span>
+                    </div>
+                    <div class="setting-row">
+                        <label>存储使用：</label>
+                        <span id="dash-storage">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 内容审核 -->
+            <div class="tab-content" id="tab-moderation">
+                <div class="section">
+                    <div class="section-title">内容审核设置</div>
+                    <div class="setting-row">
+                        <label>审核开关：</label>
+                        <button class="toggle-btn" id="mod-on-btn">开启</button>
+                        <button class="toggle-btn" id="mod-off-btn">关闭</button>
+                    </div>
+                    <div class="setting-row">
+                        <label>uapis.cn API Key：</label>
+                        <input type="text" id="apikey-input" placeholder="可选，留空则只用yuafeng.cn" style="width:300px;">
+                    </div>
+                    <div class="setting-row">
+                        <label>敏感词库：</label>
+                        <button class="btn small" id="edit-words-btn">编辑敏感词</button>
+                    </div>
+                    <div id="words-editor" class="hidden" style="margin-top:10px;">
+                        <textarea id="custom-words-input" placeholder="每行一个敏感词" style="width:100%;min-height:80px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#fff;padding:10px;"></textarea>
+                        <button class="btn small" id="save-words-btn">保存敏感词</button>
+                    </div>
+                </div>
+
+                <!-- 待审核头像 -->
+                <div class="section">
+                    <div class="section-title" style="color:#ffaa00;">⏳ 待审核头像 (<span id="pending-count">0</span>)</div>
+                    <div id="pending-avatars-list" class="avatar-list"></div>
+                </div>
+
+                <!-- 已通过头像 -->
+                <div class="section">
+                    <div class="section-title" style="color:#44ff44;">✅ 已保留头像 (<span id="approved-count">0</span>)</div>
+                    <div id="approved-avatars-list" class="avatar-list"></div>
+                </div>
+
+                <!-- 已违规头像 -->
+                <div class="section">
+                    <div class="section-title" style="color:#ff4444;">🚫 已违规头像 (<span id="blocked-count">0</span>)</div>
+                    <div id="blocked-avatars-list" class="avatar-list"></div>
+                </div>
+            </div>
+
+            <!-- 用户管理 -->
+            <div class="tab-content" id="tab-users">
+                <div class="section">
+                    <div class="section-title">👥 用户管理</div>
+                    <div class="setting-row">
+                        <input type="text" id="user-search" placeholder="搜索IP或指纹..." style="flex:1;">
+                        <button class="btn small" id="refresh-users-btn">刷新</button>
+                    </div>
+                    <div id="user-list-container" style="max-height:400px;overflow-y:auto;"></div>
+                </div>
+                <div class="section">
+                    <div class="section-title">📋 封禁列表</div>
+                    <div id="ban-list-container" style="max-height:200px;overflow-y:auto;"></div>
+                </div>
+            </div>
+
+            <!-- AI房间配置 -->
+            <div class="tab-content" id="tab-ai-rooms">
+                <div class="section">
+                    <div class="section-title">🤖 AI伪装房间配置</div>
+                    <div class="setting-row">
+                        <label>简单：</label><input type="number" id="ai-room-lv1" value="3" min="0" max="10" style="width:50px;">
+                        <label>普通：</label><input type="number" id="ai-room-lv2" value="3" min="0" max="10" style="width:50px;">
+                        <label>困难：</label><input type="number" id="ai-room-lv3" value="2" min="0" max="10" style="width:50px;">
+                        <label>大师：</label><input type="number" id="ai-room-lv4" value="2" min="0" max="10" style="width:50px;">
+                    </div>
+                    <button class="btn small" id="save-ai-config-btn">💾 保存AI房间配置</button>
+                </div>
+                <div class="section">
+                    <div class="section-title">🎭 AI行为设置</div>
+                    <div class="setting-row">
+                        <label>AI聊天回复：</label>
+                        <button class="toggle-btn" id="ai-chat-on">开启</button>
+                        <button class="toggle-btn" id="ai-chat-off">关闭</button>
+                    </div>
+                    <div class="setting-row">
+                        <label>AI难度波动：</label>
+                        <button class="toggle-btn" id="ai-variant-on">开启</button>
+                        <button class="toggle-btn" id="ai-variant-off">关闭</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 系统设置 -->
+            <div class="tab-content" id="tab-settings">
+                <div class="section">
+                    <div class="section-title">⚙️ 游戏设置</div>
+                    <div class="setting-row">
+                        <label>默认房间标题：</label>
+                        <input type="text" id="default-room-title" value="来和我一起玩吧" maxlength="15" style="width:200px;">
+                    </div>
+                    <div class="setting-row">
+                        <label>最大房间人数：</label>
+                        <input type="number" id="max-players" value="2" min="2" max="10" style="width:60px;">
+                    </div>
+                    <div class="setting-row">
+                        <label>游戏音效：</label>
+                        <button class="toggle-btn" id="sound-on">开启</button>
+                        <button class="toggle-btn" id="sound-off">关闭</button>
+                    </div>
+                    <div class="setting-row">
+                        <label>动画效果：</label>
+                        <button class="toggle-btn" id="anim-on">开启</button>
+                        <button class="toggle-btn" id="anim-off">关闭</button>
+                    </div>
+                </div>
+                <div class="section">
+                    <div class="section-title">🔒 安全设置</div>
+                    <div class="setting-row">
+                        <label>新管理密码：</label>
+                        <input type="password" id="new-password" placeholder="留空则不修改" style="width:200px;">
+                    </div>
+                    <button class="btn small warning" id="change-password-btn">🔑 修改密码</button>
+                </div>
+            </div>
+
+            <!-- 日志 -->
+            <div class="tab-content" id="tab-logs">
+                <div class="section">
+                    <div class="section-title">📝 系统日志</div>
+                    <div class="setting-row">
+                        <button class="btn small" id="clear-logs-btn">清空日志</button>
+                        <button class="btn small" id="export-logs-btn">导出日志</button>
+                    </div>
+                    <div id="log-container" class="log-list"></div>
+                </div>
+            </div>
+
+            <!-- 数据管理 -->
+            <div class="tab-content" id="tab-data">
+                <div class="section">
+                    <div class="section-title">💾 数据管理</div>
+                    <div class="export-import">
+                        <button class="btn small" id="export-data-btn">📤 导出所有数据</button>
+                        <button class="btn small" id="import-data-btn">📥 导入数据</button>
+                    </div>
+                    <textarea id="data-textarea" placeholder="导出的数据将显示在这里，或粘贴要导入的数据"></textarea>
+                    <div class="data-preview" id="data-preview"></div>
+                </div>
+                <div class="danger-zone">
+                    <div class="section-title">⚠️ 危险操作</div>
+                    <div class="setting-row">
+                        <button class="btn danger" id="reset-all-btn">🗑️ 重置所有数据</button>
+                        <span style="color:#ff6666;font-size:0.75rem;">将清空所有用户数据、审核记录、封禁列表</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== 工具函数 ==========
+        const $ = id => document.getElementById(id);
+
+        async function sha256(str){
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+            return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+        }
+
+        function showToast(msg){
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(()=>toast.remove(), 3000);
+        }
+
+        function escapeHtml(s){
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        // ========== 数据存储 ==========
+        const STORAGE_KEYS = {
+            moderation: 'bomb_moderation',
+            banData: 'bomb_ban_data',
+            aiRooms: 'bomb_ai_rooms',
+            customWords: 'bomb_custom_words',
+            logs: 'bomb_admin_logs',
+            settings: 'bomb_admin_settings'
+        };
+
+        function loadJSON(key, defaultVal){
+            try{
+                const d = JSON.parse(localStorage.getItem(key));
+                return d || defaultVal;
+            }catch(e){ return defaultVal; }
+        }
+
+        function saveJSON(key, data){
+            try{ localStorage.setItem(key, JSON.stringify(data)); }catch(e){}
+        }
+
+        // ========== 日志系统 ==========
+        function addLog(type, msg){
+            const logs = loadJSON(STORAGE_KEYS.logs, []);
+            logs.push({ time: new Date().toLocaleString(), type, msg });
+            if(logs.length > 500) logs.shift(); // 最多保留500条
+            saveJSON(STORAGE_KEYS.logs, logs);
+        }
+
+        function renderLogs(){
+            const container = $('log-container');
+            const logs = loadJSON(STORAGE_KEYS.logs, []);
+            container.innerHTML = '';
+            logs.slice().reverse().forEach(log => {
+                const item = document.createElement('div');
+                item.className = 'log-item ' + log.type;
+                item.textContent = `[${log.time}] [${log.type.toUpperCase()}] ${log.msg}`;
+                container.appendChild(item);
+            });
+        }
+
+        $('clear-logs-btn').addEventListener('click', () => {
+            if(confirm('确定要清空所有日志吗？')){
+                saveJSON(STORAGE_KEYS.logs, []);
+                renderLogs();
+                showToast('✅ 日志已清空');
+            }
+        });
+
+        $('export-logs-btn').addEventListener('click', () => {
+            const logs = loadJSON(STORAGE_KEYS.logs, []);
+            const text = logs.map(l => `[${l.time}] [${l.type.toUpperCase()}] ${l.msg}`).join('\n');
+            const blob = new Blob([text], {type:'text/plain'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'admin_logs_' + new Date().toISOString().slice(0,10) + '.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // ========== 密码验证 ==========
+        let ADMIN_PASSWORD_HASH = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'; // haododoya@163.com
+        let authed = false;
+
+        // 从存储加载自定义密码哈希
+        function loadPasswordHash(){
+            const d = loadJSON(STORAGE_KEYS.settings, {});
+            if(d.passwordHash) ADMIN_PASSWORD_HASH = d.passwordHash;
+        }
+
+        async function verifyPassword(){
+            const pwd = $('password-input').value;
+            const hash = await sha256(pwd);
+            if(hash === ADMIN_PASSWORD_HASH){
+                authed = true;
+                $('auth-msg').textContent = '';
+                showMainPanel();
+                addLog('success', '管理员登录成功');
+            } else {
+                $('auth-msg').textContent = '❌ 密码错误';
+                addLog('warn', '管理员登录失败：密码错误');
+            }
+        }
+
+        $('auth-btn').addEventListener('click', verifyPassword);
+        $('password-input').addEventListener('keydown', e => { if(e.key==='Enter') verifyPassword(); });
+
+        // ========== 标签页切换 ==========
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                $('tab-' + btn.dataset.tab).classList.add('active');
+                if(btn.dataset.tab === 'logs') renderLogs();
+                if(btn.dataset.tab === 'dashboard') renderDashboard();
+            });
+        });
+
+        function showMainPanel(){
+            $('auth-panel').style.display = 'none';
+            $('main-panel').classList.add('active');
+            loadAllData();
+            renderDashboard();
+        }
+
+        // ========== 加载数据 ==========
+        function loadAllData(){
+            loadModerationData();
+            loadBanData();
+            loadAiRoomConfig();
+            loadCustomWords();
+            loadAdminSettings();
+            renderModButtons();
+            renderAvatars();
+            renderUserList();
+            renderBanList();
+        }
+
+        // ========== 仪表盘 ==========
+        function renderDashboard(){
+            const modData = loadJSON(STORAGE_KEYS.moderation, {});
+            const banData = loadJSON(STORAGE_KEYS.banData, {});
+            const aiConfig = loadJSON(STORAGE_KEYS.aiRooms, {});
+
+            $('stat-total-users').textContent = (banData.userRecords || []).length;
+            $('stat-banned-users').textContent = (banData.bannedFingerprints || []).length;
+            $('stat-pending-avatars').textContent = (modData.pending || []).length;
+            $('stat-approved-avatars').textContent = (modData.approved || []).length;
+            $('stat-blocked-avatars').textContent = (modData.blocked || []).length;
+            $('stat-total-games').textContent = 'N/A';
+
+            $('dash-mod-status').textContent = modData.enabled !== false ? '✅ 已开启' : '❌ 已关闭';
+            $('dash-ai-rooms').textContent = Object.values(aiConfig).reduce((a,b)=>a+b, 0) || 10;
+
+            // 计算存储使用
+            let totalSize = 0;
+            for(let key in localStorage){
+                if(localStorage.hasOwnProperty(key)){
+                    totalSize += localStorage.getItem(key).length;
+                }
+            }
+            $('dash-storage').textContent = (totalSize / 1024).toFixed(2) + ' KB';
+        }
+
+        // ========== 内容审核 ==========
+        let moderationData = { enabled: true, apiKey: '', pendingAvatars: [], approvedAvatars: [], blockedAvatars: [] };
+
+        function loadModerationData(){
+            const d = loadJSON(STORAGE_KEYS.moderation, {});
+            moderationData = {
+                enabled: d.enabled !== false,
+                apiKey: d.apiKey || '',
+                pendingAvatars: d.pending || [],
+                approvedAvatars: d.approved || [],
+                blockedAvatars: d.blocked || []
+            };
+            $('apikey-input').value = moderationData.apiKey;
+        }
+
+        function saveModerationData(){
+            saveJSON(STORAGE_KEYS.moderation, {
+                enabled: moderationData.enabled,
+                apiKey: moderationData.apiKey,
+                pending: moderationData.pendingAvatars,
+                approved: moderationData.approvedAvatars,
+                blocked: moderationData.blockedAvatars
+            });
+        }
+
+        function renderModButtons(){
+            $('mod-on-btn').classList.toggle('active', moderationData.enabled);
+            $('mod-off-btn').classList.toggle('active', !moderationData.enabled);
+        }
+
+        $('mod-on-btn').addEventListener('click', () => {
+            moderationData.enabled = true;
+            saveModerationData();
+            renderModButtons();
+            addLog('info', '内容审核已开启');
+        });
+        $('mod-off-btn').addEventListener('click', () => {
+            moderationData.enabled = false;
+            saveModerationData();
+            renderModButtons();
+            addLog('warn', '内容审核已关闭');
+        });
+        $('apikey-input').addEventListener('change', function(){
+            moderationData.apiKey = this.value.trim();
+            saveModerationData();
+            addLog('info', 'API Key 已更新');
+        });
+
+        // ========== 敏感词库 ==========
+        let customWords = [];
+
+        function loadCustomWords(){
+            customWords = loadJSON(STORAGE_KEYS.customWords, []);
+        }
+
+        $('edit-words-btn').addEventListener('click', () => {
+            $('words-editor').classList.toggle('hidden');
+            if(!$('words-editor').classList.contains('hidden')){
+                $('custom-words-input').value = customWords.join('\n');
+            }
+        });
+
+        $('save-words-btn').addEventListener('click', () => {
+            const text = $('custom-words-input').value;
+            customWords = text.split('\n').map(w => w.trim()).filter(w => w);
+            saveJSON(STORAGE_KEYS.customWords, customWords);
+            $('words-editor').classList.add('hidden');
+            showToast('✅ 敏感词库已保存 (' + customWords.length + '个词)');
+            addLog('info', '敏感词库已更新，共 ' + customWords.length + ' 个词');
+        });
+
+        // ========== AI房间配置 ==========
+        let aiRoomConfig = {1:3, 2:3, 3:2, 4:2};
+
+        function loadAiRoomConfig(){
+            const c = loadJSON(STORAGE_KEYS.aiRooms, {});
+            aiRoomConfig = {1:c[1]||3, 2:c[2]||3, 3:c[3]||2, 4:c[4]||2};
+            $('ai-room-lv1').value = aiRoomConfig[1];
+            $('ai-room-lv2').value = aiRoomConfig[2];
+            $('ai-room-lv3').value = aiRoomConfig[3];
+            $('ai-room-lv4').value = aiRoomConfig[4];
+        }
+
+        $('save-ai-config-btn').addEventListener('click', () => {
+            aiRoomConfig = {
+                1: parseInt($('ai-room-lv1').value)||0,
+                2: parseInt($('ai-room-lv2').value)||0,
+                3: parseInt($('ai-room-lv3').value)||0,
+                4: parseInt($('ai-room-lv4').value)||0
+            };
+            saveJSON(STORAGE_KEYS.aiRooms, aiRoomConfig);
+            showToast('✅ AI房间配置已保存');
+            addLog('info', 'AI房间配置已更新：简单' + aiRoomConfig[1] + ' 普通' + aiRoomConfig[2] + ' 困难' + aiRoomConfig[3] + ' 大师' + aiRoomConfig[4]);
+        });
+
+        // ========== 头像审核 ==========
+        function renderAvatars(){
+            $('pending-count').textContent = moderationData.pendingAvatars.length;
+            $('approved-count').textContent = moderationData.approvedAvatars.length;
+            $('blocked-count').textContent = moderationData.blockedAvatars.length;
+
+            renderAvatarList($('pending-avatars-list'), moderationData.pendingAvatars, 'pending');
+            renderAvatarList($('approved-avatars-list'), moderationData.approvedAvatars, 'approved');
+            renderAvatarList($('blocked-avatars-list'), moderationData.blockedAvatars, 'blocked');
+        }
+
+        function renderAvatarList(container, list, status){
+            container.innerHTML = '';
+            list.forEach(entry => {
+                const card = document.createElement('div');
+                card.className = 'avatar-card';
+
+                const img = document.createElement('img');
+                img.src = entry.avatar;
+                card.appendChild(img);
+
+                const info = document.createElement('div');
+                info.className = 'info';
+                info.textContent = entry.time + (entry.source ? ' ('+entry.source+')' : '');
+                card.appendChild(info);
+
+                if(status === 'pending'){
+                    const btnRow = document.createElement('div');
+                    btnRow.style.display = 'flex';
+                    btnRow.style.gap = '4px';
+
+                    const keepBtn = document.createElement('button');
+                    keepBtn.textContent = '✅保留';
+                    keepBtn.className = 'btn small success';
+                    keepBtn.onclick = () => {
+                        moderationData.pendingAvatars = moderationData.pendingAvatars.filter(a => a.id !== entry.id);
+                        entry.status = 'approved';
+                        moderationData.approvedAvatars.push(entry);
+                        saveModerationData();
+                        renderAvatars();
+                        showToast('✅ 头像已保留');
+                        addLog('success', '头像已保留：' + entry.id);
+                    };
+
+                    const blockBtn = document.createElement('button');
+                    blockBtn.textContent = '🚫违规';
+                    blockBtn.className = 'btn small danger';
+                    blockBtn.onclick = () => {
+                        moderationData.pendingAvatars = moderationData.pendingAvatars.filter(a => a.id !== entry.id);
+                        entry.status = 'blocked';
+                        moderationData.blockedAvatars.push(entry);
+                        saveModerationData();
+                        renderAvatars();
+                        showToast('🚫 头像已标记违规');
+                        addLog('warn', '头像已标记违规：' + entry.id);
+                    };
+
+                    btnRow.appendChild(keepBtn);
+                    btnRow.appendChild(blockBtn);
+                    card.appendChild(btnRow);
+                } else {
+                    const delBtn = document.createElement('button');
+                    delBtn.textContent = '删除';
+                    delBtn.className = 'btn small';
+                    delBtn.onclick = () => {
+                        if(status === 'approved'){
+                            moderationData.approvedAvatars = moderationData.approvedAvatars.filter(a => a.id !== entry.id);
+                        } else {
+                            moderationData.blockedAvatars = moderationData.blockedAvatars.filter(a => a.id !== entry.id);
+                        }
+                        saveModerationData();
+                        renderAvatars();
+                        addLog('info', '头像已删除：' + entry.id);
+                    };
+                    card.appendChild(delBtn);
+                }
+
+                container.appendChild(card);
+            });
+        }
+
+        // ========== 用户管理 ==========
+        let banData = { bannedFingerprints: [], bannedIPs: [], userRecords: [] };
+
+        function loadBanData(){
+            const d = loadJSON(STORAGE_KEYS.banData, {});
+            banData = {
+                bannedFingerprints: d.bannedFingerprints || [],
+                bannedIPs: d.bannedIPs || [],
+                userRecords: d.userRecords || []
+            };
+        }
+
+        function saveBanData(){
+            saveJSON(STORAGE_KEYS.banData, banData);
+        }
+
+        function renderUserList(){
+            const container = $('user-list-container');
+            container.innerHTML = '';
+            const search = $('user-search').value.toLowerCase();
+
+            let users = banData.userRecords;
+            if(search){
+                users = users.filter(u =>
+                    (u.ip && u.ip.toLowerCase().includes(search)) ||
+                    (u.fingerprint && u.fingerprint.toLowerCase().includes(search))
+                );
+            }
+
+            if(users.length === 0){
+                container.innerHTML = '<div style="color:#888;padding:10px;">暂无用户记录</div>';
+                return;
+            }
+
+            users.forEach(user => {
+                const isBanned = banData.bannedFingerprints.includes(user.fingerprint);
+                const item = document.createElement('div');
+                item.className = 'user-item ' + (isBanned ? 'banned' : 'normal');
+
+                const info = document.createElement('div');
+                info.className = 'user-info';
+                info.innerHTML = `
+                    <div class="user-status ${isBanned ? 'banned' : 'normal'}">${isBanned ? '🚫 已封禁' : '✅ 正常'}</div>
+                    <div class="ip">IP: ${escapeHtml(user.ip)}</div>
+                    <div class="fp">指纹: ${escapeHtml(user.fingerprint)}</div>
+                    <div class="time">首次: ${escapeHtml(user.firstVisit)}</div>
+                `;
+                item.appendChild(info);
+
+                const btn = document.createElement('button');
+                btn.textContent = isBanned ? '解封' : '封禁';
+                btn.className = 'btn small ' + (isBanned ? 'success' : 'danger');
+                btn.onclick = () => {
+                    if(isBanned){
+                        banData.bannedFingerprints = banData.bannedFingerprints.filter(f => f !== user.fingerprint);
+                        banData.bannedIPs = banData.bannedIPs.filter(ip => ip !== user.ip);
+                        showToast('✅ 已解封');
+                        addLog('success', '用户已解封：' + user.fingerprint);
+                    } else {
+                        banData.bannedFingerprints.push(user.fingerprint);
+                        if(user.ip && user.ip !== '未知') banData.bannedIPs.push(user.ip);
+                        showToast('🚫 已封禁该用户');
+                        addLog('warn', '用户已封禁：' + user.fingerprint + ' (' + user.ip + ')');
+                    }
+                    saveBanData();
+                    renderUserList();
+                    renderBanList();
+                };
+                item.appendChild(btn);
+
+                container.appendChild(item);
+            });
+        }
+
+        function renderBanList(){
+            const container = $('ban-list-container');
+            container.innerHTML = '';
+
+            if(banData.bannedFingerprints.length === 0){
+                container.innerHTML = '<div style="color:#888;padding:10px;">暂无封禁记录</div>';
+                return;
+            }
+
+            banData.bannedFingerprints.forEach(fp => {
+                const user = banData.userRecords.find(u => u.fingerprint === fp);
+                const item = document.createElement('div');
+                item.className = 'user-item banned';
+                item.innerHTML = `
+                    <div class="user-info">
+                        <div class="fp">指纹: ${escapeHtml(fp)}</div>
+                        ${user ? '<div class="ip">IP: ' + escapeHtml(user.ip) + '</div>' : ''}
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        $('user-search').addEventListener('input', renderUserList);
+        $('refresh-users-btn').addEventListener('click', () => {
+            loadBanData();
+            renderUserList();
+            renderBanList();
+            showToast('✅ 用户列表已刷新');
+        });
+
+        // ========== 系统设置 ==========
+        function loadAdminSettings(){
+            const s = loadJSON(STORAGE_KEYS.settings, {});
+            if(s.defaultRoomTitle) $('default-room-title').value = s.defaultRoomTitle;
+            if(s.maxPlayers) $('max-players').value = s.maxPlayers;
+            // 音效和动画开关状态
+            const soundOn = s.soundEnabled !== false;
+            const animOn = s.animEnabled !== false;
+            $('sound-on').classList.toggle('active', soundOn);
+            $('sound-off').classList.toggle('active', !soundOn);
+            $('anim-on').classList.toggle('active', animOn);
+            $('anim-off').classList.toggle('active', !animOn);
+        }
+
+        $('sound-on').addEventListener('click', () => {
+            const s = loadJSON(STORAGE_KEYS.settings, {});
+            s.soundEnabled = true;
+            saveJSON(STORAGE_KEYS.settings, s);
+            $('sound-on').classList.add('active');
+            $('sound-off').classList.remove('active');
+            showToast('✅ 音效已开启');
+        });
+        $('sound-off').addEventListener('click', () => {
+            const s = loadJSON(STORAGE_KEYS.settings, {});
+            s.soundEnabled = false;
+            saveJSON(STORAGE_KEYS.settings, s);
+            $('sound-off').classList.add('active');
+            $('sound-on').classList.remove('active');
+            showToast('✅ 音效已关闭');
+        });
+        $('anim-on').addEventListener('click', () => {
+            const s = loadJSON(STORAGE_KEYS.settings, {});
+            s.animEnabled = true;
+            saveJSON(STORAGE_KEYS.settings, s);
+            $('anim-on').classList.add('active');
+            $('anim-off').classList.remove('active');
+            showToast('✅ 动画已开启');
+        });
+        $('anim-off').addEventListener('click', () => {
+            const s = loadJSON(STORAGE_KEYS.settings, {});
+            s.animEnabled = false;
+            saveJSON(STORAGE_KEYS.settings, s);
+            $('anim-off').classList.add('active');
+            $('anim-on').classList.remove('active');
+            showToast('✅ 动画已关闭');
+        });
+
+        $('change-password-btn').addEventListener('click', async () => {
+            const newPwd = $('new-password').value.trim();
+            if(!newPwd){
+                showToast('❌ 请输入新密码');
+                return;
+            }
+            if(newPwd.length < 6){
+                showToast('❌ 密码至少6位');
+                return;
+            }
+            const hash = await sha256(newPwd);
+            const s = loadJSON(STORAGE_KEYS.settings, {});
+            s.passwordHash = hash;
+            saveJSON(STORAGE_KEYS.settings, s);
+            ADMIN_PASSWORD_HASH = hash;
+            $('new-password').value = '';
+            showToast('✅ 密码已修改');
+            addLog('success', '管理密码已修改');
+        });
+
+        // ========== 数据管理 ==========
+        $('export-data-btn').addEventListener('click', () => {
+            const allData = {};
+            for(let key in localStorage){
+                if(key.startsWith('bomb_')){
+                    allData[key] = loadJSON(key, null);
+                }
+            }
+            $('data-textarea').value = JSON.stringify(allData, null, 2);
+            $('data-preview').textContent = '共 ' + Object.keys(allData).length + ' 个数据项';
+            showToast('✅ 数据已导出到文本框');
+        });
+
+        $('import-data-btn').addEventListener('click', () => {
+            const text = $('data-textarea').value.trim();
+            if(!text){
+                showToast('❌ 请先粘贴要导入的数据');
+                return;
+            }
+            try{
+                const data = JSON.parse(text);
+                for(let key in data){
+                    if(key.startsWith('bomb_')){
+                        saveJSON(key, data[key]);
+                    }
+                }
+                showToast('✅ 数据导入成功');
+                addLog('success', '数据已导入');
+                loadAllData();
+                renderDashboard();
+            }catch(e){
+                showToast('❌ 数据格式错误');
+                addLog('error', '数据导入失败：' + e.message);
+            }
+        });
+
+        $('reset-all-btn').addEventListener('click', () => {
+            if(!confirm('⚠️ 确定要重置所有数据吗？此操作不可恢复！')) return;
+            if(!confirm('再次确认：将清空所有用户数据、审核记录、封禁列表')) return;
+
+            const keys = [];
+            for(let key in localStorage){
+                if(key.startsWith('bomb_')) keys.push(key);
+            }
+            keys.forEach(k => localStorage.removeItem(k));
+            showToast('✅ 所有数据已重置');
+            addLog('warn', '所有数据已重置');
+            loadAllData();
+            renderDashboard();
+        });
+
+        // ========== 初始化 ==========
+        loadPasswordHash();
+    </script>
+</body>
+</html>
