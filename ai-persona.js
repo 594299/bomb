@@ -78,13 +78,7 @@ let aiTalkTimer = null;
 let aiLastCat = null, aiLastLine = null; // AI 对话记忆：上一句的类别与原文
 
 function aiSpeak(text, encourage){
-    const el = $('ai-talk');
-    if(!el) return;
-    el.textContent = (G.aiDisguise ? G.aiDisguise.avatar : '🤖') + ' ' + text; // 伪装房用真人头像，不露🤖
-    el.classList.toggle('encourage', !!encourage);
-    el.classList.add('show');
-    if(aiTalkTimer) clearTimeout(aiTalkTimer);
-    aiTalkTimer = setTimeout(function(){ el.classList.remove('show'); }, 3500);
+    return;
 }
 
 function aiTalk(category){

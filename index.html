@@ -3027,10 +3027,43 @@ $('pause-resume-btn').addEventListener('click', function(){
     remotePauseExit('你');
 });
 // ========== 聊天功能 ==========
+function showToast(msg, duration=2000){
+    const el = document.createElement('div');
+    el.textContent = msg;
+    el.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#fff;padding:10px 20px;border-radius:10px;z-index:9999;font-size:0.8rem;';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), duration);
+}
+
 function addChatMessage(sender, text, type) {
     const msg = document.createElement('div');
     msg.className = 'chat-msg ' + type;
-    msg.textContent = (type === 'system' ? text : sender + ': ' + text);
+
+    // 只给对手消息加举报按钮
+    if (type === 'opponent') {
+        const textSpan = document.createElement('span');
+        textSpan.textContent = sender + ': ' + text;
+        msg.appendChild(textSpan);
+
+        const reportBtn = document.createElement('button');
+        reportBtn.textContent = '举报';
+        reportBtn.className = 'chat-report-btn';
+        reportBtn.style.marginLeft = '8px';
+        reportBtn.style.opacity = '0.5'; // 默认半透明
+        reportBtn.onclick = function() {
+            const reason = prompt("请输入举报原因：", "言语不当");
+            if (reason !== null) {
+                showToast('✔️ 举报已提交');
+                reportBtn.disabled = true;
+                reportBtn.textContent = '已举报';
+                reportBtn.style.opacity = '0.3';
+            }
+        };
+        msg.appendChild(reportBtn);
+    } else {
+        msg.textContent = (type === 'system' ? text : sender + ': ' + text);
+    }
+
     chatMessages.appendChild(msg);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }

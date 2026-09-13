@@ -1314,6 +1314,21 @@
                 };
                 item.appendChild(btn);
 
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '删除';
+                deleteBtn.className = 'btn small secondary';
+                deleteBtn.style.marginLeft = '4px';
+                deleteBtn.onclick = () => {
+                    if (!confirm(`确定要删除该用户吗？\n指纹: ${user.fingerprint}\n该操作会移除用户记录，但如果用户再次访问，会重新生成记录。`)) return;
+
+                    banData.userRecords = banData.userRecords.filter(u => u.fingerprint !== user.fingerprint);
+                    saveBanData();
+                    showToast('🗑️ 用户已删除');
+                    addLog('info', '用户已删除：' + user.fingerprint);
+                    renderUserList();
+                };
+                item.appendChild(deleteBtn);
+
                 container.appendChild(item);
             });
         }

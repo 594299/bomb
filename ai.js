@@ -44,7 +44,7 @@ function aiSelectSkillWithCallback(skillCount, onComplete){
     getPlayer('p2').skills = [...selectedSkills];
     getPlayer('p2').cooldowns = {};
     G.processing = true;
-    messageDisplay.textContent = '🤖 AI 已选择技能';
+    messageDisplay.textContent = '对方已选择技能';
     setTimeout(function(){
         if(!G.active){ if(onComplete) onComplete(); return; }
         renderSkills();
@@ -64,7 +64,7 @@ function aiPlayNormal(){
     aiMarkProgress();
     G.processing=true;
     setKeypadEnabled(false);
-    messageDisplay.textContent=G.aiDisguise?'对方思考中...':'🤖 AI思考中...';
+    messageDisplay.textContent = '对方思考中...';
     const ai=getPlayer('p2'), human=getPlayer('p1');
     const plan = aiPlanSkills(ai, human);
     dlog('AI','回合开始 token='+token+' plan=['+plan.join(',')+'] range='+_aiRLo()+'~'+_aiRHi()+' hp='+ai.hp+'/'+human.hp);
@@ -126,7 +126,7 @@ function aiGuess(token){
     const _c = aiCandidates();
     const known = aiKnownBomb();
     dlog('AI','猜 '+guess+' range='+_aiRLo()+'~'+_aiRHi()+(pick.usedClues?'(线索)':'(盲猜)')+' 已知='+(known!==null?('确知'+known):('候选'+(_c?_c.length:'无线索'))));
-    messageDisplay.textContent=(G.aiDisguise?'对方输入了 ':'🤖 AI 输入了 ')+guess;
+    messageDisplay.textContent= '对方输入了 '+guess;
     setTimeout(function(){
         if(!G.active) return;
         if(token!==undefined && token!==G.aiTurnToken) return;
