@@ -1329,14 +1329,32 @@ function getDeviceInfo(){
     };
 }
 
-// 获取用户IP
+// 获取用户IP：多接口轮询（国内网络逐个试），每个4秒超时，全挂才报"未知"
 function getUserIP(callback){
-    try{
-        fetch('https://api.ipify.org?format=json')
-            .then(r=>r.json())
-            .then(d=>callback(d.ip))
-            .catch(()=>callback('未知'));
-    }catch(e){ callback('未知'); }
+    const apis = [
+        'https://api.ipify.org?format=json',
+        'https://ipinfo.io/json',
+        'https://ip.useragentinfo.com/json'
+    ];
+    let done = false;
+    function finish(ip){ if(done) return; done = true; callback(ip); }
+    function tryNext(i){
+        if(i >= apis.length){ finish('未知'); return; }
+        let aborted = false;
+        const timer = setTimeout(function(){ aborted = true; tryNext(i+1); }, 4000);
+        try{
+            fetch(apis[i])
+                .then(function(r){ return r.json(); })
+                .then(function(d){
+                    clearTimeout(timer);
+                    if(aborted) return;
+                    const ip = d && d.ip;
+                    if(ip) finish(ip); else tryNext(i+1);
+                })
+                .catch(function(){ clearTimeout(timer); if(!aborted) tryNext(i+1); });
+        }catch(e){ clearTimeout(timer); tryNext(i+1); }
+    }
+    tryNext(0);
 }
 
 // 封禁数据存储
@@ -1351,10 +1369,81 @@ function loadBanData(){
         G.banData.banReasons = d.banReasons || {};
     }catch(e){}
 }
+// 封禁名单多副本持久化：localStorage + IndexedDB + Cache Storage + Cookie 四处同写
+// 浏览器"清缓存"通常只清其中一部分——只要任一副本活着，名单自动复活并回写所有副本
 function saveBanData(){
-    try{ localStorage.setItem('bomb_ban_data', JSON.stringify(G.banData)); }catch(e){}
+    let json = '';
+    try{ json = JSON.stringify(G.banData); }catch(e){ return; }
+    try{ localStorage.setItem('bomb_ban_data', json); }catch(e){}
+    try{
+        const req = indexedDB.open('bomb_vault', 1);
+        req.onupgradeneeded = function(){ try{ req.result.createObjectStore('kv'); }catch(e){} };
+        req.onsuccess = function(){
+            try{ req.result.transaction('kv','readwrite').objectStore('kv').put(json, 'bomb_ban_data'); }catch(e){}
+        };
+    }catch(e){}
+    try{
+        if('caches' in window) caches.open('bomb_vault').then(function(c){ c.put('/bomb_ban_data', new Response(json)); });
+    }catch(e){}
+    try{
+        if(json.length < 3500) document.cookie = 'bomb_ban_data=' + encodeURIComponent(json) + ';path=/;max-age=315360000;SameSite=Lax';
+    }catch(e){}
+}
+// localStorage 被清时：依次从 IndexedDB / Cache Storage / Cookie 找活副本恢复
+function restoreBanDataCopies(){
+    function hasContent(){
+        return (G.banData.bannedFingerprints||[]).length || (G.banData.bannedIPs||[]).length ||
+               (G.banData.bannedDevices||[]).length || (G.banData.userRecords||[]).length;
+    }
+    if(hasContent()){ saveBanData(); return; } // 本地有数据：顺手治愈其它副本
+    let restored = false;
+    function adopt(json){
+        if(restored || !json) return;
+        try{
+            const d = JSON.parse(json);
+            if(!d) return;
+            const content = (d.bannedFingerprints||[]).length || (d.bannedIPs||[]).length || (d.bannedDevices||[]).length || (d.userRecords||[]).length;
+            if(!content) return;
+            restored = true;
+            G.banData.bannedFingerprints = d.bannedFingerprints || [];
+            G.banData.bannedIPs = d.bannedIPs || [];
+            G.banData.bannedDevices = d.bannedDevices || [];
+            G.banData.userRecords = d.userRecords || [];
+            G.banData.banReasons = d.banReasons || {};
+            saveBanData(); // 复活后回写所有副本
+            checkBanned(); // 恢复名单后立即重新封禁
+        }catch(e){}
+    }
+    function adoptFromCookie(){
+        try{
+            const m = document.cookie.match(/(?:^|;\s*)bomb_ban_data=([^;]+)/);
+            if(m) adopt(decodeURIComponent(m[1]));
+        }catch(e){}
+    }
+    function adoptFromCache(){
+        try{
+            if(!('caches' in window)){ adoptFromCookie(); return; }
+            caches.open('bomb_vault').then(function(c){ return c.match('/bomb_ban_data'); }).then(function(r){
+                if(r) r.text().then(adopt);
+                else adoptFromCookie();
+            }).catch(adoptFromCookie);
+        }catch(e){ adoptFromCookie(); }
+    }
+    try{
+        const req = indexedDB.open('bomb_vault', 1);
+        req.onupgradeneeded = function(){ try{ req.result.createObjectStore('kv'); }catch(e){} };
+        req.onsuccess = function(){
+            try{
+                const g = req.result.transaction('kv','readonly').objectStore('kv').get('bomb_ban_data');
+                g.onsuccess = function(){ if(g.result) adopt(g.result); else adoptFromCache(); };
+                g.onerror = adoptFromCache;
+            }catch(e){ adoptFromCache(); }
+        };
+        req.onerror = adoptFromCache;
+    }catch(e){ adoptFromCache(); }
 }
 loadBanData();
+restoreBanDataCopies();
 
 // 记录当前用户信息（指纹+网络IP+设备码+设备信息，清缓存后IP和设备码依然不变）
 G.currentUser = {
@@ -1368,14 +1457,11 @@ G.currentUser = {
     firstVisit: new Date().toLocaleString(),
     lastVisit: new Date().toLocaleString()
 };
-// 页面加载时先按指纹/设备码检查（此时G已定义）
-checkBanned();
-getUserIP(function(ip){
-    G.currentUser.ip = ip;
-    // 更新或添加用户记录
+// 本机用户留档：不等IP，打开页面先记一笔（IP接口挂起也不会漏记）
+function saveLocalUserRecord(){
     const existing = G.banData.userRecords.find(u=>u.fingerprint===G.currentUser.fingerprint || u.deviceCode===G.currentUser.deviceCode);
     if(existing){
-        existing.ip = ip;
+        existing.ip = G.currentUser.ip;
         existing.deviceCode = G.currentUser.deviceCode;
         existing.deviceInfo = G.currentUser.deviceInfo;
         existing.lastVisit = new Date().toLocaleString();
@@ -1384,6 +1470,13 @@ getUserIP(function(ip){
         G.banData.userRecords.push({...G.currentUser});
     }
     saveBanData();
+}
+// 页面加载时先按指纹/设备码检查（此时G已定义）
+checkBanned();
+saveLocalUserRecord();
+getUserIP(function(ip){
+    G.currentUser.ip = ip;
+    saveLocalUserRecord();
     // IP获取后再次检查封禁
     checkBanned();
 });
@@ -6005,7 +6098,14 @@ $('menu-version').textContent = GAME_VERSION;
 $('settings-clear-cache-btn').addEventListener('click', function(){
     if(!confirm('⚠️ 清除缓存将永久失去：战绩、主题与全部设置。\n\n确定继续吗？')) return;
     if(!confirm('最后确认：一切从头开始。真的要按下这个按钮吗？')) return;
-    try { localStorage.clear(); } catch(e) {}
+    try {
+        // 封禁名单/后台配置不属于"缓存"，清缓存不能解封——先备份再恢复
+        const KEEP_KEYS = ['bomb_ban_data','bomb_admin_settings','bomb_admin_logs','bomb_reports','bomb_moderation','bomb_custom_words','bomb_ai_rooms'];
+        const kept = {};
+        KEEP_KEYS.forEach(function(k){ const v = localStorage.getItem(k); if(v !== null) kept[k] = v; });
+        localStorage.clear();
+        Object.keys(kept).forEach(function(k){ localStorage.setItem(k, kept[k]); });
+    } catch(e) {}
     try { sessionStorage.clear(); } catch(e) {}
     function forceReload(){
         // 加时间戳参数，强制浏览器重新请求页面本体，绕过HTML缓存
@@ -6014,7 +6114,7 @@ $('settings-clear-cache-btn').addEventListener('click', function(){
     }
     try {
         if('caches' in window){
-            caches.keys().then(function(keys){ return Promise.all(keys.map(function(k){ return caches.delete(k); })); })
+            caches.keys().then(function(keys){ return Promise.all(keys.filter(function(k){ return k!=='bomb_vault'; }).map(function(k){ return caches.delete(k); })); }) // bomb_vault 存封禁副本，不能清
                 .then(forceReload).catch(forceReload);
             if(navigator.serviceWorker && navigator.serviceWorker.getRegistrations){
                 navigator.serviceWorker.getRegistrations().then(function(rs){ rs.forEach(function(r){ r.unregister(); }); });

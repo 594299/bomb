@@ -789,6 +789,7 @@
         function loadAllData(){
             loadModerationData();
             loadBanData();
+            restoreBanDataCopies(); // localStorage 被清过时，从 IndexedDB/Cache/Cookie 副本复活名单
             loadAiRoomConfig();
             loadCustomWords();
             loadAdminSettings();
@@ -1017,7 +1018,79 @@
         }
 
         function saveBanData(){
+            // 多副本持久化：localStorage + IndexedDB + Cache Storage + Cookie（浏览器清缓存只清一部分，活副本会自动复活名单）
+            const json = JSON.stringify(banData);
             saveJSON(STORAGE_KEYS.banData, banData);
+            try{
+                const req = indexedDB.open('bomb_vault', 1);
+                req.onupgradeneeded = function(){ try{ req.result.createObjectStore('kv'); }catch(e){} };
+                req.onsuccess = function(){
+                    try{ req.result.transaction('kv','readwrite').objectStore('kv').put(json, 'bomb_ban_data'); }catch(e){}
+                };
+            }catch(e){}
+            try{
+                if('caches' in window) caches.open('bomb_vault').then(function(c){ c.put('/bomb_ban_data', new Response(json)); });
+            }catch(e){}
+            try{
+                if(json.length < 3500) document.cookie = 'bomb_ban_data=' + encodeURIComponent(json) + ';path=/;max-age=315360000;SameSite=Lax';
+            }catch(e){}
+        }
+
+        // localStorage 被清时：从 IndexedDB / Cache / Cookie 恢复名单并重绘
+        function restoreBanDataCopies(){
+            function hasContent(){
+                return (banData.bannedFingerprints||[]).length || (banData.bannedIPs||[]).length ||
+                       (banData.bannedDevices||[]).length || (banData.userRecords||[]).length;
+            }
+            if(hasContent()){ saveBanData(); return; }
+            let restored = false;
+            function adopt(json){
+                if(restored || !json) return;
+                try{
+                    const d = JSON.parse(json);
+                    if(!d) return;
+                    const content = (d.bannedFingerprints||[]).length || (d.bannedIPs||[]).length || (d.bannedDevices||[]).length || (d.userRecords||[]).length;
+                    if(!content) return;
+                    restored = true;
+                    banData = {
+                        bannedFingerprints: d.bannedFingerprints || [],
+                        bannedIPs: d.bannedIPs || [],
+                        bannedDevices: d.bannedDevices || [],
+                        userRecords: d.userRecords || [],
+                        banReasons: d.banReasons || {}
+                    };
+                    saveBanData();
+                    renderUserList(); renderBanList(); renderReports(); renderDashboard();
+                    showToast('♻️ 封禁名单已从备份副本恢复');
+                }catch(e){}
+            }
+            function adoptFromCookie(){
+                try{
+                    const m = document.cookie.match(/(?:^|;\s*)bomb_ban_data=([^;]+)/);
+                    if(m) adopt(decodeURIComponent(m[1]));
+                }catch(e){}
+            }
+            function adoptFromCache(){
+                try{
+                    if(!('caches' in window)){ adoptFromCookie(); return; }
+                    caches.open('bomb_vault').then(function(c){ return c.match('/bomb_ban_data'); }).then(function(r){
+                        if(r) r.text().then(adopt);
+                        else adoptFromCookie();
+                    }).catch(adoptFromCookie);
+                }catch(e){ adoptFromCookie(); }
+            }
+            try{
+                const req = indexedDB.open('bomb_vault', 1);
+                req.onupgradeneeded = function(){ try{ req.result.createObjectStore('kv'); }catch(e){} };
+                req.onsuccess = function(){
+                    try{
+                        const g = req.result.transaction('kv','readonly').objectStore('kv').get('bomb_ban_data');
+                        g.onsuccess = function(){ if(g.result) adopt(g.result); else adoptFromCache(); };
+                        g.onerror = adoptFromCache;
+                    }catch(e){ adoptFromCache(); }
+                };
+                req.onerror = adoptFromCache;
+            }catch(e){ adoptFromCache(); }
         }
 
         function renderUserList(){
