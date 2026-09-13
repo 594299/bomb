@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>💣 数字炸弹 · 心理战版</title>
-    <!-- 引入 Socket.io 客户端，代替原来的 PeerJS -->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.3.2/dist/peerjs.min.js"></script>
     <style>
         :root { --neon:#00f0ff; --blue:#4da6ff; --red:#ff6b6b; --green:#00ff88; --orange:#ff8800; color-scheme: dark; }
         /* 主题（全部为深色底+浅色字，杜绝黑底黑字） */
@@ -2487,10 +2486,7 @@ function cleanupRemote(){
     if(G.lobbyPeer) unpublishLobbyMqtt(); // 关房：从MQTT公共频道撤下房间卡
     if(G.spectators && G.spectators.length){ G.spectators.forEach(function(c){ try{c.close();}catch(e){} }); } // 观战连接一并清掉
     G.spectators = [];
-    if(socket && socket.connected) {
-        socket.disconnect();
-        socket.connect(); // 重新连接以获取新 id
-    }
+    if(G.peer){ try{G.peer.destroy();}catch(e){} G.peer=null; }
     if(G.lobbyPeer){ try{G.lobbyPeer.destroy();}catch(e){} G.lobbyPeer=null; }
     if(G.conn){ try{G.conn.close();}catch(e){} G.conn=null; }
     G.roomCode=''; G.roomPassword=''; G.isHost=false; G.myRole='';
@@ -2507,9 +2503,25 @@ function updateChatBadge(){
         chatBadge.classList.remove('show');
     }
 }
-// 移除 PeerJS 相关的 Ping 逻辑，Socket.io 自带心跳检测
-function startPing(){ /* 废弃 */ }
-function stopPing(){ /* 废弃 */ }
+let lastRemoteMsgTime = Date.now();
+function startPing(){
+    lastRemoteMsgTime = Date.now();
+    if(pingInterval) clearInterval(pingInterval);
+    pingInterval = setInterval(function(){
+        if(G.conn && G.conn.open){
+            try { G.conn.send({type:'ping'}); } catch(e) {}
+            // 超过15秒没收到对端任何消息 → 判定断线
+            if(Date.now() - lastRemoteMsgTime > 15000){
+                stopPing();
+                roomInfo.textContent='连接超时';
+                showCheatToast('⚠️ 对端无响应，连接已断开');
+                if(G.active){ endGame(); }
+                handleRemoteDisconnect();
+            }
+        }
+    }, 3000);
+}
+function stopPing(){ if(pingInterval){ clearInterval(pingInterval); pingInterval=null; } }
 
 function showChatNotification(sender, text) {
     chatNotifBody.textContent = sender + ': ' + text;
@@ -2676,22 +2688,270 @@ numberSelectInput.addEventListener('keydown', function(e){
 });
 
 // ========== PeerJS 连接管理 ==========
-// 删掉 PeerJS 复杂的重试逻辑，Socket.io 自动处理
-function createPeer(id, onOpen, onError) { /* 废弃 */ }
-function doCreatePeer(id, onOpen, onError) { /* 废弃 */ }
+function createPeer(id, onOpen, onError) {
+    if (typeof Peer === 'undefined') {
+        let waited = 0;
+        const waitTimer = setInterval(function(){
+            waited += 200;
+            if (typeof Peer !== 'undefined') {
+                clearInterval(waitTimer);
+                doCreatePeer(id, onOpen, onError);
+            } else if (waited >= 8000) {
+                clearInterval(waitTimer);
+                onError('PeerJS库加载失败，请检查网络');
+            }
+        }, 200);
+        return;
+    }
+    doCreatePeer(id, onOpen, onError);
+}
+function doCreatePeer(id, onOpen, onError) {
+    let currentPeer = null;
+    let opened = false;
+    let timeoutHandle = null;
+    function destroyCurrentPeer() {
+        if (currentPeer) {
+            try { currentPeer.destroy(); } catch(e) {}
+            currentPeer = null;
+        }
+    }
+    function tryServer(idx) {
+        if (opened) return;
+        if (idx >= PEER_SERVERS.length) { onError('所有信令服务器均不可用'); return; }
+        destroyCurrentPeer();
+        const server = PEER_SERVERS[idx];
+        setConnStatus('正在连接信令服务器 ' + (idx+1) + '/' + PEER_SERVERS.length + '...');
+        try {
+            currentPeer = new Peer(id, { debug:0, host:server.host, port:server.port, path:server.path, secure:true, config:{iceServers:ICE_SERVERS} });
+            currentPeer.on('open', function(peerId) {
+                if(opened) return;
+                opened=true;
+                if(timeoutHandle) clearTimeout(timeoutHandle);
+                G.peer = currentPeer;
+                setConnStatus('已连接到信令服务器');
+                onOpen(peerId);
+            });
+            // peer 与信令服务器断开 → 自动重连（仅限已 open 后）
+            currentPeer.on('disconnected', function(){
+                if(!opened) return;
+                setConnStatus('信令断开，正在重连...');
+                try { currentPeer.reconnect(); } catch(e) {
+                    // reconnect 失败，尝试重新创建 peer
+                    setTimeout(function(){
+                        if(G.peer === currentPeer){
+                            try{ currentPeer.destroy(); }catch(e){}
+                            G.peer = null;
+                            doCreatePeer(id, onOpen, onError);
+                        }
+                    }, 2000);
+                }
+            });
+            currentPeer.on('error', function(err) {
+                if(opened) return;
+                if(err.type==='unavailable-id'||err.type==='peer-unavailable'){
+                    onError('房间不存在或已关闭');
+                } else if(err.type==='network'||err.type==='server-error'||err.type==='socket-closed'){
+                    tryServer(idx+1); // 信令服务器问题，切换下一个
+                } else {
+                    tryServer(idx+1);
+                }
+            });
+            timeoutHandle = setTimeout(function(){
+                if(!opened) tryServer(idx+1);
+            }, 8000);
+        } catch(e) {
+            tryServer(idx+1);
+        }
+    }
+    tryServer(0);
+}
+
 function setJoinBtnState(enabled, label){
     const btn=$('join-room-btn');
     if(!btn) return;
     btn.disabled=!enabled;
     btn.textContent=label||'加入房间';
 }
-function attemptJoinRoom(code, retryCount) { /* 废弃 */ }
+function attemptJoinRoom(code, retryCount) {
+    retryCount = retryCount || 0;
+    const MAX_RETRIES = 8;
+    setJoinBtnState(false, '连接中...');
+    setConnStatus('正在连接房间 ' + code + '... (尝试 ' + (retryCount+1) + '/' + MAX_RETRIES + ')');
+    if (retryCount >= MAX_RETRIES) { setConnStatus('连接失败'); lobbyMessage.textContent = '❌ 连接超时，请稍后重试'; setJoinBtnState(true); return; }
+    createPeer('guest-' + code + '-' + retryCount, function(peerId) {
+        setConnStatus('已连接信令服务器，正在连接Host...');
+        try {
+            const conn = G.peer.connect('bomb-' + code, { reliable: true });
+            let connected = false;
+            conn.on('error', function(err){
+                if(connected) return;
+                if(err.type==='peer-unavailable'){
+                    lobbyMessage.textContent='❌ 房间不存在或已关闭';
+                    setConnStatus('连接失败');
+                    setJoinBtnState(true);
+                    if(G.peer){ try{G.peer.destroy();}catch(e){} G.peer=null; }
+                }
+            });
+            setupConnection(conn);
+            // 4秒后仍未连接成功 → 重试（排除已成功的情况）
+            setTimeout(function(){
+                if(!G.conn || !G.conn.open){
+                    if(G.peer){ try{G.peer.destroy();}catch(e){} G.peer=null; }
+                    attemptJoinRoom(code, retryCount+1);
+                }
+            }, 4000);
+        } catch(e) {
+            setTimeout(function(){ attemptJoinRoom(code, retryCount+1); }, 1500);
+        }
+    }, function(errMsg) {
+        if(errMsg && errMsg.indexOf('房间不存在')>=0){
+            lobbyMessage.textContent='❌ 房间不存在或已关闭';
+            setJoinBtnState(true);
+        } else {
+            setConnStatus('信令服务器连接失败');
+            lobbyMessage.textContent='❌ 无法连接到信令服务器，请检查网络';
+            setJoinBtnState(true);
+        }
+    });
+}
 
 function setupConnection(conn){
     G.conn=conn;
-    // 监听后端发来的游戏消息
-    conn.on('game_msg',function(data){
+    function handleOpen(){
+        roomInfo.textContent='房间: '+G.roomCode;
+        if(G.isHost){
+            // 房主：等客机发密码验证通过后再进入设置
+            if(!G.roomPassword){
+                // 无密码房间，直接放行
+                enterRemoteSetup();
+            }
+            // 有密码房间：等 data.type==='password' 验证
+        } else {
+            // 客机：发送密码给房主验证（附带指纹+设备码+IP+设备信息，供封禁/举报系统识别）
+            getPlayer('p2').fingerprint = G.currentUser.fingerprint;
+            const id = currentIdentity();
+            
+            const sendAuth = async () => {
+                let pwdHash = '';
+                if(G.guestPassword) {
+                    const msgBuffer = new TextEncoder().encode(G.guestPassword);
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    pwdHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                }
+                // 向后兼容：同时发送明文和hash，只有新版host会优先验证hash
+                conn.send({type:'password', password: G.guestPassword || '', passwordHash: pwdHash, fp: id.fp, dc: id.dc, ip: id.ip, ua: id.ua, di: id.di});
+            };
+            sendAuth();
+        }
+        startPing();
+    }
+    function enterRemoteSetup(){
+        if(G.isHost){
+            waitingText.textContent='对手已加入！';
+            showRemoteSetup();
+        } else {
+            setJoinBtnState(true);
+            showRemoteSetup();
+            remoteStartBtn.style.display = 'none';
+            remoteReadyStatus.textContent = '请输入名称并点击准备';
+            setKeypadEnabled(false);
+        }
+    }
+    if(conn.open){ handleOpen(); } else { conn.on('open', handleOpen); }
+
+    conn.on('data',function(data){
+        lastRemoteMsgTime = Date.now(); // 收到任何消息都刷新超时计时
         if(data.type==='ping') return;
+        // 身份补报：对方连上后才拿到IP，更新玩家卡和留档
+        if(data.type==='identity_update'){
+            const rp = G.isHost ? getPlayer('p2') : getPlayer('p1');
+            if(rp && data.fp === rp.fingerprint){
+                if(!isBadIP(data.ip)) rp.ip = data.ip;
+                if(data.dc && data.dc!=='unknown') rp.deviceCode = data.dc;
+            }
+            recordRemoteUser(data);
+            return;
+        }
+        // 密码验证（先过封禁闸：指纹/设备码/IP 任一命中直接拒收，清缓存也混不进来）
+        if(data.type==='password' && G.isHost){
+            const idc = { fp:data.fp, dc:data.dc, ip:data.ip };
+            if(isIdentityBanned(idc)){
+                const bi = G.banData.banReasons[idc.fp] || G.banData.banReasons[idc.dc] || G.banData.banReasons[idc.ip] || {};
+                try{ conn.send({type:'banned', reason: bi.reason || '违反社区规定', time: bi.time || ''}); }catch(e){}
+                setTimeout(function(){ try{conn.close();}catch(e){} }, 400);
+                return;
+            }
+            
+            // 使用 SHA-256 散列对比房间密码，防止明文密码被网络嗅探
+            const hashPassword = async (pwd) => {
+                 if(!pwd) return '';
+                 const msgBuffer = new TextEncoder().encode(pwd);
+                 const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+                 const hashArray = Array.from(new Uint8Array(hashBuffer));
+                 return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            };
+
+            hashPassword(G.roomPassword).then(expectedHash => {
+                let isOk = false;
+                // 新版客户端带了 hash，优先比对 hash，防止中间人拦截明文
+                if (data.passwordHash) {
+                    isOk = (data.passwordHash === expectedHash);
+                } else {
+                    // 兼容旧版客户端：比对明文
+                    isOk = (data.password === G.roomPassword);
+                }
+
+                if (isOk) {
+                    // 验证通过
+                    getPlayer('p2').fingerprint = data.fp || 'unknown';
+                    getPlayer('p2').deviceCode = data.dc || 'unknown';
+                    getPlayer('p2').ip = isBadIP(data.ip) ? 'unknown' : data.ip;
+                    
+                    grabRemoteIP(conn, function(realIP){ // 抠客机真实公网IP
+                        if(!realIP) return;
+                        getPlayer('p2').ip = realIP;
+                        recordRemoteUser({fp:data.fp, dc:data.dc, ip:realIP, di:data.di});
+                    });
+
+                    const hid = currentIdentity();
+                    conn.send({type:'password_ok', fp: hid.fp, dc: hid.dc, ip: hid.ip, di: hid.di});
+                    enterRemoteSetup();
+                } else {
+                    conn.send({type:'password_wrong'});
+                    setTimeout(function(){ try{conn.close();}catch(e){} }, 500);
+                    G.conn = null;
+                }
+            });
+            return;
+        }
+        if(data.type==='password_ok' && !G.isHost){
+            getPlayer('p1').fingerprint = data.fp || 'unknown';
+            getPlayer('p1').deviceCode = data.dc || 'unknown';
+            getPlayer('p1').ip = isBadIP(data.ip) ? 'unknown' : data.ip;
+            grabRemoteIP(conn, function(realIP){ // 抠房主真实公网IP
+                if(!realIP) return;
+                getPlayer('p1').ip = realIP;
+                recordRemoteUser({fp:data.fp, dc:data.dc, ip:realIP, di:data.di});
+            });
+            enterRemoteSetup();
+            return;
+        }
+        if(data.type==='banned' && !G.isHost){ // 被房主/后台封号：直接进小黑屋
+            cleanupRemote();
+            showBanScreen(data.reason, data.time);
+            return;
+        }
+        if(data.type==='password_wrong' && !G.isHost){
+            lobbyMessage.textContent='❌ 密码错误';
+            cleanupRemote();
+            showRemoteLobby();
+            return;
+        }
+        if(data.type==='pause_request'){
+            handleRemotePauseRequest();
+            return;
+        }
         if(data.type==='chat'){
             addChatMessage(data.senderName, data.text, data.senderName===getMyPlayer().name?'mine':'remote');
             if(data.senderName!==getMyPlayer().name && battleArea.style.display==='flex' && chatOverlay.classList.contains('hidden')){
@@ -2711,17 +2971,24 @@ function setupConnection(conn){
             startNewRound();
         }
         else if(data.type==='join' && G.isHost){
-            // 客机发送身份信息，开始游戏
+            // 客机带密码验证加入
+            if(G.roomPassword && data.password !== G.roomPassword){
+                conn.send({type:'private', title:'❌ 密码错误', text:'加入被拒绝'});
+                setTimeout(function(){ try{conn.close();}catch(e){} }, 500);
+                return;
+            }
+            // 防客机多开
+            if(G.remoteReady.guest && G.conn && G.conn.peer !== conn.peer){
+                conn.send({type:'private', title:'❌ 房间已满', text:'加入被拒绝'});
+                setTimeout(function(){ try{conn.close();}catch(e){} }, 500);
+                return;
+            }
+            G.conn = conn; // 确认为有效客机
             getPlayer('p2').avatar = data.avatar;
             getPlayer('p2').name = data.name;
             remoteReadyStatus.textContent='对手已加入，准备开始';
             remoteStartBtn.disabled=false;
             setConnStatus('已连接，准备开始');
-            
-            // 收到加入信息后，立刻向客机同步初始设置
-            if(G.conn && G.conn.send) {
-                G.conn.send({ type: 'sync', state: getSyncState() });
-            }
         }
         else if(data.type==='pause_req'){ handleRemotePauseRequest(); }
         else if(data.type==='pause_ans'){ handleRemotePauseAnswer(data.accept); }
@@ -2729,40 +2996,11 @@ function setupConnection(conn){
             showCheatToast(data.title + ': ' + data.text, 5000);
         }
     });
-
-    // 为 Socket.io 添加 send 包装，兼容旧的 PeerJS 接口
-    conn.send = function(payload) {
-        socket.emit('game_msg', { roomCode: G.roomCode, to: 'all', payload });
-    };
-
+    conn.on('close',function(){ handleRemoteDisconnect(); });
+    conn.on('error',function(){ handleRemoteDisconnect(); });
     startPing();
-    
-    // 连接成功后，直接进入远程设置房间
-    roomInfo.textContent='房间: '+G.roomCode;
-    if(G.isHost){
-        waitingText.textContent='对手已加入！';
-        showRemoteSetup();
-    } else {
-        setJoinBtnState(true);
-        showRemoteSetup();
-        remoteStartBtn.style.display = 'none';
-        remoteReadyStatus.textContent = '请输入名称并点击准备';
-        setKeypadEnabled(false);
-    }
 }
-
-// 监听房间状态变化
-socket.on('peer_disconnected', (data) => {
-    if (data.role === 'host') {
-        showCheatToast('⚠️ 房主已断开连接，房间解散');
-        endGame();
-    } else if (data.role === 'guest') {
-        showCheatToast('⚠️ 客机已断开连接');
-        if(G.active) endGame();
-    }
-});
-// 移除剩余的无效代码（旧的密码验证和解密）
-// (这部分现在由后端 Socket.io 代理完成)
+// 暂留空位
         if(data && data.type==='pause_request'){
             if(G.active && !G.paused){ $('pause-ask-overlay').classList.remove('hidden'); }
             else if(G.conn && G.conn.open){ try{G.conn.send({type:'pause_response', accept:false});}catch(e){} }
@@ -5591,10 +5829,8 @@ $('start-game-btn').addEventListener('click',function(){
     initGame();
 });
 // 远程对战按钮
-const socket = io('http://localhost:3000'); // 暂连本地后端测试
-socket.on('connect', () => { console.log('已连接服务器', socket.id); });
-
-$('create-room-btn').addEventListener('click', async function(){
+$('create-room-btn').addEventListener('click',function(){
+    G.roomCode=generateRoomCode();
     G.roomPassword = $('room-password-input').value.trim();
     const titleInput = $('room-title-input').value.trim();
     const titleCheck = moderateTextLocal(titleInput);
@@ -5608,58 +5844,43 @@ $('create-room-btn').addEventListener('click', async function(){
     remoteReadyStatus.textContent='';
     lobbyMessage.textContent='';
     setConnStatus('正在创建房间...');
-
-    const pwdHash = G.roomPassword ? await sha256(G.roomPassword) : null;
-    socket.emit('create_room', { passwordHash: pwdHash }, (res) => {
-        if(res.success){
-            G.roomCode = res.roomCode;
-            showRemoteWaiting();
-            waitingRoomCode.textContent=G.roomCode;
-            waitingText.textContent='等待对手加入...';
-            copyLinkBtn.style.display='block';
-            lobbyMessage.textContent='';
-            setConnStatus('房间已创建，可分享链接邀请对手');
-        } else {
-            setConnStatus('创建房间失败');
-            lobbyMessage.textContent = '❌ 无法创建房间，请检查网络连接';
-        }
+    createPeer('bomb-' + G.roomCode, function(peerId) {
+        showRemoteWaiting();
+        waitingRoomCode.textContent=G.roomCode;
+        waitingText.textContent='等待对手加入...';
+        copyLinkBtn.style.display='block';
+        lobbyMessage.textContent='';
+        setConnStatus('房间已创建，可分享链接邀请对手');
+        G.peer.on('connection',function(conn){
+            if(conn.metadata && conn.metadata.spectator){ setupSpectator(conn); return; } // 观战连接：不占对战位，随时可进
+            if(G.conn){ try{conn.close();}catch(e){} return; }
+            setupConnection(conn);
+        });
+        G.peer.on('error',function(err){
+            if(err.type==='unavailable-id'){
+                waitingText.textContent='房间码冲突，正在重新生成...';
+                setTimeout(function(){ $('create-room-btn').click(); }, 500);
+            } else if(err.type==='network'||err.type==='socket-closed'||err.type==='server-error'){
+                setConnStatus('网络异常，正在重连...');
+            } else {
+                setConnStatus('连接异常: ' + (err.type||err));
+            }
+        });
+    }, function(errMsg) {
+        setConnStatus('创建房间失败: ' + errMsg);
+        lobbyMessage.textContent = '❌ 无法创建房间，请检查网络连接';
     });
 });
-// ========== 加入房间改造 ==========
-$('join-room-btn').addEventListener('click', async function(){
+$('join-room-btn').addEventListener('click',function(){
     const code=joinRoomInput.value.trim().toUpperCase();
     if(code.length!==6){ lobbyMessage.textContent='请输入6位房间码'; return; }
-    
-    G.roomCode = code;
-    G.isHost = false;
-    G.myRole = 'guest';
-    G.remoteReady.host = false;
-    G.remoteReady.guest = false;
-    lobbyMessage.textContent = '';
-    setConnStatus('正在连接服务器...');
-
-    // 弹窗输入密码
-    const rawPwd = prompt('如果房间有密码请输入（没有请留空）：', '');
-    if (rawPwd === null) return; // 用户取消
-    const pwdHash = rawPwd ? await sha256(rawPwd) : null;
-
-    socket.emit('join_room', { roomCode: code, passwordHash: pwdHash, role: 'guest' }, (res) => {
-        if(res.success){
-            setConnStatus('已连接！');
-            setupConnection(socket); // 沿用以前的 setupConnection 逻辑，把 socket 当 conn 传进去
-            // 客机连接成功，立即发送自己的信息
-            const myAvatar = getMyPlayer().avatar || '🙂';
-            const myName = getMyPlayer().name || '玩家';
-            socket.emit('game_msg', { roomCode: G.roomCode, to: 'host', payload: { type: 'join', avatar: myAvatar, name: myName } });
-        } else {
-            setConnStatus('连接失败');
-            let msg = '❌ 无法加入房间';
-            if(res.reason === 'not_found') msg = '❌ 房间不存在或已解散';
-            if(res.reason === 'wrong_password') msg = '❌ 密码错误';
-            if(res.reason === 'room_full') msg = '❌ 房间已满';
-            lobbyMessage.textContent = msg;
-        }
-    });
+    G.roomCode=code;
+    G.isHost=false;
+    G.myRole='guest';
+    G.remoteReady.host=false;
+    G.remoteReady.guest=false;
+    lobbyMessage.textContent='';
+    attemptJoinRoom(code, 0);
 });
 copyLinkBtn.addEventListener('click',function(){
     const baseUrl = window.location.origin + window.location.pathname;
