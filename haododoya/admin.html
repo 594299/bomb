@@ -570,6 +570,18 @@
             <!-- 数据管理 -->
             <div class="tab-content" id="tab-data">
                 <div class="section">
+                    <div class="section-title">🗄️ 本地文件数据库</div>
+                    <div class="setting-row">
+                        <button class="btn small success" id="connect-filedb-btn">📁 连接数据文件夹</button>
+                        <button class="btn small warning hidden" id="reauth-filedb-btn">🔓 重新授权文件夹</button>
+                        <span id="filedb-status" style="color:#888;font-size:0.75rem;">检测中...</span>
+                    </div>
+                    <div style="color:#666;font-size:0.7rem;line-height:1.6;">
+                        连接后，所有后台数据（封禁名单/用户档案/举报/设置/登录记忆）实时写入该文件夹下的 <b>bomb_database.json</b>。<br>
+                        浏览器"清除全部网站数据"也碰不到真实文件——本地机就是数据库。重新打开后台会自动从文件恢复。（需 Chrome / Edge）
+                    </div>
+                </div>
+                <div class="section">
                     <div class="section-title">💾 数据管理</div>
                     <div class="export-import">
                         <button class="btn small" id="export-data-btn">📤 导出所有数据</button>
@@ -687,6 +699,106 @@
 
         function saveJSON(key, data){
             try{ localStorage.setItem(key, JSON.stringify(data)); }catch(e){}
+            scheduleFileDbWrite(); // 同步写入本地文件数据库
+        }
+
+        // ========== 本地文件数据库（File System Access API，需 Chrome/Edge） ==========
+        // 把所有 bomb_* 数据写进用户授权文件夹里的 bomb_database.json——
+        // 浏览器"清除全部网站数据"也碰不到真实文件，本地机就是数据库
+        const FILE_DB_NAME = 'bomb_database.json';
+        let dirHandle = null;
+        let fileWriteTimer = null;
+
+        function fileDbSupported(){ return typeof window.showDirectoryPicker === 'function'; }
+        function idbKv(mode, fn){
+            return new Promise(function(resolve){
+                try{
+                    const req = indexedDB.open('bomb_vault', 1);
+                    req.onupgradeneeded = function(){ try{ req.result.createObjectStore('kv'); }catch(e){} };
+                    req.onsuccess = function(){
+                        try{ fn(req.result.transaction('kv', mode).objectStore('kv'), resolve); }
+                        catch(e){ resolve(null); }
+                    };
+                    req.onerror = function(){ resolve(null); };
+                }catch(e){ resolve(null); }
+            });
+        }
+        function idbGet(key){
+            return idbKv('readonly', function(store, resolve){
+                const g = store.get(key);
+                g.onsuccess = function(){ resolve(g.result || null); };
+                g.onerror = function(){ resolve(null); };
+            });
+        }
+        function idbPut(key, val){
+            return idbKv('readwrite', function(store, resolve){
+                try{ store.put(val, key); }catch(e){}
+                resolve(true);
+            });
+        }
+        async function loadDirHandle(){
+            if(dirHandle) return dirHandle;
+            try{ const h = await idbGet('bomb_dir_handle'); if(h){ dirHandle = h; return h; } }catch(e){}
+            return null;
+        }
+        async function ensureFilePermission(h, ask){
+            try{
+                const opts = { mode: 'readwrite' };
+                if(await h.queryPermission(opts) === 'granted') return true;
+                if(ask && await h.requestPermission(opts) === 'granted') return true;
+            }catch(e){}
+            return false;
+        }
+        // 读文件数据库（无授权/无文件/未连接 → null）
+        async function readFileDb(){
+            const h = await loadDirHandle();
+            if(!h || !(await ensureFilePermission(h, false))) return null;
+            try{
+                const fh = await h.getFileHandle(FILE_DB_NAME, { create: false });
+                const f = await fh.getFile();
+                return JSON.parse(await f.text());
+            }catch(e){ return null; }
+        }
+        // 写文件数据库：全量 bomb_* 键打包
+        async function writeFileDb(){
+            const h = await loadDirHandle();
+            if(!h || !(await ensureFilePermission(h, false))) return false;
+            try{
+                const data = {};
+                for(let key in localStorage){
+                    if(key.indexOf('bomb_') === 0 && localStorage.hasOwnProperty(key)){
+                        try{ data[key] = JSON.parse(localStorage.getItem(key)); }catch(e){}
+                    }
+                }
+                const fh = await h.getFileHandle(FILE_DB_NAME, { create: true });
+                const w = await fh.createWritable();
+                await w.write(JSON.stringify({ updatedAt: new Date().toLocaleString(), data: data }, null, 2));
+                await w.close();
+                updateFileDbStatus();
+                return true;
+            }catch(e){ return false; }
+        }
+        function scheduleFileDbWrite(){ // 防抖：连续操作合并成一次写盘
+            if(!dirHandle) return;
+            clearTimeout(fileWriteTimer);
+            fileWriteTimer = setTimeout(writeFileDb, 800);
+        }
+        // 启动时从文件恢复（浏览器存储被清过时，文件是最终副本；文件内容优先）
+        async function syncFromFileDb(){
+            const db = await readFileDb();
+            if(!db || !db.data) return false;
+            let changed = false;
+            Object.keys(db.data).forEach(function(key){
+                if(key.indexOf('bomb_') !== 0) return;
+                try{
+                    const incoming = JSON.stringify(db.data[key]);
+                    if(localStorage.getItem(key) !== incoming){
+                        localStorage.setItem(key, incoming);
+                        changed = true;
+                    }
+                }catch(e){}
+            });
+            return changed;
         }
 
         // ========== 日志系统 ==========
@@ -744,13 +856,51 @@
         }
         const authReady = loadAuth();
 
+        // ========== 登录凭证记忆（重新打开页面账户名/密码自动回填） ==========
+        // 双副本：localStorage + Cookie（清其中一个还能活）；file:// 下浏览器密码本不工作，这份自管记忆兜底
+        function saveRememberedAuth(u, p){
+            let raw = '';
+            try{ raw = btoa(unescape(encodeURIComponent(JSON.stringify({u:u, p:p})))); }catch(e){ return; }
+            try{ localStorage.setItem('bomb_admin_auth', raw); }catch(e){}
+            try{ document.cookie = 'bomb_admin_auth=' + encodeURIComponent(raw) + ';path=/;max-age=315360000;SameSite=Lax'; }catch(e){}
+            // http/https 环境下顺手存进浏览器密码本
+            try{
+                if(window.PasswordCredential && navigator.credentials && navigator.credentials.store){
+                    navigator.credentials.store(new PasswordCredential({ id: u, password: p, name: u }));
+                }
+            }catch(e){}
+        }
+        function loadRememberedAuth(){
+            let raw = null;
+            try{ raw = localStorage.getItem('bomb_admin_auth'); }catch(e){}
+            if(!raw){
+                try{
+                    const m = document.cookie.match(/(?:^|;\s*)bomb_admin_auth=([^;]+)/);
+                    if(m) raw = decodeURIComponent(m[1]);
+                }catch(e){}
+            }
+            if(!raw) return null;
+            try{ return JSON.parse(decodeURIComponent(escape(atob(raw)))); }catch(e){ return null; }
+        }
+        // 打开页面即回填上次登录的账户名和密码
+        (function prefillAuth(){
+            const saved = loadRememberedAuth();
+            if(saved){
+                if(saved.u) $('username-input').value = saved.u;
+                if(saved.p) $('password-input').value = saved.p;
+            }
+        })();
+
         async function verifyAuth(){
             await authReady;
-            const uHash = await sha256($('username-input').value.trim());
-            const pHash = await sha256($('password-input').value);
+            const u = $('username-input').value.trim();
+            const p = $('password-input').value;
+            const uHash = await sha256(u);
+            const pHash = await sha256(p);
             if(uHash === ADMIN_USER_HASH && pHash === ADMIN_PASSWORD_HASH){
                 authed = true;
                 $('auth-msg').textContent = '';
+                saveRememberedAuth(u, p); // 登录成功才记忆，下次打开自动回填
                 showMainPanel();
                 addLog('success', '管理员登录成功');
             } else {
@@ -1113,7 +1263,10 @@
             }
 
             users.forEach(user => {
-                const isBanned = banData.bannedFingerprints.includes(user.fingerprint);
+                // 三通道任一命中都算已封：设备码（主）/ 指纹 / IP
+                const isBanned = banData.bannedFingerprints.includes(user.fingerprint)
+                    || (!!user.deviceCode && banData.bannedDevices.includes(user.deviceCode))
+                    || (!!user.ip && user.ip !== '未知' && user.ip !== '获取中...' && banData.bannedIPs.includes(user.ip));
                 const item = document.createElement('div');
                 item.className = 'user-item ' + (isBanned ? 'banned' : 'normal');
 
@@ -1169,21 +1322,41 @@
             const container = $('ban-list-container');
             container.innerHTML = '';
 
-            if(banData.bannedFingerprints.length === 0){
+            // 设备码为主凭证：先按设备码列条目，指纹/IP 归并到对应条目下
+            const entries = []; // {dc, fp, user}
+            banData.bannedDevices.forEach(dc => {
+                const user = banData.userRecords.find(u => u.deviceCode === dc);
+                entries.push({ dc: dc, fp: user ? user.fingerprint : '', user: user || null });
+            });
+            banData.bannedFingerprints.forEach(fp => {
+                const user = banData.userRecords.find(u => u.fingerprint === fp);
+                const covered = entries.find(e => (user && e.user === user) || e.fp === fp);
+                if(covered){ if(!covered.fp) covered.fp = fp; return; } // 已随设备码条目展示
+                entries.push({ dc: user ? (user.deviceCode || '') : '', fp: fp, user: user || null });
+            });
+            banData.bannedIPs.forEach(ip => {
+                const user = banData.userRecords.find(u => u.ip === ip);
+                if(user && entries.find(e => e.user === user)) return; // 已随设备码/指纹条目展示
+                if(!user) entries.push({ dc: '', fp: '', ip: ip, user: null }); // 纯IP封禁（无档案）
+            });
+
+            if(entries.length === 0){
                 container.innerHTML = '<div style="color:#888;padding:10px;">暂无封禁记录</div>';
                 return;
             }
 
-            banData.bannedFingerprints.forEach(fp => {
-                const user = banData.userRecords.find(u => u.fingerprint === fp);
-                const info = banData.banReasons[fp] || {};
+            entries.forEach(e => {
+                const fp = e.fp || (e.user && e.user.fingerprint) || '';
+                const dc = e.dc || (e.user && e.user.deviceCode) || '';
+                const ip = e.ip || (e.user && e.user.ip) || '';
+                const info = banData.banReasons[dc] || banData.banReasons[fp] || banData.banReasons[ip] || {};
                 const item = document.createElement('div');
                 item.className = 'user-item banned';
                 item.innerHTML = `
                     <div class="user-info">
-                        <div class="fp">指纹: ${escapeHtml(fp)}</div>
-                        ${user ? '<div class="ip">IP: ' + escapeHtml(user.ip) + '</div>' : ''}
-                        ${user && user.deviceCode ? '<div class="fp">设备码: ' + escapeHtml(user.deviceCode) + '</div>' : ''}
+                        ${dc ? '<div class="fp">设备码: ' + escapeHtml(dc) + ' <span style="color:#00f0ff;font-size:0.65rem;">[主凭证·清缓存不变]</span></div>' : ''}
+                        ${fp ? '<div class="fp">指纹: ' + escapeHtml(fp) + ' <span style="color:#888;font-size:0.65rem;">[辅助]</span></div>' : ''}
+                        ${ip ? '<div class="ip">IP: ' + escapeHtml(ip) + ' <span style="color:#888;font-size:0.65rem;">[辅助]</span></div>' : ''}
                         <div class="time" style="color:#ff8888;">原因: ${escapeHtml(info.reason || '未填写')}</div>
                         ${info.time ? '<div class="time">时间: ' + escapeHtml(info.time) + '</div>' : ''}
                     </div>
@@ -1192,18 +1365,17 @@
                 unbanBtn.textContent = '解封';
                 unbanBtn.className = 'btn small success';
                 unbanBtn.onclick = () => {
-                    banData.bannedFingerprints = banData.bannedFingerprints.filter(f => f !== fp);
-                    if(user){
-                        banData.bannedIPs = banData.bannedIPs.filter(ip => ip !== user.ip);
-                        banData.bannedDevices = banData.bannedDevices.filter(dc => dc !== user.deviceCode);
-                        if(user.deviceCode) delete banData.banReasons[user.deviceCode];
-                    }
-                    delete banData.banReasons[fp];
+                    if(dc) banData.bannedDevices = banData.bannedDevices.filter(x => x !== dc);
+                    if(fp) banData.bannedFingerprints = banData.bannedFingerprints.filter(x => x !== fp);
+                    if(ip) banData.bannedIPs = banData.bannedIPs.filter(x => x !== ip);
+                    if(dc) delete banData.banReasons[dc];
+                    if(fp) delete banData.banReasons[fp];
+                    if(ip) delete banData.banReasons[ip];
                     saveBanData();
                     renderUserList();
                     renderBanList();
                     showToast('✅ 已解封');
-                    addLog('success', '用户已解封：' + fp);
+                    addLog('success', '用户已解封：' + (dc || fp || ip));
                 };
                 item.appendChild(unbanBtn);
                 container.appendChild(item);
@@ -1445,6 +1617,70 @@
             showToast('✅ 账户信息已修改' + (newUser ? '（浏览器密码本里的旧账户记得更新）' : ''));
             addLog('success', '管理账户信息已修改');
         });
+
+        // ========== 本地文件数据库：UI 与初始化 ==========
+        async function updateFileDbStatus(){
+            const el = $('filedb-status');
+            if(!fileDbSupported()){
+                el.textContent = '❌ 当前浏览器不支持（请用 Chrome / Edge）';
+                $('connect-filedb-btn').disabled = true;
+                return;
+            }
+            const h = await loadDirHandle();
+            if(!h){
+                el.textContent = '未连接（点左侧按钮选一个文件夹当数据库）';
+                $('reauth-filedb-btn').classList.add('hidden');
+                return;
+            }
+            if(await ensureFilePermission(h, false)){
+                el.textContent = '✅ 已连接：' + (h.name || '数据文件夹') + ' / ' + FILE_DB_NAME;
+                $('reauth-filedb-btn').classList.add('hidden');
+            } else {
+                el.textContent = '⚠️ 权限失效（浏览器清过数据），点"重新授权"即可，文件还在';
+                $('reauth-filedb-btn').classList.remove('hidden');
+            }
+        }
+        $('connect-filedb-btn').addEventListener('click', async () => {
+            if(!fileDbSupported()){ showToast('❌ 请用 Chrome / Edge 打开'); return; }
+            try{
+                dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                await idbPut('bomb_dir_handle', dirHandle);
+                if(await writeFileDb()){
+                    showToast('✅ 已连接，数据已写入 ' + FILE_DB_NAME);
+                    addLog('success', '本地文件数据库已连接：' + (dirHandle.name || ''));
+                } else {
+                    showToast('⚠️ 已连接，但写入失败');
+                }
+                updateFileDbStatus();
+            }catch(e){ /* 用户取消了选择 */ }
+        });
+        $('reauth-filedb-btn').addEventListener('click', async () => {
+            const h = await loadDirHandle();
+            if(h && await ensureFilePermission(h, true)){
+                showToast('✅ 授权成功');
+                await syncFromFileDb();
+                loadAllData();
+                renderDashboard();
+                writeFileDb();
+            } else {
+                showToast('❌ 授权被拒绝');
+            }
+            updateFileDbStatus();
+        });
+        // 打开后台：优先从文件数据库恢复（浏览器四副本被清光时它是最终副本）
+        (async function initFileDb(){
+            updateFileDbStatus();
+            const h = await loadDirHandle();
+            if(!h || !(await ensureFilePermission(h, false))) return;
+            const changed = await syncFromFileDb();
+            if(changed){
+                loadAllData();
+                renderDashboard();
+                showToast('🗄️ 已从本地文件数据库恢复数据');
+                addLog('info', '数据已从本地文件数据库恢复');
+            }
+            updateFileDbStatus();
+        })();
 
         // ========== 数据管理 ==========
         $('export-data-btn').addEventListener('click', () => {

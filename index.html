@@ -114,16 +114,15 @@
         #pause-request-btn { padding:6px 12px; border:1px solid rgba(255,204,102,0.4); border-radius:15px; background:rgba(255,204,102,0.08); color:#ffcc66; font-size:0.65rem; font-weight:700; cursor:pointer; margin-top:4px; }
         #pause-request-btn:disabled { opacity:0.4; cursor:default; }
         #codex-battle-btn { padding:6px 12px; border:1px solid rgba(0,240,255,0.4); border-radius:15px; background:rgba(0,240,255,0.08); color:var(--neon); font-size:0.65rem; font-weight:700; cursor:pointer; margin-top:4px; }
-        /* 技能演示：中央技能大卡（开局）→ 顶部小卡（播放中，不挡键盘不伪装成按钮） */
-        #demo-card { position:fixed; left:50%; top:36%; transform:translate(-50%,-50%); z-index:1400; background:rgba(8,12,18,0.93); border:2px solid var(--neon); border-radius:16px; padding:18px 32px; text-align:center; pointer-events:none; transition:all 0.6s ease; box-shadow:0 0 30px rgba(0,240,255,0.25); }
+        /* 技能演示：中央技能大卡（开局亮相 → 缩小飞进技能栏里那个能按的真按钮，然后消失） */
+        #demo-card { position:fixed; left:50%; top:36%; transform:translate(-50%,-50%); z-index:1400; background:rgba(8,12,18,0.93); border:2px solid var(--neon); border-radius:16px; padding:18px 32px; text-align:center; pointer-events:none; transition:left 0.7s ease, top 0.7s ease, transform 0.7s ease, opacity 0.7s ease; box-shadow:0 0 30px rgba(0,240,255,0.25); }
         #demo-card.hidden { display:none; }
         #demo-card-icon { font-size:3.2rem; line-height:1.1; }
         #demo-card-name { font-size:1.25rem; font-weight:900; color:var(--neon); margin-top:4px; }
         #demo-card-desc { font-size:0.75rem; color:#cde; margin-top:6px; max-width:260px; line-height:1.5; }
-        #demo-card.dock { top:76px; padding:4px 14px; border-radius:10px; box-shadow:none; background:rgba(8,12,18,0.85); opacity:0.85; }
-        #demo-card.dock #demo-card-icon { font-size:1.1rem; display:inline; vertical-align:middle; }
-        #demo-card.dock #demo-card-name { font-size:0.72rem; display:inline; margin-left:6px; vertical-align:middle; }
-        #demo-card.dock #demo-card-desc { display:none; }
+        /* 演示虚拟鼠标：真实移动到按钮上并点下去 */
+        #demo-vcursor { position:fixed; z-index:5200; font-size:1.55rem; pointer-events:none; display:none; transform:translate(-15%,-5%); filter:drop-shadow(0 2px 5px rgba(0,0,0,0.75)); }
+        .vpress { transform:scale(0.85) !important; transition:transform 0.1s !important; }
         /* 演示细节箭头：指向范围/技能栏/血条等教学要点 */
         .demo-arrow { position:fixed; z-index:4900; font-size:1.5rem; pointer-events:none; transform:translateX(-50%); filter:drop-shadow(0 0 6px rgba(255,200,0,0.9)); animation:demoArrowBounce 0.7s ease-in-out infinite; }
         @keyframes demoArrowBounce { 0%,100% { margin-top:0; } 50% { margin-top:-8px; } }
@@ -769,6 +768,24 @@
     }
     loadNext();
 })();
+// MQTT.js 带 fallback 的异步加载（大厅公共频道用，主源失败自动切备用源）
+(function(){
+    const sources = [
+        'https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js',
+        'https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.10.1/mqtt.min.js'
+    ];
+    let idx = 0;
+    function loadNext(){
+        if(idx >= sources.length){ window.__mqttReady = false; return; }
+        const s = document.createElement('script');
+        s.src = sources[idx++];
+        s.onload = function(){ window.__mqttReady = true; };
+        s.onerror = loadNext;
+        document.head.appendChild(s);
+    }
+    loadNext();
+})();
 </script>
 <script src="ai-persona.js"></script>
 <script src="ai-brain.js"></script>
@@ -1286,11 +1303,15 @@ function getMathFingerprint(){
 function getTimezoneName(){
     try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; }catch(e){ return ''; }
 }
-// 设备码：纯设备特征哈希（UA/平台/时区/屏幕/硬件/WebGL/字体/数学引擎），不存localStorage——
-// 每次打开重新计算结果都一样，清缓存/换浏览器数据也改不了它，配合IP封号清缓存无效
+// UA稳定化：抹掉所有版本号（Chrome/131.x → Chrome/#），浏览器升级后设备码不变，封禁不脱落
+function stableUA(){
+    return (navigator.userAgent || '').replace(/\s+/g, ' ').replace(/\d+(\.\d+)*/g, '#');
+}
+// 设备码（主账号凭证）：纯设备特征哈希（稳定UA/平台/时区/屏幕/硬件/WebGL/字体/数学引擎），不存localStorage——
+// 每次打开重新计算结果都一样，清缓存/换浏览器数据也改不了它，封禁以它为准，IP/指纹只做辅助验证
 function generateDeviceCode(){
     const str = [
-        navigator.userAgent,
+        stableUA(),
         navigator.platform || '',
         (navigator.languages || [navigator.language]).join(','),
         new Date().getTimezoneOffset(),
@@ -1329,32 +1350,177 @@ function getDeviceInfo(){
     };
 }
 
-// 获取用户IP：多接口轮询（国内网络逐个试），每个4秒超时，全挂才报"未知"
+// 无效IP判定：这些值都不算真IP，不允许覆盖档案里的好IP
+function isBadIP(ip){ return !ip || ip==='未知' || ip==='获取中...' || ip==='unknown'; }
+function isValidIP(ip){
+    return !!ip && (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip) || /^[0-9a-fA-F:]{3,}$/.test(ip));
+}
+// 获取用户IP：7个接口并行竞速（谁先回用谁），单接口5秒超时，总超时8秒；
+// 全部失败时退回上次缓存的IP（bomb_last_ip），尽力避免"未知"
 function getUserIP(callback){
+    let cached = '';
+    try{ cached = localStorage.getItem('bomb_last_ip') || ''; }catch(e){}
     const apis = [
-        'https://api.ipify.org?format=json',
-        'https://ipinfo.io/json',
-        'https://ip.useragentinfo.com/json'
+        { url:'https://api.ipify.org?format=json', key:'ip' },
+        { url:'https://api64.ipify.org?format=json', key:'ip' },
+        { url:'https://api.myip.com', key:'ip' },
+        { url:'https://ipinfo.io/json', key:'ip' },
+        { url:'https://ip.useragentinfo.com/json', key:'ip' },
+        { url:'https://api.ipify.org', text:true },
+        { url:'https://v4.ident.me', text:true }
     ];
     let done = false;
-    function finish(ip){ if(done) return; done = true; callback(ip); }
-    function tryNext(i){
-        if(i >= apis.length){ finish('未知'); return; }
-        let aborted = false;
-        const timer = setTimeout(function(){ aborted = true; tryNext(i+1); }, 4000);
+    function finish(ip){
+        if(done) return;
+        done = true;
+        if(isValidIP(ip)){ try{ localStorage.setItem('bomb_last_ip', ip); }catch(e){} }
+        callback(ip);
+    }
+    apis.forEach(function(a){
         try{
-            fetch(apis[i])
-                .then(function(r){ return r.json(); })
+            let aborted = false;
+            let ctrl = null;
+            const timer = setTimeout(function(){ aborted = true; if(ctrl) try{ctrl.abort();}catch(e){} }, 5000);
+            const opt = {};
+            if(window.AbortController){ ctrl = new AbortController(); opt.signal = ctrl.signal; }
+            fetch(a.url, opt)
+                .then(function(r){ return a.text ? r.text() : r.json(); })
                 .then(function(d){
                     clearTimeout(timer);
-                    if(aborted) return;
-                    const ip = d && d.ip;
-                    if(ip) finish(ip); else tryNext(i+1);
+                    if(aborted || done) return;
+                    const ip = a.text ? String(d).trim() : (d && d[a.key]);
+                    if(isValidIP(ip)) finish(ip);
                 })
-                .catch(function(){ clearTimeout(timer); if(!aborted) tryNext(i+1); });
-        }catch(e){ clearTimeout(timer); tryNext(i+1); }
-    }
-    tryNext(0);
+                .catch(function(){ clearTimeout(timer); });
+        }catch(e){}
+    });
+    setTimeout(function(){
+        if(!done){
+            done = true;
+            callback(isValidIP(cached) ? cached : '未知'); // 接口全挂：用上次记住的IP兜底
+        }
+    }, 8000);
+}
+// 当前身份载荷（联机/观战上报用）：IP没拿到就留空，绝不上报"获取中..."
+function currentIdentity(){
+    const ip = G.currentUser.ip;
+    return {
+        fp: G.currentUser.fingerprint,
+        dc: G.currentUser.deviceCode,
+        ip: isValidIP(ip) ? ip : '',
+        ua: navigator.userAgent,
+        di: G.currentUser.deviceInfo
+    };
+}
+// IP拿到后补报身份：已建立的联机/观战连接上更新对方档案里的IP
+function broadcastIdentity(){
+    const id = currentIdentity();
+    if(!id.ip) return;
+    [G.conn, G.specConn].forEach(function(c){
+        if(c && c.open){
+            try{ c.send({type:'identity_update', fp:id.fp, dc:id.dc, ip:id.ip, ua:id.ua, di:id.di}); }catch(e){}
+        }
+    });
+}
+// 从WebRTC连接里直接抠对方真实公网IP（remote-candidate 的 srflx 候选），不靠对方上报——
+// 只要没走TURN中继就能拿到；拿到 relay 说明对方走了中继，抠不到就留空（上报值兜底）
+function grabRemoteIP(conn, cb){
+    let done = false;
+    function finish(ip){ if(done) return; done = true; cb(ip); }
+    try{
+        const pc = conn && conn.peerConnection;
+        if(!pc || !pc.getStats){ finish(null); return; }
+        let tries = 0;
+        const timer = setInterval(function(){
+            if(++tries > 12){ clearInterval(timer); finish(null); return; }
+            try{
+                pc.getStats().then(function(stats){
+                    if(done) return;
+                    let pub = null, pri = null;
+                    stats.forEach(function(r){
+                        if(r.type !== 'remote-candidate') return;
+                        const ip = r.ip || r.address || '';
+                        if(!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) return; // .local(mDNS)/IPv6 跳过
+                        if(r.candidateType === 'relay') return; // 中继服务器IP，不是对方真实IP
+                        if(/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|127\.)/.test(ip)) pri = pri || ip; // 局域网IP做兜底
+                        else pub = pub || ip;
+                    });
+                    if(pub || pri){ clearInterval(timer); finish(pub || pri); }
+                }).catch(function(){});
+            }catch(e){}
+        }, 500);
+    }catch(e){ finish(null); }
+}
+
+// ========== 本地文件数据库（File System Access API，需 Chrome/Edge） ==========
+// 后台(haododoya/admin.html)授权文件夹后，封禁数据除四副本外再写一份真实文件 bomb_database.json——
+// 浏览器"清除全部网站数据"也碰不到它；浏览器存储全灭时从文件复活名单
+const FILE_DB_NAME = 'bomb_database.json';
+let dirHandle = null;
+let fileWriteTimer = null;
+function idbKv(mode, fn){
+    return new Promise(function(resolve){
+        try{
+            const req = indexedDB.open('bomb_vault', 1);
+            req.onupgradeneeded = function(){ try{ req.result.createObjectStore('kv'); }catch(e){} };
+            req.onsuccess = function(){
+                try{ fn(req.result.transaction('kv', mode).objectStore('kv'), resolve); }
+                catch(e){ resolve(null); }
+            };
+            req.onerror = function(){ resolve(null); };
+        }catch(e){ resolve(null); }
+    });
+}
+function idbGet(key){
+    return idbKv('readonly', function(store, resolve){
+        const g = store.get(key);
+        g.onsuccess = function(){ resolve(g.result || null); };
+        g.onerror = function(){ resolve(null); };
+    });
+}
+async function loadDirHandle(){
+    if(dirHandle) return dirHandle;
+    try{ const h = await idbGet('bomb_dir_handle'); if(h){ dirHandle = h; return h; } }catch(e){}
+    return null;
+}
+async function ensureFilePermission(h, ask){
+    try{
+        const opts = { mode: 'readwrite' };
+        if(await h.queryPermission(opts) === 'granted') return true;
+        if(ask && await h.requestPermission(opts) === 'granted') return true;
+    }catch(e){}
+    return false;
+}
+async function readFileDb(){
+    const h = await loadDirHandle();
+    if(!h || !(await ensureFilePermission(h, false))) return null;
+    try{
+        const fh = await h.getFileHandle(FILE_DB_NAME, { create: false });
+        const f = await fh.getFile();
+        return JSON.parse(await f.text());
+    }catch(e){ return null; }
+}
+async function writeFileDb(){
+    const h = await loadDirHandle();
+    if(!h || !(await ensureFilePermission(h, false))) return false;
+    try{
+        const data = {};
+        for(let key in localStorage){
+            if(key.indexOf('bomb_') === 0 && localStorage.hasOwnProperty(key)){
+                try{ data[key] = JSON.parse(localStorage.getItem(key)); }catch(e){}
+            }
+        }
+        const fh = await h.getFileHandle(FILE_DB_NAME, { create: true });
+        const w = await fh.createWritable();
+        await w.write(JSON.stringify({ updatedAt: new Date().toLocaleString(), data: data }, null, 2));
+        await w.close();
+        return true;
+    }catch(e){ return false; }
+}
+function scheduleFileDbWrite(){ // 防抖：连续操作合并成一次写盘
+    if(!dirHandle) return;
+    clearTimeout(fileWriteTimer);
+    fileWriteTimer = setTimeout(writeFileDb, 800);
 }
 
 // 封禁数据存储
@@ -1388,8 +1554,9 @@ function saveBanData(){
     try{
         if(json.length < 3500) document.cookie = 'bomb_ban_data=' + encodeURIComponent(json) + ';path=/;max-age=315360000;SameSite=Lax';
     }catch(e){}
+    scheduleFileDbWrite(); // 第五副本：真实文件（清全部网站数据也碰不到）
 }
-// localStorage 被清时：依次从 IndexedDB / Cache Storage / Cookie 找活副本恢复
+// localStorage 被清时：依次从 IndexedDB / Cache Storage / Cookie / 本地文件 找活副本恢复
 function restoreBanDataCopies(){
     function hasContent(){
         return (G.banData.bannedFingerprints||[]).length || (G.banData.bannedIPs||[]).length ||
@@ -1414,11 +1581,21 @@ function restoreBanDataCopies(){
             checkBanned(); // 恢复名单后立即重新封禁
         }catch(e){}
     }
+    function adoptFromFile(){ // 最终副本：本地文件数据库
+        if(restored) return;
+        try{
+            readFileDb().then(function(db){
+                if(restored || !db || !db.data || !db.data.bomb_ban_data) return;
+                try{ adopt(JSON.stringify(db.data.bomb_ban_data)); }catch(e){}
+            });
+        }catch(e){}
+    }
     function adoptFromCookie(){
         try{
             const m = document.cookie.match(/(?:^|;\s*)bomb_ban_data=([^;]+)/);
             if(m) adopt(decodeURIComponent(m[1]));
         }catch(e){}
+        adoptFromFile();
     }
     function adoptFromCache(){
         try{
@@ -1444,6 +1621,7 @@ function restoreBanDataCopies(){
 }
 loadBanData();
 restoreBanDataCopies();
+loadDirHandle(); // 预热文件夹句柄：缓存后 saveBanData 才会自动写本地文件数据库
 
 // 记录当前用户信息（指纹+网络IP+设备码+设备信息，清缓存后IP和设备码依然不变）
 G.currentUser = {
@@ -1461,7 +1639,7 @@ G.currentUser = {
 function saveLocalUserRecord(){
     const existing = G.banData.userRecords.find(u=>u.fingerprint===G.currentUser.fingerprint || u.deviceCode===G.currentUser.deviceCode);
     if(existing){
-        existing.ip = G.currentUser.ip;
+        if(!isBadIP(G.currentUser.ip)) existing.ip = G.currentUser.ip; // 烂IP不覆盖好IP
         existing.deviceCode = G.currentUser.deviceCode;
         existing.deviceInfo = G.currentUser.deviceInfo;
         existing.lastVisit = new Date().toLocaleString();
@@ -1474,15 +1652,26 @@ function saveLocalUserRecord(){
 // 页面加载时先按指纹/设备码检查（此时G已定义）
 checkBanned();
 saveLocalUserRecord();
-getUserIP(function(ip){
-    G.currentUser.ip = ip;
-    saveLocalUserRecord();
-    // IP获取后再次检查封禁
-    checkBanned();
-});
+// IP获取（失败自动重试2次，拿到后补报给已连接的对方）
+(function fetchIPWithRetry(retries){
+    getUserIP(function(ip){
+        G.currentUser.ip = ip;
+        saveLocalUserRecord();
+        // IP获取后再次检查封禁
+        checkBanned();
+        broadcastIdentity(); // 联机/观战中补报真实IP
+        if(ip==='未知' && retries > 0){
+            setTimeout(function(){ fetchIPWithRetry(retries-1); }, 15000);
+        }
+    });
+})(2);
 
-// 封禁检测（页面加载时执行）：指纹 / 网络IP / 设备码 任一命中即封
+// 封禁检测（页面加载时执行）：设备码是主凭证（清缓存不变），指纹/网络IP 辅助验证，任一命中即封
 function checkBanned(){
+    if(G.banData.bannedDevices && G.banData.bannedDevices.indexOf(G.currentUser.deviceCode) >= 0){
+        showBanScreen();
+        return true;
+    }
     const fp = G.currentUser.fingerprint;
     if(G.banData.bannedFingerprints.indexOf(fp) >= 0){
         showBanScreen();
@@ -1492,40 +1681,39 @@ function checkBanned(){
         showBanScreen();
         return true;
     }
-    if(G.banData.bannedDevices && G.banData.bannedDevices.indexOf(G.currentUser.deviceCode) >= 0){
-        showBanScreen();
-        return true;
-    }
     return false;
 }
-// 远程加入者的封禁校验（房主侧）：对方报上来的 指纹/设备码/IP 任一命中就拒收
+// 远程加入者的封禁校验（房主侧）：设备码主查，指纹/IP 辅助，任一命中就拒收
 function isIdentityBanned(idc){
     if(!idc) return false;
-    if(idc.fp && G.banData.bannedFingerprints.indexOf(idc.fp) >= 0) return true;
     if(idc.dc && G.banData.bannedDevices && G.banData.bannedDevices.indexOf(idc.dc) >= 0) return true;
+    if(idc.fp && G.banData.bannedFingerprints.indexOf(idc.fp) >= 0) return true;
     if(idc.ip && G.banData.bannedIPs.indexOf(idc.ip) >= 0) return true;
     return false;
 }
-// 远程加入者留档：指纹/设备码/IP/UA 写进用户记录（后台可查可封）
+// 远程加入者留档：指纹/设备码/IP/UA/设备信息 写进用户记录（后台可查可封）
+// 烂值不盖好值：对方IP没拿到时不把档案里的真IP冲掉
 function recordRemoteUser(d){
     if(!d || !d.fp) return;
     const rec = G.banData.userRecords.find(u=>u.fingerprint===d.fp || (d.dc && u.deviceCode===d.dc));
     if(rec){
-        rec.ip = d.ip || rec.ip;
-        rec.deviceCode = d.dc || rec.deviceCode;
+        if(!isBadIP(d.ip)) rec.ip = d.ip;
+        if(d.dc && d.dc!=='unknown') rec.deviceCode = d.dc;
         rec.userAgent = d.ua || rec.userAgent;
+        if(d.di) rec.deviceInfo = d.di;
         rec.lastVisit = new Date().toLocaleString();
     } else {
         G.banData.userRecords.push({
-            fingerprint: d.fp, deviceCode: d.dc || 'unknown', ip: d.ip || '未知',
-            userAgent: d.ua || '', firstVisit: new Date().toLocaleString(), lastVisit: new Date().toLocaleString()
+            fingerprint: d.fp, deviceCode: d.dc || 'unknown', ip: isBadIP(d.ip) ? '未知' : d.ip,
+            userAgent: d.ua || '', deviceInfo: d.di || null,
+            firstVisit: new Date().toLocaleString(), lastVisit: new Date().toLocaleString()
         });
     }
     saveBanData();
 }
 function showBanScreen(remoteReason, remoteTime){
     const fp = G.currentUser.fingerprint;
-    const info = G.banData.banReasons[fp] || G.banData.banReasons[G.currentUser.ip] || G.banData.banReasons[G.currentUser.deviceCode] || {};
+    const info = G.banData.banReasons[G.currentUser.deviceCode] || G.banData.banReasons[fp] || G.banData.banReasons[G.currentUser.ip] || {};
     if(remoteReason) info.reason = remoteReason;
     if(remoteTime) info.time = remoteTime;
     const reason = escapeHtml(info.reason || '违反社区规定');
@@ -1656,47 +1844,128 @@ function startIntro(){
     }, 2000);
 }
 
-// ========== 演示自动操作（无虚拟鼠标：数字自动敲入输入框，技能走真实 useSkill 链路） ==========
-// 自动猜数：逐位把数字敲进输入框（与真人按键相同的显示/音效），再走与"确定"按钮完全相同的结算链路
+// ========== 演示虚拟鼠标：光标真实移动到按钮上点下去（技能/键盘全走真实按钮链路） ==========
+let vCursorEl = null;
+function getVCursor(){
+    if(!vCursorEl){
+        vCursorEl = document.createElement('div');
+        vCursorEl.id = 'demo-vcursor';
+        vCursorEl.textContent = '👆';
+        document.body.appendChild(vCursorEl);
+    }
+    vCursorEl.style.display = 'block';
+    return vCursorEl;
+}
+function hideVCursor(){ if(vCursorEl) vCursorEl.style.display = 'none'; }
+function vMoveTo(el, dur){ // 平滑移动到元素中心，返回 Promise
+    return new Promise(function(res){
+        if(!el){ res(false); return; }
+        const c = getVCursor();
+        const r = el.getBoundingClientRect();
+        c.style.transition = 'left ' + (dur||450) + 'ms ease-in-out, top ' + (dur||450) + 'ms ease-in-out';
+        requestAnimationFrame(function(){
+            c.style.left = (r.left + r.width/2) + 'px';
+            c.style.top = (r.top + r.height/2) + 'px';
+        });
+        setTimeout(function(){ res(true); }, (dur||450) + 30);
+    });
+}
+function vClick(el, dur){ // 移过去→按压动效→真实 .click()
+    return vMoveTo(el, dur).then(function(ok){
+        if(!ok || !el) return false;
+        el.classList.add('vpress');
+        playSound('click');
+        setTimeout(function(){ el.classList.remove('vpress'); }, 160);
+        el.click();
+        return true;
+    });
+}
+
+// ========== 演示自动操作 ==========
+// 自动猜数：虚拟鼠标逐个点击键盘数字键，最后点"确定"——与真人操作完全同一条链路
+// 返回预计耗时（ms），demoStep 据此安排下一步
 function demoAutoGuess(n, who){
-    if(!G.active) return;
+    if(!G.active) return 0;
     who = who || 'p1';
-    if(G.currentPlayer!==who || G.processing) return; // 用户已抢先出手/回合已走：脚本不再重复猜
+    if(G.currentPlayer!==who || G.processing) return 0; // 用户已抢先出手/回合已走：脚本不再重复猜
+    const digits = String(n).split('');
+    if(who !== 'p1'){
+        // 演示AI侧没有键盘：逐位敲入输入框，再走真实结算
+        G.playerInput = '';
+        updateInputDisplay();
+        let i = 0;
+        (function typeNext(){
+            if(!G.demo || !G.active || G.currentPlayer!==who) return;
+            if(i < digits.length){
+                G.playerInput += digits[i++];
+                updateInputDisplay();
+                playSound('click');
+                setTimeout(typeNext, 200);
+            } else {
+                setTimeout(function(){
+                    if(!G.demo || !G.active || G.currentPlayer!==who || G.processing) return;
+                    G.playerInput = '';
+                    updateInputDisplay();
+                    processGuess(n, false, who);
+                }, 350);
+            }
+        })();
+        return digits.length*200 + 600;
+    }
+    // 玩家侧：虚拟鼠标真实点击键盘
     G.playerInput = '';
     updateInputDisplay();
-    const digits = String(n).split('');
     let i = 0;
-    function typeNext(){
+    (function clickNext(){
         if(!G.demo || !G.active || G.currentPlayer!==who) return; // 演示被中断/回合已变就停手
         if(i < digits.length){
-            G.playerInput += digits[i++];
-            updateInputDisplay();
-            playSound('click');
-            setTimeout(typeNext, 200);
+            const btn = document.querySelector('#keypad .key-btn[data-value="' + digits[i++] + '"]');
+            vClick(btn, 300).then(function(){ setTimeout(clickNext, 110); });
         } else {
             setTimeout(function(){
                 if(!G.demo || !G.active || G.currentPlayer!==who || G.processing) return;
-                G.playerInput = '';
-                updateInputDisplay();
-                processGuess(n, false, who);
-            }, 350);
+                vClick(document.querySelector('#keypad .key-btn[data-action="confirm"]'), 420);
+            }, 220);
         }
-    }
-    typeNext();
+    })();
+    return digits.length*440 + 900;
 }
-// 自动放技能：直接调用 useSkill（与点击技能按钮完全相同的链路，冷却/播报/生效全都真实发生）
-// 选数类技能（验证器/陷阱/黑洞/禁猜）会弹出选数浮层 → 等浮层弹出后自动填数并点确定
+// 自动放技能：虚拟鼠标找到技能栏里那个真按钮点下去（冷却/播报/生效全都真实发生）
+// 选数类技能（验证器/陷阱/黑洞/禁猜）会弹出选数浮层 → 光标移到输入框逐位敲数，再点确定
 function demoAutoUseSkill(skillId, who, pick){
-    if(!G.active) return;
+    if(!G.active) return 0;
     who = who || 'p1';
-    useSkill(skillId, who, true);
-    if(pick !== undefined && who === 'p1'){
+    if(who !== 'p1'){ useSkill(skillId, who, true); return 800; } // AI侧无按钮：原链路
+    const btn = document.querySelector('#skills-bar .skill-btn[data-sid="' + skillId + '"]');
+    if(!btn || btn.disabled){ useSkill(skillId, who, true); return 800; } // 按钮找不到/不可点：兜底走原链路
+    vClick(btn, 550);
+    let est = 900;
+    if(pick !== undefined){
+        est = 900 + 800 + String(pick).length*330 + 900;
         setTimeout(function(){
             if(!G.demo || !numberPickerCallback) return; // 浮层没弹出（技能被拦截等）就算了
-            numberSelectInput.value = pick;
-            numberSelectConfirm.click();
-        }, 600);
+            vMoveTo(numberSelectInput, 420).then(function(){
+                if(!G.demo || !numberPickerCallback) return;
+                const digits = String(pick).split('');
+                let i = 0;
+                numberSelectInput.value = '';
+                (function typeNext(){
+                    if(!G.demo || !numberPickerCallback) return;
+                    if(i < digits.length){
+                        numberSelectInput.value += digits[i++];
+                        playSound('click');
+                        setTimeout(typeNext, 300);
+                    } else {
+                        setTimeout(function(){
+                            if(!G.demo || !numberPickerCallback) return;
+                            vClick(numberSelectConfirm, 420);
+                        }, 260);
+                    }
+                })();
+            });
+        }, 750);
     }
+    return est;
 }
 
 // 演示细节箭头：指向某个界面细节（关键细节配高亮聚光灯），下一步自动消失
@@ -1997,6 +2266,7 @@ function setConnStatus(msg){ if(connStatus) connStatus.textContent = msg || ''; 
 function cleanupRemote(){
     clearAllTimers();
     setJoinBtnState(true); // 断线/退房：恢复加入按钮
+    if(G.lobbyPeer) unpublishLobbyMqtt(); // 关房：从MQTT公共频道撤下房间卡
     if(G.spectators && G.spectators.length){ G.spectators.forEach(function(c){ try{c.close();}catch(e){} }); } // 观战连接一并清掉
     G.spectators = [];
     if(G.peer){ try{G.peer.destroy();}catch(e){} G.peer=null; }
@@ -2298,9 +2568,10 @@ function setupConnection(conn){
             }
             // 有密码房间：等 data.type==='password' 验证
         } else {
-            // 客机：发送密码给房主验证（附带指纹+设备码+IP，供封禁/举报系统识别）
+            // 客机：发送密码给房主验证（附带指纹+设备码+IP+设备信息，供封禁/举报系统识别）
             getPlayer('p2').fingerprint = G.currentUser.fingerprint;
-            conn.send({type:'password', password: G.guestPassword || '', fp: G.currentUser.fingerprint, dc: G.currentUser.deviceCode, ip: G.currentUser.ip, ua: navigator.userAgent});
+            const id = currentIdentity();
+            conn.send({type:'password', password: G.guestPassword || '', fp: id.fp, dc: id.dc, ip: id.ip, ua: id.ua, di: id.di});
         }
         startPing();
     }
@@ -2321,6 +2592,16 @@ function setupConnection(conn){
     conn.on('data',function(data){
         lastRemoteMsgTime = Date.now(); // 收到任何消息都刷新超时计时
         if(data.type==='ping') return;
+        // 身份补报：对方连上后才拿到IP，更新玩家卡和留档
+        if(data.type==='identity_update'){
+            const rp = G.isHost ? getPlayer('p2') : getPlayer('p1');
+            if(rp && data.fp === rp.fingerprint){
+                if(!isBadIP(data.ip)) rp.ip = data.ip;
+                if(data.dc && data.dc!=='unknown') rp.deviceCode = data.dc;
+            }
+            recordRemoteUser(data);
+            return;
+        }
         // 密码验证（先过封禁闸：指纹/设备码/IP 任一命中直接拒收，清缓存也混不进来）
         if(data.type==='password' && G.isHost){
             const idc = { fp:data.fp, dc:data.dc, ip:data.ip };
@@ -2334,9 +2615,15 @@ function setupConnection(conn){
                 getPlayer('p1').fingerprint = G.currentUser.fingerprint;
                 getPlayer('p2').fingerprint = data.fp || 'unknown';
                 getPlayer('p2').deviceCode = data.dc || 'unknown';
-                getPlayer('p2').ip = data.ip || 'unknown';
+                getPlayer('p2').ip = isBadIP(data.ip) ? 'unknown' : data.ip;
                 recordRemoteUser(data);
-                conn.send({type:'password_ok', fp: G.currentUser.fingerprint, dc: G.currentUser.deviceCode, ip: G.currentUser.ip});
+                grabRemoteIP(conn, function(realIP){ // 直接从WebRTC抠对方真实公网IP，不靠上报
+                    if(!realIP) return;
+                    getPlayer('p2').ip = realIP;
+                    recordRemoteUser({fp:data.fp, dc:data.dc, ip:realIP, ua:data.ua, di:data.di});
+                });
+                const hid = currentIdentity();
+                conn.send({type:'password_ok', fp: hid.fp, dc: hid.dc, ip: hid.ip, di: hid.di});
                 enterRemoteSetup();
             } else {
                 conn.send({type:'password_wrong'});
@@ -2348,7 +2635,12 @@ function setupConnection(conn){
         if(data.type==='password_ok' && !G.isHost){
             getPlayer('p1').fingerprint = data.fp || 'unknown';
             getPlayer('p1').deviceCode = data.dc || 'unknown';
-            getPlayer('p1').ip = data.ip || 'unknown';
+            getPlayer('p1').ip = isBadIP(data.ip) ? 'unknown' : data.ip;
+            grabRemoteIP(conn, function(realIP){ // 抠房主真实公网IP
+                if(!realIP) return;
+                getPlayer('p1').ip = realIP;
+                recordRemoteUser({fp:data.fp, dc:data.dc, ip:realIP, di:data.di});
+            });
             enterRemoteSetup();
             return;
         }
@@ -4741,6 +5033,7 @@ function renderSkills(){
     owner.skills.forEach(skill=>{
         const btn=document.createElement('button');
         btn.className='skill-btn';
+        btn.dataset.sid=skill.id; // 演示虚拟鼠标按这个找真按钮
         const cd=owner.cooldowns[skill.id]||0;
         const isLockedSkill = owner.lockedSkill === skill.id || owner.secondLockedSkill === skill.id;
         if(cd>0){
@@ -4813,6 +5106,7 @@ function hideAll(){
     [mainMenu,setupOverlay,tutorialMenu,remoteLobby,remoteWaiting,remoteSetupOverlay,$('settings-overlay'),$('lobby-list-overlay'),$('password-prompt-overlay')].forEach(el=>el.classList.add('hidden'));
     battleArea.style.display='none';
     if($('demo-card')) $('demo-card').classList.add('hidden');
+    hideVCursor();
     if($('pause-ask-overlay')) $('pause-ask-overlay').classList.add('hidden');
     if($('paused-overlay')) $('paused-overlay').classList.add('hidden');
     skillsBar.style.display='none';
@@ -5040,6 +5334,157 @@ copyLinkBtn.addEventListener('click',function(){
     } else showCheatToast('复制失败，手动复制: '+url);
 });
 
+// ========== 公共MQTT大厅频道（纯前端·免账号·免自建服务器） ==========
+// 原理：房主把房间卡（房码/标题/锁/状态）以 retained 消息发布到公共代理，
+// 大厅订阅同一频道即可稳定看到真人房间——不依赖 listAllPeers（公共PeerServer常禁用）
+// 注意：绝不发布房间密码，只有 hasPwd 标志；房码本来就是公开可枚举的
+const MQTT_BROKERS = [
+    'wss://broker.emqx.io:8084/mqtt',
+    'wss://broker.hivemq.com:8884/mqtt',
+    'wss://test.mosquitto.org:8081/mqtt'
+];
+const MQTT_TOPIC_PREFIX = 'bombgame-lobby-v1/rooms/';
+let mqttClient = null, mqttReady = false, mqttConnecting = false;
+const mqttWaiters = [];
+
+function withMqttClient(cb){ // cb(client|null)：库没加载好或全代理连不上 → cb(null)
+    if(mqttClient && mqttReady){ cb(mqttClient); return; }
+    mqttWaiters.push(cb);
+    if(mqttConnecting) return;
+    mqttConnecting = true;
+    // 等 mqtt.js 加载（最多8秒）
+    let waited = 0;
+    const libTimer = setInterval(function(){
+        if(window.__mqttReady && window.mqtt){
+            clearInterval(libTimer);
+            connectBroker(0);
+        } else if(waited >= 8000 || window.__mqttReady === false){
+            clearInterval(libTimer);
+            flushMqttWaiters(null);
+        }
+        waited += 200;
+    }, 200);
+    function connectBroker(idx){
+        if(idx >= MQTT_BROKERS.length){ flushMqttWaiters(null); return; }
+        let settled = false;
+        let c = null;
+        const timer = setTimeout(function(){
+            if(settled) return; settled = true;
+            try{ if(c) c.end(true); }catch(e){}
+            connectBroker(idx+1);
+        }, 5000);
+        try{
+            c = window.mqtt.connect(MQTT_BROKERS[idx], {
+                clientId: 'bomb-' + Math.random().toString(36).slice(2,12),
+                keepalive: 30, reconnectPeriod: 5000, connectTimeout: 4500, clean: true
+            });
+            c.on('connect', function(){
+                if(settled) return; settled = true;
+                clearTimeout(timer);
+                mqttClient = c; mqttReady = true;
+                c.on('close', function(){ mqttReady = false; });
+                c.on('error', function(){});
+                flushMqttWaiters(c);
+            });
+            c.on('error', function(){
+                if(settled) return; settled = true;
+                clearTimeout(timer);
+                try{ c.end(true); }catch(e){}
+                connectBroker(idx+1);
+            });
+        }catch(e){
+            clearTimeout(timer);
+            connectBroker(idx+1);
+        }
+    }
+    function flushMqttWaiters(c){
+        mqttConnecting = false;
+        while(mqttWaiters.length){
+            const w = mqttWaiters.shift();
+            try{ w(c); }catch(e){}
+        }
+    }
+}
+
+// ---- 房主侧：发布/心跳/撤销房间卡 ----
+let lobbyMqttTimer = null;
+function lobbyRoomCard(){
+    return {
+        code: G.roomCode,
+        name: (G.roomTitle || getMyPlayer().name || '玩家').slice(0, 15),
+        host: (getMyPlayer().name || '玩家').slice(0, 15),
+        hasPwd: !!G.roomPassword,
+        status: G.active ? 'p' : 'w',
+        min: G.minVal, max: G.maxVal,
+        hp: getPlayer('p1').maxHP,
+        spec: G.spectators ? G.spectators.length : 0,
+        ts: Date.now()
+    };
+}
+function publishLobbyMqtt(){
+    if(!G.isHost || !G.lobbyPeer || !G.roomCode) return; // 只有"已分享到大厅"的房才发布
+    withMqttClient(function(c){
+        if(!c) return;
+        try{ c.publish(MQTT_TOPIC_PREFIX + G.roomCode, JSON.stringify(lobbyRoomCard()), { retain: true, qos: 0 }); }catch(e){}
+    });
+}
+function startLobbyMqttHeartbeat(){
+    stopLobbyMqttHeartbeat();
+    publishLobbyMqtt();
+    lobbyMqttTimer = setInterval(publishLobbyMqtt, 30000); // 30s心跳：房间卡带时间戳，大厅端过滤超时的死房
+}
+function stopLobbyMqttHeartbeat(){
+    if(lobbyMqttTimer){ clearInterval(lobbyMqttTimer); lobbyMqttTimer = null; }
+}
+function unpublishLobbyMqtt(){
+    stopLobbyMqttHeartbeat();
+    const code = G.roomCode;
+    if(!code) return;
+    withMqttClient(function(c){
+        if(!c) return;
+        try{ c.publish(MQTT_TOPIC_PREFIX + code, '', { retain: true, qos: 0 }); }catch(e){} // 空载荷清除 retained
+    });
+}
+
+// ---- 大厅侧：订阅频道收集房间卡（retained 秒到，等2.5秒收齐） ----
+function fetchMqttLobbyRooms(cb){
+    let settled = false;
+    const hardTimer = setTimeout(function(){ finish([]); }, 12000); // 总兜底12秒
+    function finish(rooms){
+        if(settled) return; settled = true;
+        clearTimeout(hardTimer);
+        cb(rooms);
+    }
+    withMqttClient(function(c){
+        if(!c){ finish([]); return; }
+        const found = {};
+        const topic = MQTT_TOPIC_PREFIX + '+';
+        function onMsg(t, payload){
+            try{
+                if(!t || t.indexOf(MQTT_TOPIC_PREFIX) !== 0) return;
+                const d = JSON.parse(payload.toString());
+                if(d && d.code && Date.now() - (d.ts || 0) < 180000){ // 3分钟内有心跳的才算活房
+                    found[d.code] = d;
+                }
+            }catch(e){}
+        }
+        c.on('message', onMsg);
+        try{
+            c.subscribe(topic, { qos: 0 }, function(err){
+                if(err){ cleanup(); finish([]); return; }
+                setTimeout(function(){
+                    cleanup();
+                    finish(Object.keys(found).map(function(k){ return found[k]; }));
+                }, 2500);
+            });
+        }catch(e){ cleanup(); finish([]); }
+        function cleanup(){
+            try{ c.unsubscribe(topic); }catch(e){}
+            try{ c.removeListener('message', onMsg); }catch(e){}
+        }
+    });
+}
+
 // ========== 联机大厅 ==========
 G.lobbyPeer = null;
 G.spectators = []; // 观战连接列表（仅房主使用）
@@ -5060,6 +5505,7 @@ function shareToLobby(){
         const btn = $('share-to-lobby-btn');
         if(btn){ btn.textContent='✅ 已分享到大厅'; btn.disabled=true; }
         showCheatToast('🌐 已分享到联机大厅');
+        startLobbyMqttHeartbeat(); // 同步发布到MQTT公共频道，真人房间稳定可见
     }, function(err){
         G.peer = savedPeer;
         showCheatToast('❌ 分享失败: ' + err);
@@ -5074,7 +5520,8 @@ function updateLobbyStatus(){
     createPeer(lobbyPeerIdWith(G.active?'p':'w'), function(){
         G.lobbyPeer = G.peer;
         G.peer = savedPeer;
-    }, function(){ G.peer = savedPeer; });
+        publishLobbyMqtt(); // MQTT房间卡同步状态
+    }, function(){ G.peer = savedPeer; publishLobbyMqtt(); });
 }
 $('share-to-lobby-btn').addEventListener('click', shareToLobby);
 
@@ -5163,14 +5610,33 @@ function fetchLobbyList(){
     }
     renderAiOnly(false);
     function finish(){ finished = true; }
+    // 双通道并行：PeerJS listAllPeers（老通道，可能被禁用）+ MQTT公共频道（新通道，稳定）
+    let peerRooms = null, mqttRooms = null, tempPeerRef = null;
+    function tryRenderFinal(){
+        if(finished || peerRooms === null || mqttRooms === null) return;
+        finish();
+        const map = {};
+        mqttRooms.forEach(function(r){ // MQTT优先：信息更全（房主名/状态/观战数）
+            map[r.code] = {code:r.code, name:r.name||'玩家', host:r.host||'', hasPwd:!!r.hasPwd, isAi:false, status:r.status==='p'?'p':'w'};
+        });
+        peerRooms.forEach(function(r){ if(!map[r.code]) map[r.code] = r; });
+        const rooms = Object.keys(map).map(function(k){ return map[k]; });
+        aiFakeRooms.forEach(function(r){ rooms.push({code:r.code, name:r.name, hasPwd:r.hasPwd, isAi:true, aiLevel:r.aiLevel, status:'w'}); });
+        rooms.sort(function(){ return Math.random()-0.5; });
+        G.lastLobbyRooms = rooms;
+        renderLobbyRooms(rooms);
+        statusEl.textContent = '共 ' + rooms.length + ' 个房间' + (Object.keys(map).length===0 ? '（未发现真人房间）' : '');
+        if(tempPeerRef){ try{ tempPeerRef.destroy(); }catch(e){} tempPeerRef = null; }
+    }
+    fetchMqttLobbyRooms(function(rooms){ mqttRooms = rooms || []; tryRenderFinal(); });
     const savedPeer = G.peer || null; // 保护房主/连接中的 peer，别让大厅探测顶掉
     const tempId = 'lb-' + Math.random().toString(36).slice(2, 10);
     createPeer(tempId, function(){
         const tempPeer = G.peer;
+        tempPeerRef = tempPeer;
         G.peer = savedPeer; // 立即还回
         let listed = false;
         function showReal(peers){
-            if(finished) return; finish();
             const rooms = [];
             (peers || []).forEach(function(pid){
                 if(pid.indexOf('lobby-') === 0){
@@ -5193,27 +5659,25 @@ function fetchLobbyList(){
                     }
                 }
             });
-            aiFakeRooms.forEach(function(r){ rooms.push({code:r.code, name:r.name, hasPwd:r.hasPwd, isAi:true, aiLevel:r.aiLevel, status:'w'}); });
-            rooms.sort(function(){ return Math.random()-0.5; });
-            G.lastLobbyRooms = rooms;
-            renderLobbyRooms(rooms);
-            statusEl.textContent = '共 ' + rooms.length + ' 个房间';
-            try{ tempPeer.destroy(); }catch(e){}
+            listed = true;
+            peerRooms = rooms;
+            tryRenderFinal();
         }
         try{
-            tempPeer.listAllPeers(function(peers){ listed = true; showReal(peers); });
-            // listAllPeers 在部分信令服务器上被禁用（回调永不触发）→ 5秒超时保留AI房间
+            tempPeer.listAllPeers(function(peers){ showReal(peers); });
+            // listAllPeers 在部分信令服务器上被禁用（回调永不触发）→ 5秒超时，靠MQTT通道
             setTimeout(function(){
-                if(!listed && !finished){ finish(); statusEl.textContent = '共 ' + aiFakeRooms.length + ' 个房间（实时房间不可用）'; }
-                try{ tempPeer.destroy(); }catch(e){}
+                if(!listed){ peerRooms = []; tryRenderFinal(); }
+                if(tempPeerRef){ try{ tempPeerRef.destroy(); }catch(e){} tempPeerRef = null; }
             }, 5000);
-            tempPeer.on('error', function(){ if(!listed && !finished){ finish(); renderAiOnly(true); try{ tempPeer.destroy(); }catch(e){} } });
+            tempPeer.on('error', function(){ if(!listed){ peerRooms = []; tryRenderFinal(); } });
         } catch(e){
-            if(!finished){ finish(); renderAiOnly(true); }
-            try{ tempPeer.destroy(); }catch(e){}
+            peerRooms = [];
+            tryRenderFinal();
         }
     }, function(err){
-        if(!finished){ finish(); renderAiOnly(true); }
+        peerRooms = []; // PeerJS全挂没关系，MQTT通道照样能找到真人房间
+        tryRenderFinal();
     });
 }
 
@@ -5350,6 +5814,11 @@ function setupSpectator(conn){
                 return;
             }
             if(!G.roomPassword || data.password === G.roomPassword){
+                recordRemoteUser(data); // 观战者也留档（后台可查可封）
+                grabRemoteIP(conn, function(realIP){ // 抠观战者真实公网IP
+                    if(!realIP) return;
+                    recordRemoteUser({fp:data.fp, dc:data.dc, ip:realIP, ua:data.ua, di:data.di});
+                });
                 try{ conn.send({type:'spectate_ok'}); }catch(e){}
                 if(G.spectators.indexOf(conn)<0) G.spectators.push(conn);
                 updateSpectatorCount();
@@ -5362,6 +5831,10 @@ function setupSpectator(conn){
                 try{ conn.send({type:'password_wrong'}); }catch(e){}
                 setTimeout(function(){ try{conn.close();}catch(e){} }, 400);
             }
+        }
+        if(data.type==='identity_update'){ // 观战者IP补报：更新留档
+            recordRemoteUser(data);
+            return;
         }
         // 其它消息一律忽略：观战者没有操作权
     });
@@ -5380,6 +5853,7 @@ function updateSpectatorCount(n){
     const inBattle = battleArea.style.display==='flex';
     el.style.display = (inBattle && n>0) ? 'block' : 'none';
     el.textContent = '👁️ ' + n + ' 人观战';
+    if(G.isHost && G.lobbyPeer) publishLobbyMqtt(); // 观战人数同步到大厅房间卡
 }
 // 观战者侧：从大厅进入已开始的对局
 function spectateRoom(code, hasPwd){
@@ -5413,7 +5887,8 @@ function doSpectate(code){
 function setupSpectatorClient(conn, specPeer){
     G.specConn = conn;
     function handleOpen(){
-        try{ conn.send({type:'password', password:G.spectatePassword||'', fp:G.currentUser.fingerprint, dc:G.currentUser.deviceCode, ip:G.currentUser.ip, spectator:true}); }catch(e){}
+        const id = currentIdentity();
+        try{ conn.send({type:'password', password:G.spectatePassword||'', fp:id.fp, dc:id.dc, ip:id.ip, ua:id.ua, di:id.di, spectator:true}); }catch(e){}
     }
     if(conn.open) handleOpen(); else conn.on('open', handleOpen);
     conn.on('data', function(data){
@@ -5547,6 +6022,7 @@ surrenderBtn.addEventListener('click',function(){
 });
 gameOverBtn.addEventListener('click',function(){
     G.demo=null; // 退出技能演示
+    hideVCursor();
     if(G.spectating){ exitSpectate(); showMainMenu(); return; } // 退出观战
     if(G.mode.includes('remote')){ cleanupRemote(); }
     showMainMenu();
@@ -5966,14 +6442,32 @@ function startSkillDemo(skillId){
     surrenderBtn.style.display='none';
     rematchBtn.style.display='none';
     gameOverBtn.style.display='block'; // 随时可退出（返回主菜单）
-    // 中央技能大卡：先占C位让小朋友看清楚"这演的是谁"，3秒后缩到顶部不挡键盘
+    // 中央技能大卡：先占C位让小朋友看清楚"这演的是谁"，2.6秒后缩小飞进技能栏里那个能按的真按钮，然后消失
     const dc = $('demo-card');
     const nameParts = sk.name.split(' ');
     $('demo-card-icon').textContent = nameParts[0];
     $('demo-card-name').textContent = nameParts.slice(1).join(' ') || sk.name;
     $('demo-card-desc').textContent = sk.desc.split('。')[0];
-    dc.classList.remove('hidden','dock');
-    setTimeout(function(){ if(G.demo) dc.classList.add('dock'); }, 3000);
+    dc.style.left='50%'; dc.style.top='36%'; dc.style.transform='translate(-50%,-50%)'; dc.style.opacity='';
+    dc.classList.remove('hidden');
+    setTimeout(function(){
+        if(!G.demo) return;
+        const btn = document.querySelector('#skills-bar .skill-btn[data-sid="'+skillId+'"]');
+        if(btn){
+            const r = btn.getBoundingClientRect();
+            dc.style.left = (r.left + r.width/2) + 'px';
+            dc.style.top = (r.top + r.height/2) + 'px';
+            dc.style.transform = 'translate(-50%,-50%) scale(0.1)';
+            dc.style.opacity = '0';
+            btn.classList.add('demo-spotlight'); // 告诉观众：大卡变成了这个能按的按钮
+            setTimeout(function(){
+                dc.classList.add('hidden');
+                setTimeout(function(){ btn.classList.remove('demo-spotlight'); }, 2600);
+            }, 750);
+        } else {
+            dc.classList.add('hidden');
+        }
+    }, 2600);
     G.demo = { script: def.script.slice(), idx:0, skillName:sk.name };
     $('quick-chat-bar').style.display='flex'; // 演示布局与真实对战保持一致
     updateTurnIndicator();
@@ -5982,7 +6476,7 @@ function startSkillDemo(skillId){
 }
 function demoStep(){
     if(!G.demo || !G.active) return;
-    if(battleArea.style.display!=='flex'){ G.demo=null; $('demo-card').classList.add('hidden'); clearDemoPoint(); return; }
+    if(battleArea.style.display!=='flex'){ G.demo=null; $('demo-card').classList.add('hidden'); clearDemoPoint(); hideVCursor(); return; }
     clearDemoPoint(); // 上一步的箭头/聚光灯收起
     const s = G.demo.script[G.demo.idx++];
     if(!s){
@@ -5990,6 +6484,7 @@ function demoStep(){
         G.demo = null;
         $('demo-card').classList.add('hidden');
         clearDemoPoint();
+        hideVCursor();
         showCheatToast('🎬 演示结束！'+name+' 就是这么用的', 5000);
         messageDisplay.textContent='🎬 演示结束。点"返回主菜单"退出，或留在这局自由对局练练手';
         G.processing = false;
@@ -6010,10 +6505,11 @@ function demoStep(){
 
     const NUMBER_SKILLS = ['verifier','trap','blackhole','forbid'];
 
+    let actEst = 0; // 虚拟鼠标真实点击的预计耗时：下一步必须等它点完
     if(s.use){
         const who = s.who||'p1';
         const pick = (NUMBER_SKILLS.includes(s.use) && s.pick!==undefined) ? s.pick : undefined;
-        demoAutoUseSkill(s.use, who, pick); // 真实技能链路；选数类自动填数确定
+        actEst = demoAutoUseSkill(s.use, who, pick) || 0; // 虚拟鼠标点真技能按钮；选数类自动填数确定
     } else if(s.guess!==undefined || s.guessVerified){
         const who = s.who||'p1';
         let n;
@@ -6024,9 +6520,9 @@ function demoStep(){
         } else {
             n = s.guess==='bomb' ? G.bombNumber : s.guess;
         }
-        demoAutoGuess(n, who); // 数字自动敲入输入框，再走真实结算
+        actEst = demoAutoGuess(n, who) || 0; // 虚拟鼠标点键盘数字+确定，真实结算
     }
-    setTimeout(demoStep, next);
+    setTimeout(demoStep, Math.max(next, actEst + 500));
 }
 function openCodex(){
     const inBattle = battleArea.style.display==='flex'; // 对局内打开：纯查阅，不显示演示入口（演示会重开一局）
