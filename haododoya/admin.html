@@ -1275,12 +1275,32 @@
                 const devInfo = user.deviceInfo ? (escapeHtml(user.deviceInfo.platform||'') + ' | ' + escapeHtml(user.deviceInfo.screen||'') + ' | ' + (user.deviceInfo.cores||'?') + '核 | ' + escapeHtml(user.deviceInfo.gpu||'GPU未知') + ' | ' + escapeHtml(user.deviceInfo.timezone||'')) : '';
                 info.innerHTML = `
                     <div class="user-status ${isBanned ? 'banned' : 'normal'}">${isBanned ? '🚫 已封禁' : '✅ 正常'}</div>
-                    <div class="ip">IP: ${escapeHtml(user.ip)}</div>
+                    <div class="ip">IP: ${escapeHtml(user.ip)} <span class="ip-loc" style="color:#00f0ff;cursor:pointer;margin-left:5px;">[查询归属地]</span></div>
                     <div class="fp">指纹: ${escapeHtml(user.fingerprint)}</div>
                     <div class="fp">设备码: ${escapeHtml(user.deviceCode || '未知')}</div>
                     ${devInfo ? '<div class="time">设备: ' + devInfo + '</div>' : ''}
                     <div class="time">首次: ${escapeHtml(user.firstVisit)}</div>
                 `;
+                const locBtn = info.querySelector('.ip-loc');
+                if(locBtn) {
+                    locBtn.onclick = async () => {
+                        if(!user.ip || user.ip === '未知') return;
+                        locBtn.textContent = '[查询中...]';
+                        try {
+                            const res = await fetch('https://yunapi.cn/api/hqfwzgsd?ip=' + user.ip);
+                            const data = await res.json();
+                            if(data.status === 'success') {
+                                locBtn.textContent = `[${data.province} ${data.city}]`.replace(/ \[\]/g, '').replace(/\[\] /g, '');
+                                locBtn.style.cursor = 'default';
+                                locBtn.onclick = null;
+                            } else {
+                                locBtn.textContent = '[查询失败]';
+                            }
+                        } catch(e) {
+                            locBtn.textContent = '[查询出错]';
+                        }
+                    };
+                }
                 item.appendChild(info);
 
                 const btn = document.createElement('button');
