@@ -123,8 +123,9 @@
         /* 演示虚拟鼠标：真实移动到按钮上并点下去 */
         #demo-vcursor { position:fixed; z-index:5200; font-size:1.55rem; pointer-events:none; display:none; transform:translate(-15%,-5%); filter:drop-shadow(0 2px 5px rgba(0,0,0,0.75)); }
         .vpress { transform:scale(0.85) !important; transition:transform 0.1s !important; }
-        /* 演示细节箭头：指向范围/技能栏/血条等教学要点 */
+        /* 演示细节箭头：指向范围/技能栏/血条等教学要点（文字直接贴在目标旁边，不用看窗口文字） */
         .demo-arrow { position:fixed; z-index:4900; font-size:1.5rem; pointer-events:none; transform:translateX(-50%); filter:drop-shadow(0 0 6px rgba(255,200,0,0.9)); animation:demoArrowBounce 0.7s ease-in-out infinite; }
+        .demo-caption { position:fixed; z-index:4901; background:rgba(8,12,18,0.95); border:1.5px solid #ffcc66; color:#ffe9a8; font-size:0.72rem; font-weight:700; padding:6px 12px; border-radius:10px; pointer-events:none; transform:translateX(-50%); max-width:230px; text-align:center; line-height:1.45; box-shadow:0 0 16px rgba(255,200,0,0.35); animation:demoArrowBounce 0.7s ease-in-out infinite; }
         @keyframes demoArrowBounce { 0%,100% { margin-top:0; } 50% { margin-top:-8px; } }
         .demo-spotlight { outline:2px solid #ffcc66 !important; outline-offset:3px; border-radius:10px; box-shadow:0 0 18px rgba(255,200,80,0.55) !important; }
         #skills-bar { display:none; gap:4px; margin-top:4px; flex-wrap:wrap; justify-content:center; }
@@ -671,8 +672,8 @@
         <div style="color:#888;font-size:0.85rem;margin-bottom:5px;" id="number-select-range">范围：1 - 100</div>
         <input type="number" class="room-input" id="number-select-input" placeholder="输入数字">
         <div style="display:flex;gap:10px;margin-top:10px;">
-            <button class="btn" id="number-select-confirm" style="min-width:100px;margin-top:0;">确认</button>
             <button class="btn secondary" id="number-select-cancel" style="min-width:100px;margin-top:0;">取消</button>
+            <button class="btn" id="number-select-confirm" style="min-width:100px;margin-top:0;">确认</button>
         </div>
     </div>
     <div id="qc-picker-overlay" class="overlay hidden" style="z-index:3450;">
@@ -1912,7 +1913,7 @@ function demoAutoGuess(n, who){
         })();
         return digits.length*200 + 600;
     }
-    // 玩家侧：虚拟鼠标真实点击键盘
+    // 玩家侧：虚拟鼠标真实点击键盘（放慢节奏让观众看清每一次点击）
     G.playerInput = '';
     updateInputDisplay();
     let i = 0;
@@ -1920,15 +1921,15 @@ function demoAutoGuess(n, who){
         if(!G.demo || !G.active || G.currentPlayer!==who) return; // 演示被中断/回合已变就停手
         if(i < digits.length){
             const btn = document.querySelector('#keypad .key-btn[data-value="' + digits[i++] + '"]');
-            vClick(btn, 300).then(function(){ setTimeout(clickNext, 110); });
+            vClick(btn, 560).then(function(){ setTimeout(clickNext, 280); });
         } else {
             setTimeout(function(){
                 if(!G.demo || !G.active || G.currentPlayer!==who || G.processing) return;
-                vClick(document.querySelector('#keypad .key-btn[data-action="confirm"]'), 420);
-            }, 220);
+                vClick(document.querySelector('#keypad .key-btn[data-action="confirm"]'), 650);
+            }, 400);
         }
     })();
-    return digits.length*440 + 900;
+    return digits.length*860 + 1300;
 }
 // 自动放技能：虚拟鼠标找到技能栏里那个真按钮点下去（冷却/播报/生效全都真实发生）
 // 选数类技能（验证器/陷阱/黑洞/禁猜）会弹出选数浮层 → 光标移到输入框逐位敲数，再点确定
@@ -1938,13 +1939,13 @@ function demoAutoUseSkill(skillId, who, pick){
     if(who !== 'p1'){ useSkill(skillId, who, true); return 800; } // AI侧无按钮：原链路
     const btn = document.querySelector('#skills-bar .skill-btn[data-sid="' + skillId + '"]');
     if(!btn || btn.disabled){ useSkill(skillId, who, true); return 800; } // 按钮找不到/不可点：兜底走原链路
-    vClick(btn, 550);
-    let est = 900;
+    vClick(btn, 800);
+    let est = 1200;
     if(pick !== undefined){
-        est = 900 + 800 + String(pick).length*330 + 900;
+        est = 1200 + 1000 + String(pick).length*500 + 1400;
         setTimeout(function(){
             if(!G.demo || !numberPickerCallback) return; // 浮层没弹出（技能被拦截等）就算了
-            vMoveTo(numberSelectInput, 420).then(function(){
+            vMoveTo(numberSelectInput, 650).then(function(){
                 if(!G.demo || !numberPickerCallback) return;
                 const digits = String(pick).split('');
                 let i = 0;
@@ -1954,16 +1955,16 @@ function demoAutoUseSkill(skillId, who, pick){
                     if(i < digits.length){
                         numberSelectInput.value += digits[i++];
                         playSound('click');
-                        setTimeout(typeNext, 300);
+                        setTimeout(typeNext, 480);
                     } else {
                         setTimeout(function(){
                             if(!G.demo || !numberPickerCallback) return;
-                            vClick(numberSelectConfirm, 420);
-                        }, 260);
+                            vClick(numberSelectConfirm, 650);
+                        }, 420);
                     }
                 })();
             });
-        }, 750);
+        }, 950);
     }
     return est;
 }
@@ -1998,6 +1999,44 @@ function clearDemoPoint(){
     if(demoArrowEl) demoArrowEl.style.display = 'none';
     if(demoSpotEl){ demoSpotEl.classList.remove('demo-spotlight'); demoSpotEl = null; }
 }
+
+// ========== 提示指引箭头：验证器/透视/探测等私密提示一弹出，箭头+文字牌就指着它 ==========
+// 很多玩家不看字——把"看这里"直接钉在提示窗上，提示窗关了箭头自动消失
+let hintArrowEl = null, hintCapEl = null;
+function pointAtHint(target, caption){
+    clearHintPointer();
+    const el = (typeof target === 'string') ? document.querySelector(target) : target;
+    if(!el) return;
+    const r = el.getBoundingClientRect();
+    if(r.width === 0 && r.height === 0) return; // 元素不可见
+    if(!hintArrowEl){
+        hintArrowEl = document.createElement('div');
+        hintArrowEl.className = 'demo-arrow';
+        document.body.appendChild(hintArrowEl);
+        hintCapEl = document.createElement('div');
+        hintCapEl.className = 'demo-caption';
+        document.body.appendChild(hintCapEl);
+    }
+    const cx = r.left + r.width/2;
+    const above = r.top > 130; // 弹窗上方放得下就指上面，放不下指下面
+    hintArrowEl.textContent = above ? '⬇️' : '⬆️';
+    hintArrowEl.style.left = cx + 'px';
+    hintArrowEl.style.top = above ? (r.top - 36) + 'px' : (r.bottom + 4) + 'px';
+    hintArrowEl.style.display = 'block';
+    hintCapEl.textContent = caption || '👀 看这里！这是给你的提示';
+    hintCapEl.style.left = cx + 'px';
+    hintCapEl.style.top = above ? (r.top - 36 - 50) + 'px' : (r.bottom + 4 + 40) + 'px';
+    hintCapEl.style.display = 'block';
+}
+function clearHintPointer(){
+    if(hintArrowEl) hintArrowEl.style.display = 'none';
+    if(hintCapEl) hintCapEl.style.display = 'none';
+}
+// 提示窗消失（toast收起/隐私屏关闭）→ 箭头自动跟着消失
+new MutationObserver(function(){ if(!cheatToast.classList.contains('show')) clearHintPointer(); })
+    .observe(cheatToast, { attributes:true, attributeFilter:['class'] });
+new MutationObserver(function(){ if(!privacyScreen.classList.contains('active')) clearHintPointer(); })
+    .observe(privacyScreen, { attributes:true, attributeFilter:['class'] });
 
 // ========== 战绩存储 ==========
 function loadStats() {
@@ -2707,6 +2746,7 @@ function setupConnection(conn){
         }
         else if(data.type==='private'&&G.myRole==='guest'){
             showCheatToast(data.title + '：' + data.text, 5000);
+            if(data.title && !data.title.includes('拒绝')) pointAtHint('#cheat-toast', '👀 看这里！这是只有你能看到的提示');
             if(data.title && data.title.includes('拒绝')){
                 G.processing = false;
                 setKeypadEnabled(isMyTurn() && G.active);
@@ -4252,14 +4292,19 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
         // 提示类技能的使用本身也是秘密：本地/远程都不在公共消息栏播报，只私密告知使用者
         if(Privacy.isLocal()){
             Privacy.showSecret(getPlayer(user.id).name, title, text, null);
+            if(Privacy.needsPrivacy()) pointAtHint('.privacy-result', '👀 看这里！这是只有你能看到的提示'); // 箭头钉在私密窗上
         } else if(G.mode.includes('remote')){
             if(user.id === getMyPlayer().id) {
                 showCheatToast(title + '：' + text, 5000);
+                pointAtHint('#cheat-toast', '👀 看这里！这是只有你能看到的提示');
             } else if(G.isHost && user.id === 'p2' && G.conn) {
                 G.conn.send({type:'private', title:title, text:text});
             }
         } else {
-            if(user.id === 'p1' || G.mode==='tutorial') showCheatToast(title + '：' + text, 5000);
+            if(user.id === 'p1' || G.mode==='tutorial'){
+                showCheatToast(title + '：' + text, 5000);
+                pointAtHint('#cheat-toast', '👀 看这里！这是给你的提示');
+            }
             else if(G.mode.includes('ai')){
                 // AI的信息技能结果私密——清掉玩家自己此前的toast残留，避免误以为看到了AI的结果
                 cheatToast.classList.remove('show');
@@ -6522,7 +6567,7 @@ function demoStep(){
         }
         actEst = demoAutoGuess(n, who) || 0; // 虚拟鼠标点键盘数字+确定，真实结算
     }
-    setTimeout(demoStep, Math.max(next, actEst + 500));
+    setTimeout(demoStep, Math.max(next, actEst + 1000)); // 动作点完后多留1秒给观众看清结果
 }
 function openCodex(){
     const inBattle = battleArea.style.display==='flex'; // 对局内打开：纯查阅，不显示演示入口（演示会重开一局）
