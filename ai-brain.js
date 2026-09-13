@@ -430,11 +430,16 @@ function aiExpectedPostGuessEntropy(wc, guess){
 function aiExpectedPostVerifyEntropy(wc, guess){
     const total = aiWeightedTotal(wc);
     if(total<=0) return 0;
+    
+    // Performance Guard: Limit iteration count for entropy calculations
+    const limit = Math.min(wc.length, 300); 
+    const step = Math.max(1, Math.floor(wc.length / limit));
+    
     const missSet = [];
     let hit = 0;
-    for(let i=0; i<wc.length; i++){
+    for(let i=0; i<wc.length; i+=step){
         const o = wc[i];
-        if(o.n===guess) hit += Math.max(0, o.w||0);
+        if(o.n===guess) hit += Math.max(0, o.w||0) * step;
         else missSet.push(o);
     }
     const missP = Math.max(0, total-hit) / total;
@@ -453,10 +458,15 @@ function aiBlackholeRangeForBomb(low, high, pivot, bomb){
 function aiExpectedBlackholeOutcome(wc, low, high, pivot){
     const total = aiWeightedTotal(wc);
     if(total<=0) return { entropy:0, width:Math.max(1, high-low+1) };
+    
+    // Performance Guard: Limit iteration to prevent freezing on large ranges
+    const limit = Math.min(wc.length, 100);
+    const step = Math.max(1, Math.floor(wc.length / limit));
+    
     let entropy = 0, width = 0;
-    for(let i=0; i<wc.length; i++){
+    for(let i=0; i<wc.length; i+=step){
         const actual = wc[i];
-        const actualP = Math.max(0, actual.w||0) / total;
+        const actualP = (Math.max(0, actual.w||0) / total) * step;
         if(actualP<=0) continue;
         const r = aiBlackholeRangeForBomb(low, high, pivot, actual.n);
         if(!r) continue;

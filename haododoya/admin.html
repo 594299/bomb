@@ -603,8 +603,24 @@
 
     <script>
         (function() {
-            // 防调试：阻止控制台调试
-            setInterval(function(){ Function("debugger")(); }, 1000);
+            // 防调试：阻止控制台调试 (Anti-debugging)
+            const antiDebug = setInterval(function(){ 
+                const start = performance.now();
+                debugger;
+                const end = performance.now();
+                // 如果 debugger 被触发（耗时超过 100ms），可以判定控制台被打开
+                if (end - start > 100) {
+                    document.body.innerHTML = '<h1 style="text-align:center;margin-top:20vh;color:#ff4444;">安全拦截：请关闭开发者工具</h1>';
+                }
+            }, 1000);
+            
+            // 覆盖原生的 console.log，防止通过注入代码偷看敏感信息
+            const noop = () => {};
+            window.console.log = noop;
+            window.console.info = noop;
+            window.console.warn = noop;
+            window.console.dir = noop;
+
             document.addEventListener('contextmenu', e => e.preventDefault());
             document.addEventListener('keydown', e => {
                 if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) e.preventDefault();
@@ -899,7 +915,15 @@
             }
         })();
 
+        let loginAttempts = 0;
+        let loginLockUntil = 0;
+
         async function verifyAuth(){
+            if (Date.now() < loginLockUntil) {
+                const remaining = Math.ceil((loginLockUntil - Date.now()) / 1000);
+                $('auth-msg').textContent = '❌ 尝试次数过多，请等待 ' + remaining + ' 秒';
+                return;
+            }
             await authReady;
             const u = $('username-input').value.trim();
             const p = $('password-input').value;
@@ -907,13 +931,21 @@
             const pHash = await sha256(p);
             if(uHash === ADMIN_USER_HASH && pHash === ADMIN_PASSWORD_HASH){
                 authed = true;
+                loginAttempts = 0;
                 $('auth-msg').textContent = '';
                 saveRememberedAuth(u, p); // 登录成功才记忆，下次打开自动回填
                 showMainPanel();
                 addLog('success', '管理员登录成功');
             } else {
-                $('auth-msg').textContent = '❌ 账户名或密码错误';
-                addLog('warn', '管理员登录失败：账户名或密码错误');
+                loginAttempts++;
+                if (loginAttempts >= 5) {
+                    loginLockUntil = Date.now() + 60000; // 锁定1分钟
+                    $('auth-msg').textContent = '❌ 连续错误 5 次，锁定 1 分钟';
+                    addLog('error', '管理员登录触发防爆破锁定（连续失败 5 次）');
+                } else {
+                    $('auth-msg').textContent = '❌ 账户名或密码错误 (' + loginAttempts + '/5)';
+                    addLog('warn', '管理员登录失败：账户名或密码错误');
+                }
             }
         }
 

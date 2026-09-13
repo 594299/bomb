@@ -836,11 +836,30 @@
 (function(){
 'use strict';
 
-// 基础防调试：阻止控制台调试
-setInterval(function(){ Function("debugger")(); }, 1000);
-document.addEventListener('contextmenu', e => e.preventDefault());
-document.addEventListener('keydown', e => {
-    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) e.preventDefault();
+// 基础防调试：阻止控制台调试 (Anti-debugging)
+const antiDebug = setInterval(function(){ 
+    const start = performance.now();
+    debugger; 
+    const end = performance.now();
+    // 反作弊：如果有人打开控制台导致 debugger 停顿，强制清除本地关键缓存并白屏
+    if (end - start > 100 && typeof G !== 'undefined' && G.active && G.mode.includes('remote')) {
+        try { G.conn.send({type:'private', title:'❌ 作弊检测', text:'检测到开发者工具被开启，已断开连接'}); } catch(e){}
+        setTimeout(() => { window.location.reload(); }, 1000);
+    }
+}, 1000);
+
+// 覆盖原生的 console，防止通过注入代码偷看敏感信息（如炸弹数字）
+const noop = () => {};
+window.console.log = noop;
+window.console.info = noop;
+window.console.warn = noop;
+window.console.dir = noop;
+
+document.addEventListener('contextmenu', function(e){ if(typeof G !== 'undefined' && !G.demo) e.preventDefault(); });
+document.addEventListener('keydown', function(e){
+    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+        e.preventDefault();
+    }
 });
 
 // ========== 信令服务器与 ICE 配置 ==========
@@ -906,6 +925,7 @@ const ALL_SKILLS = [
     { id:'sacrifice', name:'🩸 献祭', desc:'主动扣除1点生命，本轮范围内额外生成一个炸弹（踩中任何一个都会爆炸）', cooldown:4 },
     { id:'balance', name:'⚖️ 天平', desc:'将你和对手当前的生命值相加，然后平分（向下取整）。绝境翻盘神技', cooldown:5 }
 ];
+Object.freeze(ALL_SKILLS);
 
 // ========== 玩家对象工厂 ==========
 // 复活血量随生命上限缩放：高血量局里"3血复活"约等于没用——至少3血，上限高时复活半管
@@ -929,9 +949,30 @@ function makePlayer(id) {
         
     return new Proxy(player, {
         set(target, prop, value) {
-            // 简单的防修改逻辑：如果在非游戏流程(processing)中，且有人试图直接将血量锁为超大值，直接阻断
-            if (prop === 'hp') {
-                if (value > 999) return true; // 忽略极其离谱的数值
+            // Anti-Cheat: 防止在非正常流程下锁血
+            if (prop === 'hp' && typeof value === 'number') {
+                if (value > 999 || isNaN(value)) {
+                    if(G.conn && G.isHost) G.conn.send({type:'private', title:'❌ 作弊检测', text:'异常生命值修改已被拦截'});
+                    return true; 
+                }
+                target[prop] = value;
+                return true;
+            }
+            // Anti-Cheat: 限制冷却时间被非法篡改（不能是负数或NaN）
+            if (prop === 'cooldowns' && typeof value === 'object') {
+                for (let key in value) {
+                    if (isNaN(value[key]) || value[key] < 0) value[key] = 0;
+                }
+                target[prop] = value;
+                return true;
+            }
+            // Anti-Cheat: 拦截对已拥有技能的非法增加（防止客机自己给自己塞技能）
+            if (prop === 'skills' && Array.isArray(value)) {
+                // 如果当前对局规定了技能上限，超出上限的技能会被自动截断
+                if (G.skillCount && value.length > G.skillCount) {
+                    value.length = G.skillCount;
+                    if(G.conn && G.isHost) G.conn.send({type:'private', title:'❌ 作弊检测', text:'携带的技能数量超限，已被截断'});
+                }
                 target[prop] = value;
                 return true;
             }
@@ -2173,14 +2214,23 @@ function updateStatsDisplay() {
 function loadSettings() {
     try {
         const s = localStorage.getItem('bomb_settings');
-        if(s) return JSON.parse(s);
+        if(s) {
+            const parsed = JSON.parse(s);
+            if (!parsed.name) parsed.name = '玩家';
+            return parsed;
+        }
     } catch(e) {}
-    return { theme:'neon', customBg:'', name:'', avatar:'🙂', minVal:1, maxVal:100, hp:5, skillCount:1, oppType:null, aiLevel:null, autoFs:false, music:true };
+    return { theme:'neon', customBg:'', name:'玩家', avatar:'🙂', minVal:1, maxVal:100, hp:5, skillCount:1, oppType:null, aiLevel:null, autoFs:false, music:true };
 }
 function saveSettings() {
     try { localStorage.setItem('bomb_settings', JSON.stringify(G.settings)); } catch(e) {}
 }
 G.settings = loadSettings();
+// 确保即使 localStorage 里存的是空名字，也能回退到默认名字
+if (!G.settings.name) {
+    G.settings.name = '玩家';
+    saveSettings();
+}
 // 🥷(Unicode13) 在旧系统渲染为豆腐块，统一迁移为 👺
 if(G.settings.avatar === '🥷'){ G.settings.avatar = '👺'; saveSettings(); }
 function applyTheme(theme, customBgUrl) {
@@ -2490,6 +2540,49 @@ function addHistory(entry) {
     historyContainer.innerHTML = guessHistory.join('<br>');
     historyContainer.scrollTop = historyContainer.scrollHeight;
 }
+// ==================== 回合与状态生命周期管理 ====================
+// 在新的一轮（炸弹爆炸后重开）时被调用
+function resetSkillStates(player) {
+    if(!player) return;
+    // 重置所有跨回合、临时性的状态，防止 AI 或玩家将上一局/上一回合的增益带入新回合
+    player.shield = 0;
+    player.reflect = 0;
+    player.freeze = false;
+    player.dormant = false;
+    player.dormantActive = false;
+    player.anger = 0;
+    player.allin = false;
+    player.double = 0;
+    player.rampage = 0;
+    player.bomblet = 0;
+    player.volley = 0;
+    player.blind = false;
+    player.speed = 0;
+    player.pierce = false;
+    player.pause = false;
+    player.numberSlash = 0;
+    player.numberSlashAtk = 0;
+    player.numberSlashHeal = 0;
+    player.lockedSkill = null;
+    player.secondLockedSkill = null;
+    player.disguise = false;
+    player.disguiseNumber = null;
+    player.trappedNumber = null;
+    player.forbidNumber = null;
+}
+
+// 在玩家回合结束时调用（清除“本回合有效”的临时增益，保留跨回合防御）
+function cleanupTurnStates(player) {
+    if(!player) return;
+    player.allin = false;
+    player.double = 0;
+    player.rampage = 0;
+    player.bomblet = 0;
+    player.anger = 0;
+    player.volley = 0;
+    player.pierce = false;
+}
+
 function clearHistory() {
     guessHistory = [];
     historyContainer.innerHTML = '';
@@ -2737,7 +2830,19 @@ function setupConnection(conn){
             // 客机：发送密码给房主验证（附带指纹+设备码+IP+设备信息，供封禁/举报系统识别）
             getPlayer('p2').fingerprint = G.currentUser.fingerprint;
             const id = currentIdentity();
-            conn.send({type:'password', password: G.guestPassword || '', fp: id.fp, dc: id.dc, ip: id.ip, ua: id.ua, di: id.di});
+            
+            const sendAuth = async () => {
+                let pwdHash = '';
+                if(G.guestPassword) {
+                    const msgBuffer = new TextEncoder().encode(G.guestPassword);
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    pwdHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                }
+                // 向后兼容：同时发送明文和hash，只有新版host会优先验证hash
+                conn.send({type:'password', password: G.guestPassword || '', passwordHash: pwdHash, fp: id.fp, dc: id.dc, ip: id.ip, ua: id.ua, di: id.di});
+            };
+            sendAuth();
         }
         startPing();
     }
@@ -2777,25 +2882,37 @@ function setupConnection(conn){
                 setTimeout(function(){ try{conn.close();}catch(e){} }, 400);
                 return;
             }
-            if(!G.roomPassword || data.password === G.roomPassword){
-                getPlayer('p1').fingerprint = G.currentUser.fingerprint;
-                getPlayer('p2').fingerprint = data.fp || 'unknown';
-                getPlayer('p2').deviceCode = data.dc || 'unknown';
-                getPlayer('p2').ip = isBadIP(data.ip) ? 'unknown' : data.ip;
-                recordRemoteUser(data);
-                grabRemoteIP(conn, function(realIP){ // 直接从WebRTC抠对方真实公网IP，不靠上报
-                    if(!realIP) return;
-                    getPlayer('p2').ip = realIP;
-                    recordRemoteUser({fp:data.fp, dc:data.dc, ip:realIP, ua:data.ua, di:data.di});
-                });
-                const hid = currentIdentity();
-                conn.send({type:'password_ok', fp: hid.fp, dc: hid.dc, ip: hid.ip, di: hid.di});
-                enterRemoteSetup();
-            } else {
-                conn.send({type:'password_wrong'});
-                setTimeout(function(){ try{conn.close();}catch(e){} }, 500);
-                G.conn = null;
-            }
+            
+            // 使用 SHA-256 散列对比房间密码，防止明文密码被网络嗅探
+            const hashPassword = async (pwd) => {
+                if(!pwd) return '';
+                const msgBuffer = new TextEncoder().encode(pwd);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            };
+            
+            hashPassword(G.roomPassword).then(expectedHash => {
+                if(!G.roomPassword || data.passwordHash === expectedHash || data.password === G.roomPassword){
+                    getPlayer('p1').fingerprint = G.currentUser.fingerprint;
+                    getPlayer('p2').fingerprint = data.fp || 'unknown';
+                    getPlayer('p2').deviceCode = data.dc || 'unknown';
+                    getPlayer('p2').ip = isBadIP(data.ip) ? 'unknown' : data.ip;
+                    recordRemoteUser(data);
+                    grabRemoteIP(conn, function(realIP){ // 直接从WebRTC抠对方真实公网IP，不靠上报
+                        if(!realIP) return;
+                        getPlayer('p2').ip = realIP;
+                        recordRemoteUser({fp:data.fp, dc:data.dc, ip:realIP, ua:data.ua, di:data.di});
+                    });
+                    const hid = currentIdentity();
+                    conn.send({type:'password_ok', fp: hid.fp, dc: hid.dc, ip: hid.ip, di: hid.di});
+                    enterRemoteSetup();
+                } else {
+                    conn.send({type:'password_wrong'});
+                    setTimeout(function(){ try{conn.close();}catch(e){} }, 500);
+                    G.conn = null;
+                }
+            });
             return;
         }
         if(data.type==='password_ok' && !G.isHost){
@@ -2945,6 +3062,13 @@ function handleGuestAction(data){
         const p2 = getPlayer('p2');
         const skill = getSkillById(skillId);
         if(!skill) return;
+        
+        // Anti-Cheat (Host Authority): 严格校验客机是否真正拥有该技能
+        if(!p2.skills.some(s => s.id === skillId)){
+            if(G.conn) G.conn.send({type:'private', title:'❌ 技能使用被拒绝', text:'你并没有拥有这个技能（同步异常或作弊检测）'});
+            return;
+        }
+        
         if(p2.cooldowns[skillId] > 0 || p2.lockedSkill === skillId || p2.secondLockedSkill === skillId){
             if(G.conn) G.conn.send({type:'private', title:'❌ 技能使用被拒绝', text:'冷却中或已被封锁'});
             return;
@@ -2954,6 +3078,8 @@ function handleGuestAction(data){
                 if(G.conn) G.conn.send({type:'private', title:'❌ 技能使用被拒绝', text:'数字不在当前范围内'});
                 return;
             }
+            // Anti-Cheat: Validation in Host
+            if(!getSkillById(skillId)) return;
             p2.cooldowns[skillId] = skill.cooldown;
             if(skillId === 'trap'){
                 p2.trappedNumber = number;
@@ -2984,8 +3110,24 @@ function handleGuestAction(data){
     }
     else if(data.action==='skill_select'&&data.playerId==='p2'&&G.pendingSkillSelect==='p2'){
         const skillIds = data.skillIds || (data.skillId ? [data.skillId] : []);
-        const skills = skillIds.map(id=>getSkillById(id)).filter(s=>s);
+        
+        // Anti-Cheat (Host Authority): 严格校验客机选的技能是不是在“发牌选项”里
+        const validOptions = G.pendingSkillOptions || G.pendingRoundOptions || [];
+        const validatedIds = skillIds.filter(id => validOptions.includes(id));
+        
+        if (skillIds.length > 0 && validatedIds.length !== skillIds.length) {
+            if(G.conn) G.conn.send({type:'private', title:'❌ 技能选择被拒绝', text:'试图选择未提供的技能（作弊检测）'});
+            return;
+        }
+        
+        const skills = validatedIds.map(id=>getSkillById(id)).filter(s=>s);
         if(skills.length===0) return;
+        
+        // 限制客机选技能的数量不能超过本局规定的技能上限
+        if(skills.length > G.skillCount) {
+            skills.length = G.skillCount;
+        }
+        
         const p2=getPlayer('p2');
         p2.skills=[...skills]; p2.cooldowns={};
         clearHostTimeout();
@@ -3210,7 +3352,7 @@ function addChatMessage(sender, text, type) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// 聊天频率限制：3秒内最多发5条消息
+// 聊天频率限制：3秒内最多发5条消息，防刷屏
 const CHAT_LIMIT = { maxCount: 5, windowMs: 3000 };
 let chatTimestamps = [];
 
@@ -3222,6 +3364,20 @@ function checkChatRateLimit(){
         return false; // 超过限制
     }
     chatTimestamps.push(now);
+    return true;
+}
+
+// 举报频率限制：10分钟内最多举报3次，防止恶意填塞后台缓存
+const REPORT_LIMIT = { maxCount: 3, windowMs: 600000 };
+let reportTimestamps = [];
+
+function checkReportRateLimit(){
+    const now = Date.now();
+    reportTimestamps = reportTimestamps.filter(t => now - t < REPORT_LIMIT.windowMs);
+    if(reportTimestamps.length >= REPORT_LIMIT.maxCount){
+        return false;
+    }
+    reportTimestamps.push(now);
     return true;
 }
 
@@ -3275,6 +3431,12 @@ reportSubmitBtn.addEventListener('click', function(){
     const detailReason = reportReasonInput.value.trim();
     const reason = selectedQuickReason || detailReason || '无具体原因';
     const fullReason = selectedQuickReason && detailReason ? selectedQuickReason + '：' + detailReason : reason;
+
+    if(!checkReportRateLimit()){
+        showCheatToast('⚠️ 举报过于频繁，请稍后再试（10分钟内最多举报3次）');
+        reportOverlay.classList.add('hidden');
+        return;
+    }
 
     const reporter = getMyPlayer();
     const reported = getMyOpponent();
@@ -4356,7 +4518,8 @@ function processGuess(guess, isSkillAttack, guesserId){
                 }
             }
             // 猜错只消耗"本回合"类增益（骰子）和孤注一掷（上面已结算惩罚）；
-            // 双倍/翻倍/子母弹/连击/吸血/休眠蓄势等"下一次猜中"类增益保留到猜中，与技能描述一致
+            // 其他“本回合”增益在 switchTurn 的 cleanupTurnStates 中统一清除
+            // 但“跨回合存款型”增益（如休眠蓄势、吸血、双倍等）不受猜错影响，继续保留
             guesser.diceBonus=0;
             if(defender.bet){
                 defender.bet=false;
@@ -4403,7 +4566,10 @@ function switchTurn(){
         if(current.slashActive===0){ resolveSlash(current); if(!G.active) return; }
         else renderSlashPanel();
     }
-    current.blind=false; current.pierce=false; current.speed=0;
+    
+    // 清除回合结束失效的临时增益/负面状态
+    cleanupTurnStates(current);
+    
     current.lie=false; // 迷雾不在换回合时清除：按对手的猜测次数消耗
     current.frozen=false;
     G.playerInput=''; updateInputDisplay();
@@ -6478,6 +6644,7 @@ const SKILL_EXAMPLES = {
     sacrifice:'<b>用途：</b>主动扣减 1 点生命，在场上额外生成一个炸弹。<br><b>例：</b>当自己血量健康而范围很小时，使用献祭可以制造混乱。场上有多个炸弹时，踩中任何一个都会爆炸。AI 在血量充足时很喜欢用。',
     balance:'<b>用途：</b>将双方的生命值平分。<br><b>例：</b>绝境翻盘神技。当你只剩 1 血而对手有 10 血时，使用天平瞬间把双方血量拉平（各 5 血或 5/6 血）。顺风时千万别用，那是给对手送血。'
 };
+Object.freeze(SKILL_EXAMPLES);
 // ========== 技能演示：打开一个对局，自动放技能，一步步展示它有什么用 ==========
 // 步骤类型：{say}解说 {use:技能id,pick:选数} 放技能 {guess:数字|'bomb',who:'p1'|'p2'} 猜数
 //          {setBomb:n} 锁定炸弹 {hp:[a,b]} 调血 {buff:{who,field,val}} 调状态 {t:ms} 本步时长
@@ -6841,16 +7008,17 @@ function demoStep(){
         $('demo-card').classList.add('hidden');
         clearDemoPoint();
         hideVCursor();
-        showCheatToast('🎬 演示结束！'+name+' 就是这么用的', 5000);
+        showCheatToast('🎬 演示结束！'+name+' 就是这么用的', 6000);
         messageDisplay.textContent='🎬 演示结束。点"返回主菜单"退出，或留在这局自由对局练练手';
         G.processing = false;
         updateTurnIndicator();
-        if(G.currentPlayer==='p2') setTimeout(aiTurn, 1200);
+        if(G.currentPlayer==='p2') setTimeout(aiTurn, 1500);
         return;
     }
-    const next = s.t || 2400;
-    if(s.say) showCheatToast(s.say, Math.min(next+600, 5200));
-    if(s.point) setTimeout(function(){ if(G.demo) pointAtDemo(s.point); }, 400); // 箭头指向细节
+    // 整体放慢演示节奏，像教傻子一样：基础时长延长 1200ms
+    const next = (s.t || 2400) + 1200;
+    if(s.say) showCheatToast(s.say, Math.min(next+800, 6000));
+    if(s.point) setTimeout(function(){ if(G.demo) pointAtDemo(s.point); }, 600); // 箭头指向细节（稍微等字出来再指）
     if(s.setBomb!==undefined){ G.bombNumbers = [s.setBomb]; updateRange(); }
     if(s.hp){ getPlayer('p1').hp=s.hp[0]; getPlayer('p2').hp=s.hp[1]; renderPlayers(); }
     if(s.buff){ getPlayer(s.buff.who)[s.buff.field]=s.buff.val; renderPlayers(); }
@@ -6872,13 +7040,14 @@ function demoStep(){
         if(s.guessVerified){ // 验证器分支教学：中了就猜它，没中就猜另一个（排除法）
             const hit = G.bombNumbers.includes(s.guessVerified.pick);
             n = hit ? s.guessVerified.pick : s.guessVerified.other;
-            showCheatToast(hit ? ('✅ 验证中了！炸弹就是 '+n+'，直接收网') : ('❌ '+s.guessVerified.pick+' 没中！排除它，炸弹必是 '+n), Math.min(next+600, 5200));
+            showCheatToast(hit ? ('✅ 验证中了！炸弹就是 '+n+'，直接收网') : ('❌ '+s.guessVerified.pick+' 没中！排除它，炸弹必是 '+n), Math.min(next+800, 6000));
         } else {
             n = s.guess==='bomb' ? G.bombNumbers[0] : s.guess;
         }
         actEst = demoAutoGuess(n, who) || 0; // 虚拟鼠标点键盘数字+确定，真实结算
     }
-    setTimeout(demoStep, Math.max(next, actEst + 1000)); // 动作点完后多留1秒给观众看清结果
+    // 动作点完后多留 2 秒给观众看清结果（原为1秒）
+    setTimeout(demoStep, Math.max(next, actEst + 2000)); 
 }
 function openCodex(){
     const inBattle = battleArea.style.display==='flex'; // 对局内打开：纯查阅，不显示演示入口（演示会重开一局）
