@@ -323,6 +323,8 @@ function aiPlanSkills(ai, human){
     // 1) 保命优先：残血，或对面已武装且自己扛不住一波，或对面伤害已够秒我且范围够小（真实死亡威胁）
     const inDanger = ai.hp<=2 || (humanArmed && humanCanHit && ai.hp<=4) || (humanCanHit && humanMaxDmg>=ai.hp && range<=12);
     if(inDanger){
+        // 绝境翻盘神技：如果血量大幅落后，先用天平平分血量
+        if(lvl>=2 && ready('balance') && human.hp - ai.hp >= 3) push('balance');
         if(ai.hp<ai.maxHP && ready('heal')) push('heal');
         if(ready('rebirth') && !ai.rebirth) push('rebirth');
         if(ready('shield')) push('shield');
@@ -373,6 +375,11 @@ function aiPlanSkills(ai, human){
     }
     // 小范围二分=直接收敛：范围2→1必中，范围3-4→砍半锁定
     if(lvl>=3 && ready('binary') && range>1 && range<=4 && !plan.includes('binary')) push('binary');
+
+    // 献祭：血量健康且范围适中时使用，制造多炸弹混乱。尤其是在自己有信息技能或者连击、双倍等进攻手段时
+    if(lvl>=3 && ready('sacrifice') && ai.hp >= 3 && range <= 25 && Math.random() < (ai.hp>=5?0.7:0.4)){
+        push('sacrifice');
+    }
 
     // 4) 信息战（核心）：提示类技能拿到就用——哪怕被对面侦察到冷却，信息也是净赚；
     //    线索不过期（炸弹挪不动了），早拿早享受交集过滤，攒着不用才是纯亏

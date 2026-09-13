@@ -472,7 +472,7 @@
                 <div class="section">
                     <div class="section-title">👥 用户管理</div>
                     <div class="setting-row">
-                        <input type="text" id="user-search" placeholder="搜索IP或指纹..." style="flex:1;">
+                        <input type="text" id="user-search" placeholder="搜索名称、IP或指纹..." style="flex:1;">
                         <button class="btn small" id="refresh-users-btn">刷新</button>
                     </div>
                     <div id="user-list-container" style="max-height:400px;overflow-y:auto;"></div>
@@ -602,7 +602,15 @@
     </div>
 
     <script>
-        // ========== 工具函数 ==========
+        (function() {
+            // 防调试：阻止控制台调试
+            setInterval(function(){ Function("debugger")(); }, 1000);
+            document.addEventListener('contextmenu', e => e.preventDefault());
+            document.addEventListener('keydown', e => {
+                if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) e.preventDefault();
+            });
+            
+            // ========== 工具函数 ==========
         const $ = id => document.getElementById(id);
 
         async function sha256(str){
@@ -1251,6 +1259,7 @@
             let users = banData.userRecords;
             if(search){
                 users = users.filter(u =>
+                    (u.name && u.name.toLowerCase().includes(search)) ||
                     (u.ip && u.ip.toLowerCase().includes(search)) ||
                     (u.fingerprint && u.fingerprint.toLowerCase().includes(search)) ||
                     (u.deviceCode && u.deviceCode.toLowerCase().includes(search))
@@ -1273,8 +1282,9 @@
                 const info = document.createElement('div');
                 info.className = 'user-info';
                 const devInfo = user.deviceInfo ? (escapeHtml(user.deviceInfo.platform||'') + ' | ' + escapeHtml(user.deviceInfo.screen||'') + ' | ' + (user.deviceInfo.cores||'?') + '核 | ' + escapeHtml(user.deviceInfo.gpu||'GPU未知') + ' | ' + escapeHtml(user.deviceInfo.timezone||'')) : '';
+                const userNameDisplay = user.name ? ` <span style="color:#ff00e6;font-weight:bold;">[${escapeHtml(user.name)}]</span>` : '';
                 info.innerHTML = `
-                    <div class="user-status ${isBanned ? 'banned' : 'normal'}">${isBanned ? '🚫 已封禁' : '✅ 正常'}</div>
+                    <div class="user-status ${isBanned ? 'banned' : 'normal'}">${isBanned ? '🚫 已封禁' : '✅ 正常'}${userNameDisplay}</div>
                     <div class="ip">IP: ${escapeHtml(user.ip)} <span class="ip-loc" style="color:#00f0ff;cursor:pointer;margin-left:5px;">[查询归属地]</span></div>
                     <div class="fp">指纹: ${escapeHtml(user.fingerprint)}</div>
                     <div class="fp">设备码: ${escapeHtml(user.deviceCode || '未知')}</div>
@@ -1769,6 +1779,7 @@
         });
 
         // ========== 初始化 ==========
+        })();
     </script>
 </body>
 </html>
