@@ -146,15 +146,24 @@ function aiGuess(token){
     }
     if(typeof guess!=='number' || isNaN(guess)){ dlog('ERROR','AI猜数得到非法值 '+guess+'，降级中点'); guess = Math.round((_aiRLo()+_aiRHi())/2); }
     guess = Math.max(_aiRLo(), Math.min(_aiRHi(), guess));
-    G.playerInput=String(guess);
-    updateInputDisplay();
-    // 人类用迷雾冻结了AI视野：AI的猜测数字对人类保密——输入框与消息全部遮蔽
-    const aiFogged = getPlayer('p1').viewFog>0;
-    if(aiFogged) inputDisplay.textContent='🌫️';
-    const _c = aiCandidates();
-    const known = aiKnownBomb();
-    dlog('AI','猜 '+guess+' range='+_aiRLo()+'~'+_aiRHi()+(usedClues?'(线索)':'(盲猜)')+' 已知='+(known!==null?('确知'+known):('候选'+(_c?_c.length:'无线索'))));
-    messageDisplay.textContent= aiFogged ? '🌫️ 对方在迷雾中猜了一个数……' : '对方输入了 '+guess;
+    // 人类用迷雾冻结了AI视野：AI的猜测数字对人类保密——先判断迷雾再上屏，数字绝不经输入框泄露
+    // 上屏段整体兜底：任何异常都不能杀死执行链（曾因此处引用未导出的DOM导致AI永久卡死）
+    let aiFogged = false;
+    try {
+        aiFogged = getPlayer('p1').viewFog>0;
+        if(aiFogged){
+            G.playerInput='';
+            inputDisplay.textContent='🌫️';
+            inputDisplay.classList.remove('empty');
+        } else {
+            G.playerInput=String(guess);
+            updateInputDisplay();
+        }
+        const _c = aiCandidates();
+        const known = aiKnownBomb();
+        dlog('AI','猜 '+guess+' range='+_aiRLo()+'~'+_aiRHi()+(usedClues?'(线索)':'(盲猜)')+' 已知='+(known!==null?('确知'+known):('候选'+(_c?_c.length:'无线索'))));
+        messageDisplay.textContent= aiFogged ? '🌫️ 对方在迷雾中猜了一个数……' : '对方输入了 '+guess;
+    } catch(e){ dlog('ERROR','AI猜数上屏异常：'+((e&&e.message)||e)+'，跳过展示直接结算'); }
     setTimeout(function(){
         if(!G.active) return;
         if(token!==undefined && token!==G.aiTurnToken) return;

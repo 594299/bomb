@@ -67,12 +67,13 @@ function aiNoteBombFeat(key, valFn){
         else if(key==='digitSum') bb.digitSum=v; else if(key==='digits') bb.digits=v;
     } else { bb.lastDigit=null; bb.tens=null; bb.digitSum=null; bb.digits=null; } // 多弹：单值无意义，只认逐颗档案
 }
-function aiEmptySoft(){ return { lastDigit:null, tens:null, digitSum:null, parity:null, digits:null }; }
+function aiEmptySoft(){ return { lastDigit:null, lastDigitSet:null, tens:null, digitSum:null, parity:null, digits:null }; }
 function aiEffectiveLevel(){ return G.mode==='tutorial' ? 2 : G.aiLevel; } // 教程AI恒为普通强度：教学表现与玩家的存档难度设置无关，关卡体验可复现
 function aiDigitSum(n){ let s=0; const st=String(n); for(const c of st) s+=+c; return s; }
 function aiMatchFeatureSet(n, feat){
     if(!feat) return true;
     if(feat.lastDigit!==null && n%10!==feat.lastDigit) return false;
+    if(feat.lastDigitSet && feat.lastDigitSet.length>0 && feat.lastDigitSet.indexOf(n%10)<0) return false; // 多弹个位集合：成员之一即匹配
     if(feat.tens!==null && Math.floor(n/10)%10!==feat.tens) return false;
     if(feat.digitSum!==null && aiDigitSum(n)!==feat.digitSum) return false;
     if(feat.parity!==null && n%2!==feat.parity) return false;
@@ -94,7 +95,7 @@ function aiCandidates(hardOnly){
     if(b.clueSig!==sig){ b.clueSig=sig; b.staleScore=0; }
     const hasCandSet = b.candSet && b.candSet.length>0;
     const soft = (!hardOnly && b.soft) ? b.soft : null;
-    const hasSoft = soft && (soft.lastDigit!==null || soft.tens!==null || soft.digitSum!==null || soft.parity!==null || soft.digits!==null);
+    const hasSoft = soft && (soft.lastDigit!==null || (soft.lastDigitSet && soft.lastDigitSet.length>0) || soft.tens!==null || soft.digitSum!==null || soft.parity!==null || soft.digits!==null);
     const hasClue = hasCandSet || hasSoft || feats || b.parity!==null || b.lastDigit!==null || b.digitSum!==null || b.tens!==null || b.digits!==null || b.thermo || Object.keys(b.verified).length>0;
     if(!hasClue) return null;
     const cands = [];
@@ -128,6 +129,7 @@ function aiCandidates(hardOnly){
     if(hasSoft){
         const fs = cands.filter(n=>{
             if(soft.lastDigit!==null && n%10!==soft.lastDigit) return false;
+            if(soft.lastDigitSet && soft.lastDigitSet.length>0 && soft.lastDigitSet.indexOf(n%10)<0) return false;
             if(soft.tens!==null && Math.floor(n/10)%10!==soft.tens) return false;
             if(soft.digitSum!==null){ let s=0; const str=String(n); for(const c of str) s+=+c; if(s!==soft.digitSum) return false; }
             if(soft.parity!==null && n%2!==soft.parity) return false;
@@ -213,7 +215,7 @@ function aiWeightedCands(){
     const hard = aiCandidates(true);
     if(hard && hard.length===0) return hard; // 硬线索矛盾：交给调用方走清空重推
     const soft = (b && b.soft) ? b.soft : null;
-    const hasSoft = soft && (soft.lastDigit!==null || soft.tens!==null || soft.digitSum!==null || soft.parity!==null || soft.digits!==null);
+    const hasSoft = soft && (soft.lastDigit!==null || (soft.lastDigitSet && soft.lastDigitSet.length>0) || soft.tens!==null || soft.digitSum!==null || soft.parity!==null || soft.digits!==null);
     if(!hard && !hasSoft) return null;
     let pool = hard;
     if(!pool){ pool = []; for(let n=_aiRLo(); n<=_aiRHi(); n++) pool.push(n); }
@@ -227,6 +229,7 @@ function aiWeightedCands(){
         let w = 1;
         if(hasSoft){
             if(soft.lastDigit!==null && n%10===soft.lastDigit) w*=W;
+            if(soft.lastDigitSet && soft.lastDigitSet.length>0 && soft.lastDigitSet.indexOf(n%10)>=0) w*=W;
             if(soft.tens!==null && Math.floor(n/10)%10===soft.tens) w*=W;
             if(soft.digitSum!==null && aiDigitSum(n)===soft.digitSum) w*=W;
             if(soft.parity!==null && n%2===soft.parity) w*=W;

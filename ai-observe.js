@@ -57,7 +57,7 @@ function aiObserveHumanGuess(guess, prevLow, prevHigh, newLow, newHigh){
 function aiInferHumanBombPool(low, high){
     const b = G.aiBrain;
     const soft = (b && b.soft) ? b.soft : null;
-    const hasSoft = soft && (soft.lastDigit!==null || soft.tens!==null || soft.digitSum!==null || soft.parity!==null || soft.digits!==null);
+    const hasSoft = soft && (soft.lastDigit!==null || (soft.lastDigitSet && soft.lastDigitSet.length>0) || soft.tens!==null || soft.digitSum!==null || soft.parity!==null || soft.digits!==null);
     if(!hasSoft) return null;
     const out = [];
     for(let n=low; n<=high; n++){
@@ -201,7 +201,30 @@ function aiMinePatterns(guess){
         G.humanSuspicion=(G.humanSuspicion||0)+2;
         dlog('AI','模式挖掘确认：对手疑似掌握['+attr+'='+val+']（连续'+need+'次一致）');
     };
-    confirm('lastDigit', guess%10, 2); // 连续2次同个位，巧合率~1%
+    // 个位挖掘分两条路：
+    // ① 单弹：连续N次同个位才采信（经典单值跟猜）
+    // ② 多弹广播：透视在多炸弹时报的是一组个位——对手轮换着猜集合成员，单值软线索每次都"被打破"锁不上。
+    //    触发：已知多弹（estBombs>1），或他捏着透视却猜出≥2种个位（行为本身暴露了多弹）——收编最近的去重个位做集合跟猜
+    const hasPeekSkill = human && human.skills.some(x=>x.id==='peek');
+    const estBombsNow = aiEstBombCount();
+    const distinctDigits = [];
+    seq.slice(-8).forEach(n=>{ const dd=n%10; if(distinctDigits.indexOf(dd)<0) distinctDigits.push(dd); });
+    if(estBombsNow>1 || (hasPeekSkill && distinctDigits.length>=2)){
+        if(s.lastDigit!==null) s.lastDigit=null; // 多弹停用单值个位（否则轮换猜集合成员会被误判"模式打破"）
+        const cap = Math.max(estBombsNow, 2);
+        const pool = [];
+        for(let i=seq.length-1; i>=0 && pool.length<cap; i--){ const dd=seq[i]%10; if(pool.indexOf(dd)<0) pool.unshift(dd); } // 最近cap个去重个位：早期盲猜混入的成员会被新成员自然淘汰
+        if(pool.length >= (hasPeekSkill ? 1 : 2)){ // 捏着透视=多半真看过，一个成员就跟；裸猜要至少2个成员才读出规律
+            if(!s.lastDigitSet){ G.humanSuspicion=(G.humanSuspicion||0)+2; dlog('AI','模式挖掘：对手疑似掌握个位集合['+pool.join(',')+']（多弹广播，集合跟猜）'); }
+            s.lastDigitSet = pool;
+        } else {
+            s.lastDigitSet = null;
+            confirm('lastDigit', guess%10, 2); // 集合读不出规律（对手只盯着一颗弹的个位猜）→ 退回经典单值跟猜
+        }
+    } else {
+        s.lastDigitSet = null;
+        confirm('lastDigit', guess%10, 2); // 连续2次同个位，巧合率~1%
+    }
     if(Math.floor(_aiRLo()/10)!==Math.floor(_aiRHi()/10)) confirm('tens', Math.floor(guess/10)%10, 2); // 范围横跨十位才有意义
     if(String(_aiRLo()).length!==String(_aiRHi()).length) confirm('digits', String(guess).length, 2); // 范围横跨位数边界才有意义（读出对手的探测）
     if(lvl>=3){ // 困难起做弱信号模式：不管是不是装糖，先跟了再说

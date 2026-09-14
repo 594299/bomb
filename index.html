@@ -541,6 +541,13 @@
             <label>房间标题：</label>
             <input type="text" id="room-title-input" placeholder="来和我一起玩吧" maxlength="15" style="width:200px;" onfocus="this.select()">
         </div>
+        <div class="setting-row">
+            <label>回合倒计时：</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.85rem;color:#aaa;">
+                <input type="checkbox" id="room-timer-checkbox" checked style="width:18px;height:18px;accent-color:#00f0ff;">
+                选技30秒 / 猜数60秒（不勾选则不限时）
+            </label>
+        </div>
         <button class="btn" id="create-room-btn">创建房间</button>
         <button class="btn secondary" id="show-lobby-btn">🌐 联机大厅</button>
         <div style="margin:15px 0;color:#666;">— 或输入房间码 —</div>
@@ -1037,6 +1044,7 @@ const G = {
     peer:null, conn:null, roomCode:'',
     pendingSkillSelect:null, pendingSkillOptions:null,
     pendingSkillCount:3, skillCount:3, pendingRoundOptions:null,
+    noTimer:false, // 房间级开关：true=选技/猜数不限时（创建房间时不勾选倒计时）
     skillDeck:[], // 技能牌堆：牌堆制发牌，保证所有技能轮流出现
     skillTimer:null, skillTimerCount:30, hostTimeout:null,
     players:{ p1:makePlayer('p1'), p2:makePlayer('p2') },
@@ -2329,6 +2337,7 @@ function applySettings() {
     skillCountInput.value=s.skillCount;
     remoteMinInput.value=s.minVal; remoteMaxInput.value=s.maxVal; remoteHpInput.value=s.hp;
     remoteSkillCountInput.value=s.skillCount;
+    const rtc=$('room-timer-checkbox'); if(rtc) rtc.checked = s.noTimer!==true; // 记住上次的倒计时勾选
 }
 function showSettings(){
     hideAll();
@@ -2495,6 +2504,7 @@ function clearTurnTimer(){
 function startTurnTimer(){
     clearTurnTimer();
     if(!G.active || !G.mode.includes('remote')) return;
+    if(G.noTimer) return; // 房间未勾选倒计时：猜数不限时
     if(G.pendingSkillSelect || skillSelectPhase) return; // 选技阶段不计时（本来也不能猜）
     G.turnTimerPlayer = G.currentPlayer;
     G.turnDeadline = Date.now() + 60000;
@@ -3234,6 +3244,7 @@ function syncIfRemote(){
         tideShrinkNext:G.tideShrinkNext,
         roundStartHP:deepClone(G.roundStartHP),
         roundCount:G.roundCount,
+        noTimer:G.noTimer, // 房间倒计时开关跟随同步（客机/观战者据此停掉本地计时）
         spectatorCount:(G.spectators ? G.spectators.length : 0) // 对局内显示观战人数
     };
     if(G.conn && G.conn.open){ try{ G.conn.send({type:'sync',state:state}); }catch(e){} }
@@ -3260,6 +3271,7 @@ function applySync(state){
     if(state.tideShrinkNext!==undefined) G.tideShrinkNext=state.tideShrinkNext;
     if(state.roundStartHP) G.roundStartHP=deepClone(state.roundStartHP);
     if(state.roundCount!==undefined) G.roundCount=state.roundCount;
+    if(state.noTimer!==undefined){ G.noTimer=!!state.noTimer; if(G.noTimer){ clearSkillTimer(); clearTurnTimer(); } }
     // 客机保持自己的头像/名字不被房主端数据覆盖（观战者不算参与者，完整采用房主端数据）
     const isSpec = G.myRole==='spectator';
     const myId = isSpec ? null : (G.myRole==='host' ? 'p1' : 'p2');
@@ -3983,8 +3995,8 @@ function showSkillSelectWithCallback(forPlayerId, skillCount, onComplete){
         G.processing = true;
         setKeypadEnabled(false);
 
-        // AI/教程模式：对手是AI不拖时间，选技不限时（倒计时只用于真人对抗防拖延）
-        if(G.mode.includes('ai') || G.mode==='tutorial'){
+        // AI/教程模式：对手是AI不拖时间，选技不限时（倒计时只用于真人对抗防拖延）；房间未勾选倒计时同样不限时
+        if(G.mode.includes('ai') || G.mode==='tutorial' || G.noTimer){
             clearSkillTimer();
             skillTimerEl.style.display = 'none';
         } else {
@@ -4034,6 +4046,7 @@ function showSkillSelectWithCallback(forPlayerId, skillCount, onComplete){
 
 function startHostTimeout(playerId, onComplete){
     clearHostTimeout();
+    if(G.noTimer) return; // 房间未勾选倒计时：选技不代选、不限时
     G.hostTimeout=setTimeout(function(){
         if(G.active&&G.pendingSkillSelect===playerId&&G.isHost){
             const player=getPlayer(playerId);
@@ -4113,8 +4126,8 @@ function showSkillSelectWithOptions(forPlayerId, optionIds, skillCount){
         G.processing = true;
         setKeypadEnabled(false);
 
-        // AI/教程模式：对手是AI不拖时间，选技不限时（倒计时只用于真人对抗防拖延）
-        if(G.mode.includes('ai') || G.mode==='tutorial'){
+        // AI/教程模式：对手是AI不拖时间，选技不限时（倒计时只用于真人对抗防拖延）；房间未勾选倒计时同样不限时
+        if(G.mode.includes('ai') || G.mode==='tutorial' || G.noTimer){
             clearSkillTimer();
             skillTimerEl.style.display = 'none';
         } else {
@@ -5925,6 +5938,8 @@ $('create-room-btn').addEventListener('click',function(){
     const titleCheck = moderateTextLocal(titleInput);
     if(titleCheck.flagged){ lobbyMessage.textContent='⚠️ 房间标题包含违规内容，请修改'; return; }
     G.roomTitle = titleInput || '来和我一起玩吧';
+    G.noTimer = !$('room-timer-checkbox').checked; // 未勾选倒计时：选技/猜数不限时（随start/sync广播给客机与观战者）
+    G.settings.noTimer = G.noTimer; saveSettings();
     G.isHost=true;
     G.myRole='host';
     G.remoteReady.host=false;
@@ -5966,6 +5981,7 @@ $('join-room-btn').addEventListener('click',function(){
     G.roomCode=code;
     G.isHost=false;
     G.myRole='guest';
+    G.noTimer=false; // 清掉自己上次建房的残留：房间倒计时以房主sync为准
     G.remoteReady.host=false;
     G.remoteReady.guest=false;
     lobbyMessage.textContent='';
@@ -6470,7 +6486,7 @@ function setupSpectator(conn){
                 updateSpectatorCount();
                 // 对局进行中：立刻把开局参数+全量状态推给观战者
                 if(G.active){
-                    try{ conn.send({type:'start', minVal:G.minVal, maxVal:G.maxVal, isSkillMode:G.isSkillMode, hp:getPlayer('p1').maxHP, skillCount:G.skillCount}); }catch(e){}
+                    try{ conn.send({type:'start', minVal:G.minVal, maxVal:G.maxVal, isSkillMode:G.isSkillMode, hp:getPlayer('p1').maxHP, skillCount:G.skillCount, noTimer:G.noTimer}); }catch(e){}
                     syncIfRemote();
                 }
             } else {
@@ -6560,6 +6576,7 @@ function setupSpectatorClient(conn, specPeer){
             G.mode=data.isSkillMode?'remote-skill':'remote-normal';
             if(data.hp){ getPlayer('p1').maxHP=data.hp; getPlayer('p2').maxHP=data.hp; }
             if(data.skillCount!==undefined) G.skillCount=data.skillCount;
+            if(data.noTimer!==undefined) G.noTimer=!!data.noTimer;
             enterSpectateView(true);
             return;
         }
@@ -6643,9 +6660,9 @@ remoteStartBtn.addEventListener('click',function(){
     G.isSkillMode = G.skillCount > 0;
     G.mode = G.isSkillMode ? 'remote-skill' : 'remote-normal';
     if(G.conn&&G.conn.open){
-        G.conn.send({type:'start',minVal:G.minVal,maxVal:G.maxVal,isSkillMode:G.isSkillMode,hp:getPlayer('p1').maxHP,skillCount:G.skillCount});
+        G.conn.send({type:'start',minVal:G.minVal,maxVal:G.maxVal,isSkillMode:G.isSkillMode,hp:getPlayer('p1').maxHP,skillCount:G.skillCount,noTimer:G.noTimer});
     }
-    broadcastToSpectators({type:'start',minVal:G.minVal,maxVal:G.maxVal,isSkillMode:G.isSkillMode,hp:getPlayer('p1').maxHP,skillCount:G.skillCount}); // 等待中的观战者同步开局
+    broadcastToSpectators({type:'start',minVal:G.minVal,maxVal:G.maxVal,isSkillMode:G.isSkillMode,hp:getPlayer('p1').maxHP,skillCount:G.skillCount,noTimer:G.noTimer}); // 等待中的观战者同步开局
     initGame();
     updateLobbyStatus(); // 大厅房间状态 → 已开始
 });
@@ -6677,7 +6694,7 @@ rematchBtn.addEventListener('click',function(){
     if(G.mode.includes('remote')){
         if(G.isHost && G.conn && G.conn.open){
             G.conn.send({type:'rematch'});
-            broadcastToSpectators({type:'start',minVal:G.minVal,maxVal:G.maxVal,isSkillMode:G.isSkillMode,hp:getPlayer('p1').maxHP,skillCount:G.skillCount}); // 观战者跟随重赛
+            broadcastToSpectators({type:'start',minVal:G.minVal,maxVal:G.maxVal,isSkillMode:G.isSkillMode,hp:getPlayer('p1').maxHP,skillCount:G.skillCount,noTimer:G.noTimer}); // 观战者跟随重赛
             initGame();
             updateLobbyStatus(); // 大厅房间状态 → 已开始
         } else if(!G.isHost) {
@@ -7354,6 +7371,7 @@ window.updateInputDisplay = updateInputDisplay;
 window.renderSkills = renderSkills;
 window.showCheatToast = showCheatToast;
 window.messageDisplay = messageDisplay;
+window.inputDisplay = inputDisplay;
 window.$ = $;
 window.SECRET_SKILLS = SECRET_SKILLS;
 Object.defineProperty(window, 'skillSelectPhase', { get(){ return skillSelectPhase; }, configurable:true });
