@@ -3021,6 +3021,17 @@ function setupConnection(conn){
             handleRemotePauseRequest();
             return;
         }
+        // 开局参数下发（修复：此前客机丢弃start——G.mode从未设置，isMyTurn恒false，客机键盘整场不解锁）
+        if(data.type==='start' && !G.isHost){
+            G.minVal=data.minVal; G.maxVal=data.maxVal;
+            G.isSkillMode=!!data.isSkillMode;
+            G.mode=data.isSkillMode?'remote-skill':'remote-normal';
+            if(data.hp){ getPlayer('p1').maxHP=data.hp; getPlayer('p2').maxHP=data.hp; }
+            if(data.skillCount!==undefined) G.skillCount=data.skillCount;
+            if(data.noTimer!==undefined) G.noTimer=!!data.noTimer;
+            return;
+        }
+        if(data.type==='request_sync' && G.isHost){ syncIfRemote(); return; } // 客机补拉全量状态
         if(data.type==='chat'){
             const _ct = Date.now();
             if(conn._chatT && _ct-conn._chatT < 600) return; // Anti-Cheat：聊天防刷屏（600ms最小间隔）
