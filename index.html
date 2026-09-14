@@ -116,10 +116,21 @@
         #cheat-toast { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); border:1px solid rgba(0,240,255,0.3); padding:12px 24px; border-radius:10px; font-size:0.9rem; font-weight:700; z-index:3000; opacity:0; transition:opacity 0.3s; pointer-events:none; color:var(--neon); text-align:center; max-width:80%; }
         #cheat-toast.show { opacity:1; pointer-events:auto; }
         #cheat-toast .toast-close { position:absolute; top:4px; right:8px; cursor:pointer; font-size:1rem; color:#aaa; background:none; border:none; }
-        #surrender-btn { padding:6px 12px; border:1px solid rgba(255,80,80,0.4); border-radius:15px; background:rgba(255,50,50,0.08); color:#ff6666; font-size:0.65rem; font-weight:700; cursor:pointer; margin-top:4px; display:none; }
-        #pause-request-btn { padding:6px 12px; border:1px solid rgba(255,204,102,0.4); border-radius:15px; background:rgba(255,204,102,0.08); color:#ffcc66; font-size:0.65rem; font-weight:700; cursor:pointer; margin-top:4px; }
-        #pause-request-btn:disabled { opacity:0.4; cursor:default; }
-        #codex-battle-btn { padding:6px 12px; border:1px solid rgba(0,240,255,0.4); border-radius:15px; background:rgba(0,240,255,0.08); color:var(--neon); font-size:0.65rem; font-weight:700; cursor:pointer; margin-top:4px; }
+        #surrender-btn { padding:5px 10px; border:1px solid rgba(255,80,80,0.4); border-radius:15px; background:rgba(255,50,50,0.08); color:#ff6666; font-size:0.65rem; font-weight:700; cursor:pointer; display:none; }
+        #codex-battle-btn { padding:5px 10px; border:1px solid rgba(0,240,255,0.4); border-radius:15px; background:rgba(0,240,255,0.08); color:var(--neon); font-size:0.65rem; font-weight:700; cursor:pointer; display:none; }
+        #training-panel-btn { padding:5px 10px; border:1px solid rgba(255,204,102,0.45); border-radius:15px; background:rgba(255,204,102,0.08); color:#ffcc66; font-size:0.65rem; font-weight:700; cursor:pointer; display:none; }
+        /* 训练场 */
+        .training-toggle-row { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:8px 0; max-width:420px; }
+        .training-toggle-btn { padding:10px 14px; border-radius:12px; border:1.5px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.05); color:#999; font-size:0.75rem; font-weight:700; cursor:pointer; min-width:132px; }
+        .training-toggle-btn.on { border-color:#7dffbe; color:#7dffbe; background:rgba(0,255,136,0.1); box-shadow:0 0 10px rgba(0,255,136,0.25); }
+        #training-skill-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; max-width:400px; max-height:52vh; overflow-y:auto; padding:4px; }
+        .training-skill-card { padding:8px 4px; border:2px solid rgba(255,255,255,0.15); border-radius:10px; cursor:pointer; text-align:center; background:rgba(255,255,255,0.03); }
+        .training-skill-card.selected { border-color:var(--neon); background:rgba(0,240,255,0.12); box-shadow:0 0 10px rgba(0,240,255,0.3); }
+        .training-skill-card .skill-name { font-size:0.68rem; font-weight:700; }
+        .training-skill-card .skill-cd { font-size:0.55rem; color:#ffaa00; margin-top:2px; }
+        .training-slot-row { display:flex; gap:8px; justify-content:center; margin:8px 0; }
+        .training-slot { min-width:86px; padding:8px 10px; border:1.5px dashed rgba(0,240,255,0.4); border-radius:10px; font-size:0.7rem; color:#9adcff; text-align:center; }
+        .training-slot.filled { border-style:solid; color:var(--neon); background:rgba(0,240,255,0.08); }
         /* 技能演示：中央技能大卡（开局亮相 → 缩小飞进技能栏里那个能按的真按钮，然后消失） */
         #demo-card { position:fixed; left:50%; top:36%; transform:translate(-50%,-50%); z-index:1400; background:rgba(8,12,18,0.93); border:2px solid var(--neon); border-radius:16px; padding:18px 32px; text-align:center; pointer-events:none; transition:left 0.7s ease, top 0.7s ease, transform 0.7s ease, opacity 0.7s ease; box-shadow:0 0 30px rgba(0,240,255,0.25); }
         #demo-card.hidden { display:none; }
@@ -423,6 +434,9 @@
     <div id="header">
         <h1>💣 数字炸弹</h1>
         <div id="header-right">
+            <button id="codex-battle-btn">📖 图鉴</button>
+            <button id="surrender-btn">🏳️ 认输</button>
+            <button id="training-panel-btn">🛠️ 训练</button>
             <button id="fullscreen-btn" title="全屏">⛶</button>
             <button id="chat-toggle-btn">💬<span id="chat-badge" class="chat-badge">0</span></button>
             <div id="room-info">未连接</div>
@@ -435,6 +449,7 @@
         <div class="menu-floaters"><span>💣</span><span>💥</span><span>🎲</span><span>⚔️</span><span>🧨</span></div>
         <div class="overlay-title">选择模式</div>
         <button class="btn" id="normal-mode-btn">🎮 开始游戏</button>
+        <button class="btn secondary" id="training-mode-btn">🏋️ 训练场</button>
         <button class="btn secondary" id="tutorial-mode-btn">🎓 教程模式</button>
         <button class="btn secondary" id="settings-btn">⚙️ 设置</button>
         <div id="skill-marquee"><div id="skill-marquee-track"></div></div>
@@ -530,6 +545,51 @@
         </div>
         <div class="tutorial-levels" id="tutorial-levels"></div>
         <button class="btn secondary" id="back-menu-btn2">返回</button>
+    </div>
+    <div id="training-setup-overlay" class="overlay hidden">
+        <div class="overlay-title">🏋️ 训练场</div>
+        <div class="help-content" style="flex:none;padding-bottom:0;text-align:center;">
+            <p>自由沙盒：从全部技能中自选 3 个与 AI 对练。对局中点右上角「🛠️ 训练」可随时开/关无敌、无冷却、显示炸弹，或重选技能。</p>
+        </div>
+        <div class="setting-row" id="training-ai-level-row">
+            <label>AI难度：</label>
+            <button class="ai-level-btn" data-level="1">简单</button>
+            <button class="ai-level-btn" data-level="2">普通</button>
+            <button class="ai-level-btn" data-level="3">困难</button>
+            <button class="ai-level-btn" data-level="4">大师</button>
+        </div>
+        <div class="setting-row"><label>我的技能（选 3 个）：</label></div>
+        <div class="training-slot-row" id="training-slot-row"></div>
+        <button class="btn small" id="training-pick-btn">🃏 选择技能</button>
+        <button class="btn" id="training-start-btn" disabled>开始训练</button>
+        <button class="btn secondary" id="training-back-btn">返回</button>
+    </div>
+    <div id="training-skill-overlay" class="overlay hidden" style="z-index:2800;">
+        <div class="overlay-title" style="font-size:1.2rem;">🃏 选择 3 个技能</div>
+        <div id="training-pick-count" style="color:var(--neon);font-size:0.85rem;font-weight:700;margin-bottom:8px;">已选 0 / 3</div>
+        <div id="training-skill-grid"></div>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+            <button class="btn secondary" id="training-pick-cancel" style="min-width:110px;margin-top:0;">取消</button>
+            <button class="btn" id="training-pick-confirm" style="min-width:110px;margin-top:0;" disabled>确定</button>
+        </div>
+    </div>
+    <div id="training-panel-overlay" class="overlay hidden" style="z-index:2700;">
+        <div class="overlay-title" style="font-size:1.2rem;">🛠️ 训练场控制台</div>
+        <div class="training-toggle-row">
+            <button class="training-toggle-btn" id="tg-god-self">✨ 自己无敌：关</button>
+            <button class="training-toggle-btn" id="tg-god-opp">✨ 对面无敌：关</button>
+            <button class="training-toggle-btn" id="tg-no-cd">⏱️ 无冷却：关</button>
+            <button class="training-toggle-btn" id="tg-show-bomb">💣 显示炸弹：关</button>
+        </div>
+        <div class="setting-row" id="training-panel-ai-row">
+            <label>AI难度：</label>
+            <button class="ai-level-btn" data-level="1">简单</button>
+            <button class="ai-level-btn" data-level="2">普通</button>
+            <button class="ai-level-btn" data-level="3">困难</button>
+            <button class="ai-level-btn" data-level="4">大师</button>
+        </div>
+        <button class="btn small" id="training-repick-btn">🃏 重选我的 3 个技能</button>
+        <button class="btn" id="training-panel-close">关闭</button>
     </div>
     <div id="remote-lobby" class="overlay hidden">
         <div class="overlay-title">远程对战</div>
@@ -647,9 +707,6 @@
                 <button class="key-btn" data-value="000">000</button>
             </div>
             <div id="pc-kbd-hint">⌨️ 数字键输入 · Enter 确定 · Backspace 退格 · 选技能按 1/2/3 · Esc 关闭浮层</div>
-            <button id="surrender-btn">🏳️ 认输</button>
-            <button id="pause-request-btn" style="display:none;">⏸ 暂停</button>
-            <button id="codex-battle-btn">📖 图鉴</button>
             <button id="game-over-btn">返回主菜单</button>
             <button id="rematch-btn">🔄 再来一局</button>
         </div>
@@ -1057,7 +1114,8 @@ const G = {
     skillSelectShown: false,
     roundCount: 0,
     aiTurnToken: 0, // AI回合令牌：必须初始化为数字！若为undefined，++后变NaN，NaN!==NaN恒true会让AI执行链立即中止卡死
-    tutorial: null // 教程相关数据
+    tutorial: null, // 教程相关数据
+    training: null // 训练场配置：{ skills:[id×3], godSelf, godOpp, noCd, showBomb }，开局时建立，整局（含再来一局）保留
 };
 
 let skillSelectPhase = null;
@@ -3366,18 +3424,11 @@ function remotePauseExit(byWho){
     G.paused = false;
     $('paused-overlay').classList.add('hidden');
     $('pause-ask-overlay').classList.add('hidden');
-    $('pause-request-btn').disabled = false;
     updateTurnIndicator();
     startTurnTimer(); // 解除后该回合重新计 60 秒
     showCheatToast('▶ '+(byWho||'对方')+' 解除了暂停', 2500);
     syncIfRemote();
 }
-$('pause-request-btn').addEventListener('click', function(){
-    if(!G.mode.includes('remote') || !G.conn || !G.conn.open || G.paused || !G.active) return;
-    try{ G.conn.send({type:'pause_request'}); }catch(e){ return; }
-    this.disabled = true;
-    showCheatToast('⏸ 暂停请求已发送，等待对方回应...', 3000);
-});
 $('pause-accept-btn').addEventListener('click', function(){
     if(G.conn && G.conn.open){ try{G.conn.send({type:'pause_response', accept:true});}catch(e){} }
     remotePauseEnter();
@@ -3744,7 +3795,7 @@ function endGame(){
     else if(p1.hp<=0) { messageDisplay.textContent='🎉 '+p2.name+' 获胜！'; winner=p2.id; }
     else { messageDisplay.textContent='🎉 '+p1.name+' 获胜！'; winner=p1.id; }
 
-    if(winner !== 'draw' && winner && G.mode!=='tutorial') {
+    if(winner !== 'draw' && winner && G.mode!=='tutorial' && G.mode!=='training') { // 训练场=练习沙盒，胜负不计入战绩
         const stats = loadStats();
         const me = getMyPlayer();
         if(winner === me.id) stats.wins++;
@@ -3811,6 +3862,7 @@ async function initGame(){
         getPlayer('p2').avatar= getRandomAnimeAvatar();
         G.aiAvatarUrl=null; G.aiAvatarOk=false;
         roomInfo.textContent=(G.aiDisguise?'对方':'🤖 AI') + ' ('+(['简单','普通','困难','大师'][G.aiLevel-1]||'困难')+')';
+        if(G.mode==='training') roomInfo.textContent='🏋️ 训练场 · AI ('+(['简单','普通','困难','大师'][G.aiLevel-1]||'困难')+')';
         if(G.aiDisguise){ // 大厅伪装房：对手显示房主名+人类头像，房间信息装成真远程
             getPlayer('p1').name = G.settings.name || '我';
             getPlayer('p2').name = G.aiDisguise.name;
@@ -3834,7 +3886,9 @@ async function initGame(){
     renderPlayers(); updateRange(); updateInputDisplay();
     messageDisplay.textContent='游戏开始！第 1 轮';
     updateTurnIndicator();
-    if(G.isSkillMode && G.mode!=='tutorial'){
+    if(G.mode==='training'){
+        trainingSkillPhase(); // 训练场：玩家用自选的3技，AI 正常选技
+    } else if(G.isSkillMode && G.mode!=='tutorial'){
         if(!(G.mode.includes('remote')&&!G.isHost)) startRoundSkillSelect();
     } else if(G.mode.includes('ai')&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
     else if(G.mode==='tutorial'&&G.currentPlayer==='p2') setTimeout(aiTurn, 900);
@@ -4339,7 +4393,9 @@ function processGuess(guess, isSkillAttack, guesserId){
             if(isSplash){
                 defender.web=false;
                 let splashMsg='🕸️ '+guesserName+' 踩中蛛网雷区，被爆炸波及！';
-                if(guesser.shield>0){
+                if(trainingGod(guesser)){
+                    splashMsg+='（✨无敌：波及伤害免疫）';
+                } else if(guesser.shield>0){
                     guesser.shield--;
                     splashMsg+='（🛡️护盾抵挡了波及伤害）';
                 } else {
@@ -4383,7 +4439,9 @@ function processGuess(guess, isSkillAttack, guesserId){
 
             if(selfInflicted){
                 const trapDmg = guesser.blind ? 2 : 1; // 致盲×陷阱联动：瞎子踩雷伤害+1（先致盲再埋雷）
-                if(guesser.shield>0){
+                if(trainingGod(guesser)){
+                    messageDisplay.textContent='✨ '+guesserName+' 无敌：陷阱伤害免疫！';
+                } else if(guesser.shield>0){
                     guesser.shield--;
                     messageDisplay.textContent='🛡️ '+guesserName+' 的护盾抵挡了陷阱伤害！';
                 } else {
@@ -4408,12 +4466,13 @@ function processGuess(guess, isSkillAttack, guesserId){
             const segDamages = [];
             let rem = totalDamage;
             for(let i=0;i<segCount;i++){ const sd = Math.ceil(rem/(segCount-i)); segDamages.push(sd); rem -= sd; }
-            let blockedSegs=0, reflectedSegs=0, reflectedDamage=0, landedSegs=0, landedDamage=0;
+            let blockedSegs=0, reflectedSegs=0, reflectedDamage=0, landedSegs=0, landedDamage=0, godSegs=0;
             let defenderRebirthed=false, guesserRebirthed=false;
             for(const sd of segDamages){
                 if(defender.reflect>0 && !isSkillAttack){
                     defender.reflect--; reflectedSegs++;
-                    if(guesser.shield>0){ guesser.shield--; }
+                    if(trainingGod(guesser)){ godSegs++; }
+                    else if(guesser.shield>0){ guesser.shield--; }
                     else {
                         guesser.hp-=sd; reflectedDamage+=sd;
                         if(guesser.hp<=0){
@@ -4421,6 +4480,8 @@ function processGuess(guess, isSkillAttack, guesserId){
                             else break;
                         }
                     }
+                } else if(trainingGod(defender)){
+                    godSegs++;
                 } else if(defender.shield>0 && !guesser.pierce){
                     defender.shield--; blockedSegs++;
                 } else {
@@ -4442,6 +4503,7 @@ function processGuess(guess, isSkillAttack, guesserId){
                     rmsg= reflectedDamage>0 ? '↩️ 伤害被反射！'+guesserName+' -'+reflectedDamage+'血' : '↩️ 反射！但 '+guesserName+' 的护盾抵挡了伤害';
                 }
                 if(guesserRebirthed) rmsg+=' 🕊️ '+guesserName+' 重生！以'+rebirthHP(guesser)+'血复活';
+                if(godSegs>0) rmsg+=' ✨无敌免疫'+godSegs+'段';
                 messageDisplay.textContent=rmsg;
                 renderPlayers();
                 if(getPlayer('p1').hp<=0||getPlayer('p2').hp<=0){ endGame(); return; }
@@ -4470,6 +4532,7 @@ function processGuess(guess, isSkillAttack, guesserId){
             }
             if(defenderRebirthed) hitMsg+=' 🕊️ '+defender.name+' 重生！以'+rebirthHP(defender)+'血复活';
             if(guesserRebirthed) hitMsg+=' 🕊️ '+guesserName+' 重生！以'+rebirthHP(guesser)+'血复活';
+            if(godSegs>0) hitMsg+=' ✨无敌免疫'+godSegs+'段伤害';
             // 数字斩联动：生效期间猜中炸弹，额外多积0.5攻击或治疗（命中=加速积攒）
             if(guesser.slashActive>0 && !isSkillAttack){ if(Math.random()<0.5) guesser.slashAtk=(guesser.slashAtk||0)+0.5; else guesser.slashHeal=(guesser.slashHeal||0)+0.5; hitMsg+=' ⚔️数字斩命中加积0.5！'; renderSlashPanel(); }
             if(landedDamage>0){
@@ -4487,8 +4550,11 @@ function processGuess(guess, isSkillAttack, guesserId){
             if(getPlayer('p1').hp<=0||getPlayer('p2').hp<=0){ endGame(); return; }
             if(defender.bet){
                 defender.bet=false;
+                if(trainingGod(defender)){ messageDisplay.textContent += ' 🎯 押注失败，但✨无敌免疫'; }
+                else {
                 defender.hp = Math.max(0, defender.hp - 1);
                 messageDisplay.textContent += ' 🎯 押注失败！'+defender.name+' -1血';
+                }
                 renderPlayers();
                 if(defender.hp <= 0){
                     if(defender.rebirth){
@@ -4590,7 +4656,9 @@ function processGuess(guess, isSkillAttack, guesserId){
             if(guesser.allin){
                 guesser.allin=false;
                 guesser.allinMultiplier=null;
-                if(guesser.shield>0){
+                if(trainingGod(guesser)){
+                    messageDisplay.textContent+=' ✨ 无敌：孤注一掷反噬免疫';
+                } else if(guesser.shield>0){
                     guesser.shield--;
                     messageDisplay.textContent+=' 🛡️ 护盾抵挡自伤';
                 } else {
@@ -4640,7 +4708,9 @@ function processGuess(guess, isSkillAttack, guesserId){
 }
 
 function afterHitSkillPhase(){
-    if(G.isSkillMode && G.mode!=='tutorial') {
+    if(G.mode==='training') {
+        trainingSkillPhase(); // 训练场每轮：玩家保留自选技能，AI 重新选技
+    } else if(G.isSkillMode && G.mode!=='tutorial') {
         startRoundSkillSelect();
     } else {
         startNewRound();
@@ -4772,7 +4842,7 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
         return;
     }
 
-    if(skillId!=='numberslash') user.cooldowns[skillId] = skill.cooldown; // 数字斩生效期间不进冷却：3回合结算后才正式冷却
+    if(skillId!=='numberslash' && !(G.mode==='training'&&G.training&&G.training.noCd&&user.id==='p1')) user.cooldowns[skillId] = skill.cooldown; // 数字斩生效期间不进冷却：3回合结算后才正式冷却；训练场开无冷却时玩家技能不进冷却
     // 记录人类（p1）的公开部署动作（陷阱/禁猜是公开播报的）：AI据此调整埋雷躲避
     if(G.mode.includes('ai') && user.id==='p1'){
         // 提示类/挪弹类技能已全面保密：AI 无从得知使用事实，只能靠对手的猜测行为品出威胁
@@ -5217,8 +5287,8 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             } else {
                 const totalHP = user.hp + opponent.hp;
                 const avgHP = Math.floor(totalHP / 2);
-                user.hp = Math.max(1, avgHP);
-                opponent.hp = Math.max(1, avgHP);
+                if(!(trainingGod(user) && avgHP < user.hp)) user.hp = Math.max(1, avgHP); // 训练场无敌：只加不扣
+                if(!(trainingGod(opponent) && avgHP < opponent.hp)) opponent.hp = Math.max(1, avgHP);
                 messageDisplay.textContent='⚖️ '+userName+' 使用天平！双方生命值平分（各'+avgHP+'血）！';
             }
             renderPlayers(); // 血量条必须立即重绘——否则数值变了界面不动，看起来像技能无效
@@ -5311,7 +5381,8 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
                 {msg:'🎲 命运骰子：本回合伤害-1', effect:()=>{ user.diceBonus -= 1; }},
                 {msg:'🎲 命运骰子：立即回复1血', effect:()=>{ user.hp = Math.min(user.maxHP, user.hp+1); }},
                 {msg:'🎲 命运骰子：自己受到1点伤害', effect:()=>{
-                    if(user.shield>0){ user.shield--; }
+                    if(trainingGod(user)){ chosen.msg='🎲 命运骰子：自伤被✨无敌免疫'; }
+                    else if(user.shield>0){ user.shield--; }
                     else { user.hp -= 1; if(user.hp<=0 && user.rebirth){ user.hp=rebirthHP(user); user.rebirth=false; user.skills = user.skills.filter(s=>s.id!=='rebirth'); } }
                 }},
                 {msg:'🎲 命运骰子：无事发生', effect:()=>{}}
@@ -5326,7 +5397,8 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
         case 'gambler': {
             const userWin = Math.random() < 0.5;
             if(userWin){
-                if(opponent.shield>0){ opponent.shield--; messageDisplay.textContent='🃏 赌徒：对手护盾抵挡了伤害！'; }
+                if(trainingGod(opponent)){ messageDisplay.textContent='🃏 赌徒：对手✨无敌，伤害免疫！'; }
+                else if(opponent.shield>0){ opponent.shield--; messageDisplay.textContent='🃏 赌徒：对手护盾抵挡了伤害！'; }
                 else {
                     opponent.hp -= 1;
                     messageDisplay.textContent='🃏 赌徒：对手受到1点伤害！';
@@ -5337,7 +5409,8 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
                     }
                 }
             } else {
-                if(user.shield>0){ user.shield--; messageDisplay.textContent='🃏 赌徒：你的护盾抵挡了伤害！'; }
+                if(trainingGod(user)){ messageDisplay.textContent='🃏 赌徒：你✨无敌，伤害免疫！'; }
+                else if(user.shield>0){ user.shield--; messageDisplay.textContent='🃏 赌徒：你的护盾抵挡了伤害！'; }
                 else {
                     user.hp -= 1;
                     messageDisplay.textContent='🃏 赌徒：你受到1点伤害！';
@@ -5371,15 +5444,18 @@ function reduceCooldowns(playerId){
 function resolveSlash(p){
     const atk = p.slashAtk||0, heal = p.slashHeal||0;
     p.slashAtk = 0; p.slashHeal = 0;
-    p.cooldowns['numberslash'] = 3;
+    if(!(G.mode==='training'&&G.training&&G.training.noCd&&p.id==='p1')) p.cooldowns['numberslash'] = 3; // 训练场无冷却：数字斩结算后也不进冷却
     const opp = getOpponentPlayer(p.id);
     let msg = '⚔️ 数字斩结算（攻击'+atk+' / 治疗'+heal+'）：';
     if(atk>heal){
         const dmg = Math.round(atk);
         if(dmg>0){
-            opp.hp -= dmg;
-            msg += '攻击更多，对'+(opp.name||'对手')+'直接造成'+dmg+'点伤害！';
-            if(opp.hp<=0 && opp.rebirth){ opp.hp=rebirthHP(opp); opp.rebirth=false; opp.skills=opp.skills.filter(s=>s.id!=='rebirth'); msg+=' 🕊️ 对手重生！以'+rebirthHP(opp)+'血复活'; }
+            if(trainingGod(opp)){ msg += '攻击更多，但'+(opp.name||'对手')+'✨无敌，伤害免疫！'; }
+            else {
+                opp.hp -= dmg;
+                msg += '攻击更多，对'+(opp.name||'对手')+'直接造成'+dmg+'点伤害！';
+                if(opp.hp<=0 && opp.rebirth){ opp.hp=rebirthHP(opp); opp.rebirth=false; opp.skills=opp.skills.filter(s=>s.id!=='rebirth'); msg+=' 🕊️ 对手重生！以'+rebirthHP(opp)+'血复活'; }
+            }
         } else msg += '攻击太少，无事发生';
     } else if(heal>atk){
         const h = Math.round(heal);
@@ -5507,7 +5583,7 @@ document.addEventListener('keydown', function(e){
     }
     // Esc：关闭最上层浮层（不动主菜单/设置向导，避免破坏流程）
     if(e.key==='Escape'){
-        const closable = ['chat-overlay','help-overlay','settings-overlay'];
+        const closable = ['chat-overlay','help-overlay','settings-overlay','training-panel-overlay'];
         for(const id of closable){
             const el = $(id);
             if(el && !el.classList.contains('hidden')){
@@ -5614,11 +5690,12 @@ function updateRange(){
     } else {
         rangeDisplay.textContent='范围：'+v.low+' - '+v.high;
     }
-    // 教程/演示模式：直接亮出炸弹位置（纯教学辅助，其它模式永不显示）
+    // 教程/演示模式：直接亮出炸弹位置（纯教学辅助）；训练场由玩家在控制台自主开关
     const tbh=$('tutorial-bomb-hint');
     if(tbh){
-        if(G.mode==='tutorial' && G.active && G.bombNumbers && G.bombNumbers.length>0){
-            tbh.textContent='💣 炸弹：'+G.bombNumbers.join(', ')+'（教学可见）';
+        const trainingShow = G.mode==='training' && G.training && G.training.showBomb;
+        if((G.mode==='tutorial' || trainingShow) && G.active && G.bombNumbers && G.bombNumbers.length>0){
+            tbh.textContent='💣 炸弹：'+G.bombNumbers.join(', ')+(trainingShow?'（训练场可见）':'（教学可见）');
             tbh.classList.remove('hidden');
         } else {
             tbh.classList.add('hidden');
@@ -5791,6 +5868,11 @@ function hideAll(){
     surrenderBtn.style.display='none';
     gameOverBtn.style.display='none';
     rematchBtn.style.display='none';
+    $('codex-battle-btn').style.display='none';
+    $('training-panel-btn').style.display='none';
+    if($('training-setup-overlay')) $('training-setup-overlay').classList.add('hidden');
+    if($('training-skill-overlay')) $('training-skill-overlay').classList.add('hidden');
+    if($('training-panel-overlay')) $('training-panel-overlay').classList.add('hidden');
     chatToggleBtn.style.display='none';
     chatOverlay.classList.add('hidden');
     skillSelectOverlay.classList.remove('active');
@@ -5867,6 +5949,120 @@ function startTutorial(levelIndex) {
     roomInfo.textContent = '🎓 教程关卡 ' + levelData.level;
     showCheatToast('🎯 ' + levelData.goal + '<br>💡 ' + levelData.hint, 6000);
 }
+
+// ========== 训练场 ==========
+// 训练场=开了作弊控制台的 AI 技能战：mode='training'（含子串'ai'，AI 触发/回合/观察逻辑全部自动生效），
+// 与教程的差别：AI 走正常强度（按难度档案），玩家技能整局固定为自选的 3 个，每轮不重抽。
+const trainingSetup = { skills:[], aiLevel:1 }; // 设置页暂存（未开局时的选项）
+
+// 训练场无敌判定：被无敌护住的玩家免疫一切生命值扣减（爆炸/反射/陷阱/蛛网/反噬/赌徒/数字斩/天平扣减侧）
+function trainingGod(p){
+    return G.mode==='training' && G.training && p && ((p.id==='p1'&&G.training.godSelf)||(p.id==='p2'&&G.training.godOpp));
+}
+
+function showTrainingSetup(){
+    hideAll();
+    $('training-setup-overlay').classList.remove('hidden');
+    trainingSetup.aiLevel = Math.min(G.aiLevel || G.settings.aiLevel || 1, 4);
+    $('training-ai-level-row').querySelectorAll('.ai-level-btn').forEach(function(x){ x.classList.toggle('active', parseInt(x.dataset.level)===trainingSetup.aiLevel); });
+    renderTrainingSlots();
+}
+function renderTrainingSlots(){
+    const row=$('training-slot-row'); row.innerHTML='';
+    for(let i=0;i<3;i++){
+        const s=document.createElement('div');
+        const sk=trainingSetup.skills[i]?getSkillById(trainingSetup.skills[i]):null;
+        s.className='training-slot'+(sk?' filled':'');
+        s.textContent=sk?sk.name:'空位 '+(i+1);
+        row.appendChild(s);
+    }
+    $('training-start-btn').disabled = trainingSetup.skills.length!==3;
+}
+
+// 全技能自选器（开局前 & 对局中重选共用）：点选最多3个，选满才能确定。onDone(ids|null)
+let trainingPickTemp=[], trainingPickDone=null;
+function openTrainingPicker(currentIds, onDone){
+    trainingPickTemp=(currentIds||[]).slice(0,3);
+    trainingPickDone=onDone;
+    const grid=$('training-skill-grid'); grid.innerHTML='';
+    ALL_SKILLS.forEach(function(sk){
+        const card=document.createElement('div');
+        card.className='training-skill-card'+(trainingPickTemp.includes(sk.id)?' selected':'');
+        const nameDiv=document.createElement('div');
+        nameDiv.className='skill-name'; nameDiv.textContent=sk.name;
+        const cdDiv=document.createElement('div');
+        cdDiv.className='skill-cd'; cdDiv.textContent=sk.cooldown===-1?'一次性':'冷却'+sk.cooldown;
+        card.appendChild(nameDiv); card.appendChild(cdDiv);
+        card.addEventListener('click',function(){
+            const i=trainingPickTemp.indexOf(sk.id);
+            if(i>=0) trainingPickTemp.splice(i,1);
+            else {
+                if(trainingPickTemp.length>=3){ showCheatToast('最多选 3 个，先点掉一个再换'); return; }
+                trainingPickTemp.push(sk.id);
+            }
+            card.classList.toggle('selected', trainingPickTemp.includes(sk.id));
+            $('training-pick-count').textContent='已选 '+trainingPickTemp.length+' / 3';
+            $('training-pick-confirm').disabled = trainingPickTemp.length!==3;
+        });
+        grid.appendChild(card);
+    });
+    $('training-pick-count').textContent='已选 '+trainingPickTemp.length+' / 3';
+    $('training-pick-confirm').disabled = trainingPickTemp.length!==3;
+    $('training-skill-overlay').classList.remove('hidden');
+}
+
+function startTraining(){
+    if(trainingSetup.skills.length!==3) return;
+    G.aiDisguise=null;
+    G.aiLevel=trainingSetup.aiLevel;
+    G.mode='training';
+    G.isSkillMode=true;
+    G.skillCount=3;
+    G.minVal=G.settings.minVal||1; G.maxVal=G.settings.maxVal||100;
+    const hp=Math.max(1,Math.min(100,parseInt(G.settings.hp)||15));
+    getPlayer('p1').maxHP=hp; getPlayer('p2').maxHP=hp;
+    G.training={ skills:trainingSetup.skills.slice(0,3), godSelf:false, godOpp:false, noCd:false, showBomb:false };
+    initGame();
+}
+
+// 训练场的每轮技能阶段：玩家保留自选 3 技（重选走控制台），AI 按正常逻辑重新选技，然后开新轮
+function trainingSkillPhase(){
+    if(!G.active){ startNewRound(); return; }
+    G.processing=true; setKeypadEnabled(false);
+    const p1=getPlayer('p1');
+    p1.skills=G.training.skills.map(function(id){ return getSkillById(id); });
+    renderSkills();
+    messageDisplay.textContent='⏳ AI 正在选择技能...';
+    skillSelectPhase='p2';
+    aiSelectSkillWithCallback(G.skillCount, function(){
+        skillSelectPhase=null;
+        if(!G.active) return;
+        G.processing=false;
+        startNewRound();
+    });
+}
+
+// 训练场控制台：四个开关的UI刷新
+function trainingPanelRefresh(){
+    if(!G.training) return;
+    const t=G.training;
+    [['tg-god-self','godSelf','✨ 自己无敌'],['tg-god-opp','godOpp','✨ 对面无敌'],['tg-no-cd','noCd','⏱️ 无冷却'],['tg-show-bomb','showBomb','💣 显示炸弹']].forEach(function(m){
+        const b=$(m[0]);
+        b.classList.toggle('on', !!t[m[1]]);
+        b.textContent=m[2]+'：'+(t[m[1]]?'开':'关');
+    });
+    $('training-panel-ai-row').querySelectorAll('.ai-level-btn').forEach(function(x){ x.classList.toggle('active', parseInt(x.dataset.level)===G.aiLevel); });
+}
+function trainingToggle(key){
+    if(G.mode!=='training' || !G.training) return;
+    G.training[key]=!G.training[key];
+    if(key==='noCd' && G.training.noCd){ getPlayer('p1').cooldowns={}; renderSkills(); } // 开无冷却：已在冷却的技能立刻清零
+    if(key==='showBomb') updateRange(); // 显示炸弹开关即时生效
+    trainingPanelRefresh();
+    const names={godSelf:'✨ 自己无敌',godOpp:'✨ 对面无敌',noCd:'⏱️ 无冷却',showBomb:'💣 显示炸弹'};
+    showCheatToast(names[key]+(G.training[key]?' 已开启':' 已关闭'), 1500);
+}
+
 function showRemoteLobby(){
     hideAll();
     G.aiDisguise=null; // 进真远程：摘掉大厅伪装
@@ -5903,9 +6099,9 @@ function showBattleArea(){
     hideAll();
     if(G.mode.includes('remote') && G.conn && G.conn.open) startPing();
     battleArea.style.display='flex';
-    surrenderBtn.style.display='block';
-    $('pause-request-btn').style.display = G.mode.includes('remote') ? 'block' : 'none'; // 暂停请求：仅远程对战
-    $('pause-request-btn').disabled = false;
+    surrenderBtn.style.display='inline-block';
+    $('codex-battle-btn').style.display='inline-block'; // 图鉴/认输已移至标题栏右侧，战斗中显示
+    $('training-panel-btn').style.display = G.mode==='training' ? 'inline-block' : 'none'; // 训练场控制台入口
     G.paused=false; $('paused-overlay').classList.add('hidden'); $('pause-ask-overlay').classList.add('hidden');
     $('quick-chat-bar').style.display = (G.mode.includes('ai')||G.mode.includes('remote')) ? 'flex' : 'none';
     if(G.isSkillMode){ skillsBar.style.display='flex'; renderSkills(); }
@@ -5917,6 +6113,64 @@ function showBattleArea(){
 // ========== 事件绑定 ==========
 $('normal-mode-btn').addEventListener('click',showSetup);
 $('tutorial-mode-btn').addEventListener('click',showTutorialMenu);
+// 训练场：入口 / 设置页 / 自选器 / 控制台
+$('training-mode-btn').addEventListener('click',showTrainingSetup);
+$('training-back-btn').addEventListener('click',showMainMenu);
+$('training-ai-level-row').querySelectorAll('.ai-level-btn').forEach(function(b){
+    b.addEventListener('click',function(){
+        $('training-ai-level-row').querySelectorAll('.ai-level-btn').forEach(function(x){x.classList.remove('active')});
+        b.classList.add('active');
+        trainingSetup.aiLevel=parseInt(b.dataset.level);
+    });
+});
+$('training-pick-btn').addEventListener('click',function(){
+    openTrainingPicker(trainingSetup.skills, function(ids){
+        if(ids){ trainingSetup.skills=ids; renderTrainingSlots(); }
+    });
+});
+$('training-start-btn').addEventListener('click',startTraining);
+$('training-pick-confirm').addEventListener('click',function(){
+    if(trainingPickTemp.length!==3) return;
+    $('training-skill-overlay').classList.add('hidden');
+    const cb=trainingPickDone; trainingPickDone=null;
+    if(cb) cb(trainingPickTemp.slice(0,3));
+});
+$('training-pick-cancel').addEventListener('click',function(){
+    $('training-skill-overlay').classList.add('hidden');
+    const cb=trainingPickDone; trainingPickDone=null;
+    if(cb) cb(null);
+});
+$('training-panel-btn').addEventListener('click',function(){
+    if(G.mode!=='training' || !G.training) return;
+    trainingPanelRefresh();
+    $('training-panel-overlay').classList.remove('hidden');
+});
+$('training-panel-close').addEventListener('click',function(){ $('training-panel-overlay').classList.add('hidden'); });
+$('tg-god-self').addEventListener('click',function(){ trainingToggle('godSelf'); });
+$('tg-god-opp').addEventListener('click',function(){ trainingToggle('godOpp'); });
+$('tg-no-cd').addEventListener('click',function(){ trainingToggle('noCd'); });
+$('tg-show-bomb').addEventListener('click',function(){ trainingToggle('showBomb'); });
+$('training-panel-ai-row').querySelectorAll('.ai-level-btn').forEach(function(b){
+    b.addEventListener('click',function(){ // 对局中随时换 AI 难度
+        G.aiLevel=parseInt(b.dataset.level);
+        trainingPanelRefresh();
+        roomInfo.textContent='🏋️ 训练场 · AI ('+(['简单','普通','困难','大师'][G.aiLevel-1]||'困难')+')';
+        showCheatToast('AI 难度 → '+(['简单','普通','困难','大师'][G.aiLevel-1]), 1500);
+    });
+});
+$('training-repick-btn').addEventListener('click',function(){ // 对局中重选：换一套技能并清空旧冷却
+    if(G.mode!=='training' || !G.training) return;
+    $('training-panel-overlay').classList.add('hidden');
+    openTrainingPicker(G.training.skills, function(ids){
+        if(!ids) return;
+        G.training.skills=ids;
+        const p1=getPlayer('p1');
+        p1.skills=ids.map(function(id){ return getSkillById(id); });
+        p1.cooldowns={};
+        renderSkills();
+        showCheatToast('🃏 技能已更换：'+ids.map(function(id){ return getSkillById(id).name; }).join('、'), 2500);
+    });
+});
 $('back-menu-btn1').addEventListener('click',showMainMenu);
 $('back-menu-btn2').addEventListener('click',showMainMenu);
 $('back-menu-btn3').addEventListener('click',showMainMenu);
@@ -6632,7 +6886,6 @@ function enterSpectateView(hasGame){
     rematchBtn.style.display='none';
     gameOverBtn.style.display='block'; // 复用为"退出观战"按钮
     gameOverBtn.textContent='🚪 退出观战';
-    $('pause-request-btn').style.display='none';
     chatToggleBtn.style.display='inline-block';
     $('quick-chat-bar').style.display='none'; // 观战不发表情
     setKeypadEnabled(false);
