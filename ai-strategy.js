@@ -101,6 +101,10 @@ function aiPlanSkills(ai, human){
     if(cands && cands.length===0){ aiHandleContradiction(); cands=null; } // 线索矛盾：首次容忍，连续才清洗（ai-brain.js）
     const known = aiKnownBomb();
     const candCount = known!==null ? 1 : ((cands && cands.length>0) ? cands.length : range);
+    // 交集推理：自家硬线索 ∩ 对面行为暴露的软线索 = 直接推出答案
+    // （对面把数字和+个位全广播了，我手里一条预知就是最后一块拼图：9=5+4、个位5、十位5 → 54 锁定）
+    const combCands = aiCandidates(false);
+    const combCount = (combCands && combCands.length>0) ? combCands.length : null;
     const humanArmed = !!(human.doubleDamage || human.allinMultiplier || (human.rampageMulti||0)>1 || human.volley>0 || human.bombletDamage);
     const humanDefensed = human.shield>0 || human.reflect>0 || human.rebirth;
     // 人类斩杀线精算：增伤buff使用时全部公开播报——精确算出"他这一发猜中我会不会死"
@@ -249,11 +253,20 @@ function aiPlanSkills(ai, human){
     // 多炸弹（裂变）逐颗配对：场上炸弹变多但档案没跟上（对手偷埋/自己刚埋/档案数对不上）→ 像人一样先刷新情报再动手
     const featsStale = estBombs>1 && (!b || !b.bombFeats || b.bombFeats.length<estBombs
         || !(infoUsed.peek||infoUsed.precognition||infoUsed.digitsum||infoUsed.detect));
+    // 交集补全（优先级最高）：对面行为已暴露≥1条软线索时，任何一条"新维度"提示技都可能直接拼出答案——
+    // 他把数字和/个位全广播了，我手里的预知就是最后一块拼图，必须立刻打
+    const SKILL_FEAT = { peek:'lastDigit', precognition:'tens', digitsum:'digitSum', detect:'digits' };
+    const softFeatCount = (b && b.soft) ? ['lastDigit','tens','digitSum','digits','parity'].filter(f=>b.soft[f]!==null).length : 0;
+    const featKnown = f => !!(b && ((b.soft && b.soft[f]!==null)
+        || (f==='lastDigit'&&b.lastDigit!==null) || (f==='tens'&&b.tens!==null)
+        || (f==='digitSum'&&b.digitSum!==null) || (f==='digits'&&b.digits!==null)));
+    const complement = softFeatCount>0 ? ['peek','precognition','digitsum','detect'].filter(id=>ready(id) && !infoUsed[id] && !featKnown(SKILL_FEAT[id])) : [];
     // 只要范围还没锁死、线索没拿满，信息技能就直接放（不再等候选变少——候选少时线索同样是确认器）
     // infoWanted=false 的另一层含义：信息技能全在冷却时，不得按"候选将减半"的幻影概率估算斩杀
-    const infoWanted = anyInfoReady && range>2 && (clueCount<prof.clueWanted || featsStale);
+    const infoWanted = (anyInfoReady && range>2 && (clueCount<prof.clueWanted || featsStale)) || complement.length>0;
     h.infoWanted = infoWanted;
     if(infoWanted){
+        complement.forEach(id=>push(id)); // 先打互补件：三角定位的最后一块拼图
         // 不互斥：一回合可同时拿 探测+透视+数字和，交集后候选常常只剩个位数；
         // 侦察过的特征不重复看（多炸弹时提示技报全列表，用过一次=该特征全弹覆盖）
         if(ready('detect') && !infoUsed.detect && !(b && b.digits!==null)) push('detect');
@@ -261,8 +274,12 @@ function aiPlanSkills(ai, human){
         if(ready('peek') && !infoUsed.peek && !(b && b.lastDigit!==null)) push('peek');
         if(ready('precognition') && !infoUsed.precognition && !(b && b.tens!==null)) push('precognition');
     }
-    // 验证器：候选较少时验证“当前最值得怀疑”的数字——中了立刻确知，没中也能排除最优猜点
-    if(ready('verifier') && candCount>1 && candCount<=prof.verifierCandMax) push('verifier');
+    // 验证器：候选较少时验证"当前最值得怀疑"的数字——中了立刻确知，没中也能排除最优猜点；
+    // 交集推理收敛到个位数候选时必敲：把行为证据落成硬确知再全压（防钓的正规手续）
+    const verCand = combCount || candCount;
+    if(ready('verifier') && verCand>1 && verCand<=prof.verifierCandMax) push('verifier');
+    // 交集唯一解：有验证器先敲实锤——验证不结束回合，敲完本回合照猜；被钓了也只是空验一发，不亏猜数节奏
+    if(adv && combCount===1 && ready('verifier')) push('verifier');
     // 侦察：对手埋雷/设禁猜/伪装（动作公开、数字保密）→ 必侦察看穿；否则按难度基准频率顺手刺探
     if(adv && ready('scout') && (ai.scoutVision||0)<=0){
         if((G.humanSuspicion||0)>=1 || avgShrink>0.4) push('scout');
@@ -300,14 +317,9 @@ function aiPlanSkills(ai, human){
     const volleySegs = (humanDefensed && ready('volley')) ? (plan.includes('empower')?5:3) : 1;
     const effDmg = defLayers>0 ? Math.max(1,Math.round(estDmg/volleySegs))*Math.max(0,volleySegs-Math.min(defLayers,volleySegs)) : estDmg;
     const canLethal = effDmg >= human.hp + aiRebirthBonus(human);
-    // 读人成果（软线索）：没有硬线索时给斩杀估算一个保守口径——软候选按1.5倍计入（约6折信任），
-    // 体现"宁可被钓也要会跟注，但不下全部身家"；硬线索照旧全信
-    const softCands = (cands===null && adv) ? aiCandidates(false) : null;
-    // 命中概率按“放完信息技能后候选数约减半”乐观估计
-    let estCand = infoWanted ? Math.max(1, Math.floor(candCount/2)) : candCount;
-    if(!infoWanted && cands===null && softCands && softCands.length>0 && softCands.length<candCount){
-        estCand = Math.max(1, Math.ceil(softCands.length*1.5));
-    }
+    // 命中概率估算：交集推理（硬∩软）给出最准候选数直接采用——两路独立证据拼出的解，信任度拉满；
+    // 没有交集时按"放完信息技能后候选数约减半"乐观估计
+    let estCand = infoWanted ? Math.max(1, Math.floor((combCount||candCount)/2)) : (combCount || candCount);
     // 计划里的小范围二分=直接收敛：范围2→1必中，范围3-4→砍半锁定，斩杀估算必须计入
     if(plan.includes('binary') && range<=4) estCand = Math.min(estCand, Math.max(1, Math.ceil(range/2)));
     // 本回合计划里排了裂变：技能先放完才猜，命中面按+1弹计入（先埋后猜，一气呵成）
@@ -387,14 +399,20 @@ function aiPlanSkills(ai, human){
     if(ready('rebirth') && !ai.rebirth) push('rebirth'); // 重生=免费保险：拿到就挂上，别等残血（挂了的不重复挂）
     if(adv && ready('anger') && (ai.maxHP-ai.hp)>=4) push('anger');
 
-    // 7.5) 存款回合：双倍/子母弹/狂暴/吸血"猜错不失效"=本回合内不过期的存款——
-    //      翻倍可以多次累乘，越早叠越赚；炸弹已挪不动（洗牌/虫洞已删），叠了不怕被掀桌
+    // 7.5) 存款回合：可叠加技能"冷却好了就叠"——它们猜错不失效、层数可累积，捏着=白浪费冷却周转
+    //      （双倍/子母弹/翻倍/连击/盾/反/赋能/吸血/治疗），叠了不怕被掀桌
     if(!willing && prof.deposit && !ai.frozen && !human.dormant){ // 对手休眠设伏时增益会打进陷阱，不存款
         if(ready('double')) push('double');
         if(ready('bomblet')) push('bomblet');
         if(adv && ready('rampage')) push('rampage'); // 翻倍多次累乘：没事干就叠，别等确知炸弹才放
+        if(adv && ready('volley')) push('volley');   // 连击段数可叠：早叠早破防
+        if(adv && ready('empower')) push('empower'); // 赋能层数可叠：白存一层
+        if(adv && ready('shield')) push('shield');   // 护盾可叠层：免费保险，好了就补
+        if(adv && ready('reflect')) push('reflect'); // 反射可叠层：架好等对面撞
         if(adv && ready('lifesteal') && ai.hp<ai.maxHP) push('lifesteal');
         if(ready('heal') && ai.hp<ai.maxHP) push('heal'); // 满血前治疗也是白赚的存款
+        // 续猜=当回合多出手：收敛中/落后/小范围时好了就用；钓鱼撑范围时不自我拆台
+        if(adv && ready('speed') && (G.aiBehind || estCand<=8 || range<=12)) push('speed');
     }
 
     // 8) 博弈小注
@@ -475,9 +493,12 @@ function aiTopUp(ai, human, used){
     if(cands && cands.length===0){ aiHandleContradiction(); cands=null; }
     const known = aiKnownBomb();
     const candCount = known!==null ? 1 : ((cands && cands.length>0) ? cands.length : (_aiRHi()-_aiRLo()+1));
+    // 交集推理（硬∩软）：两路证据拼出的候选，追加决策同样采信
+    const combC = aiCandidates(false);
+    const combN = (combC && combC.length>0) ? combC.length : candCount;
     const out = [];
     const push = id => { if(out.length<prof.topUpCap && !out.includes(id) && ready(id)) out.push(id); };
-    if((known!==null || candCount<=4) && !human.dormant){ // 对手休眠设伏：爆发被吞还送+2，改走压缩/确认磨过去
+    if((known!==null || combN<=4) && !human.dormant){ // 对手休眠设伏：爆发被吞还送+2，改走压缩/确认磨过去
         // 线索已收敛 → 直接补爆发收割
         if(adv) push('empower');
         push('double');
@@ -486,7 +507,7 @@ function aiTopUp(ai, human, used){
         push('bomblet');
         if(human.shield>0 || human.reflect>0 || human.rebirth){ push('volley'); push('pierce'); }
         if(prof.topUpSpeed) push('speed');
-    } else if(candCount<=10){
+    } else if(combN<=10){
         // 还不够精确 → 再确认/再压缩
         if(adv) push('verifier');
         push('binary');
@@ -611,5 +632,8 @@ function aiChooseGuess(ai){
         const adj = prof.guessAdjust({ guess:guess, usedClues:usedClues, known:known, lo:_aiRLo(), hi:_aiRHi(), range:range, ai:ai });
         if(typeof adj==='number') guess = Math.max(_aiRLo(), Math.min(_aiRHi(), Math.round(adj)));
     }
+    // 记录本猜是否软线索驱动（跟猜/交集推理）：落空=被钓鱼实锤，aiRegisterMiss 当场清软线索
+    const _b = G.aiBrain;
+    G.aiLastGuessSoft = !!(usedClues && _b && _b.soft && aiMatchFeatureSet(guess, _b.soft));
     return { guess:guess, usedClues:usedClues };
 }

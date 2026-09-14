@@ -9,7 +9,7 @@
 
 // ========== AI 调参中枢：推理机制的旋钮集中在这里 ==========
 const AI_TUNE = {
-    softWeight: 5,      // 软线索（模式挖掘）概率加权倍率：匹配候选权重×5（半信半疑），而不是硬过滤
+    softWeight: 5,      // 软线索（模式挖掘）概率加权倍率：池内匹配候选权重×5（先收敛到软线索池跟猜，池内再加权选点）
     staleThreshold: 2.5 // 情报污染检测（SPRT思想）：线索制导猜测累计期望命中到此值仍颗粒无收 → 情报已过期，全部废弃
 };
 
@@ -204,8 +204,10 @@ function aiRestoreBrain(){
     dlog('AI','伪装识破，取回暂存线索恢复推理');
 }
 
-// 加权候选：硬线索照旧硬过滤（确定的真理不让步），软线索只做概率加权（半信半疑）——
-// 被钓鱼的代价从"候选被掏空"降级为"概率被轻微带偏"，且与硬事实矛盾时照旧当场丢弃
+// 加权候选：硬线索照旧硬过滤（确定的真理不让步）；软线索=对手每一猜都在广播的行为证据——
+// 收敛到软线索池内选点（跟猜是最基本的逻辑：他连着猜5十位=他看过预知，跟着猜就是），
+// 池内再按特征匹配度做概率加权选出最优切割点；
+// 与硬事实矛盾时照旧当场丢弃（防钓底线：最多被带偏两轮，模式一破立刻扔）
 function aiWeightedCands(){
     const b = G.aiBrain;
     const hard = aiCandidates(true);
@@ -215,8 +217,12 @@ function aiWeightedCands(){
     if(!hard && !hasSoft) return null;
     let pool = hard;
     if(!pool){ pool = []; for(let n=_aiRLo(); n<=_aiRHi(); n++) pool.push(n); }
+    if(hasSoft){
+        const fs = pool.filter(n=>aiMatchFeatureSet(n, soft));
+        if(fs.length>0) pool = fs; // 跟猜：只在对手广播出来的特征池里选点
+        else { b.soft=null; dlog('AI','软线索与硬事实矛盾，全部丢弃'); } // 被钓了：一个都匹配不上
+    }
     const W = AI_TUNE.softWeight;
-    let boosted = 0;
     const out = pool.map(n=>{
         let w = 1;
         if(hasSoft){
@@ -226,10 +232,8 @@ function aiWeightedCands(){
             if(soft.parity!==null && n%2===soft.parity) w*=W;
             if(soft.digits!==null && String(n).length===soft.digits) w*=W;
         }
-        if(w>1) boosted++;
         return { n:n, w:w };
     });
-    if(hasSoft && boosted===0){ b.soft=null; dlog('AI','软线索与硬事实矛盾，全部丢弃'); } // 被钓了：一个都匹配不上
     return out;
 }
 function aiWeightedTotal(wc){
@@ -333,6 +337,13 @@ function aiRegisterMiss(guess){
         return;
     }
     if(b.verified[guess]===undefined) b.verified[guess]=false;
+    // 跟猜/交集推理的数落空 = 被钓鱼实锤：软线索当场全扔并记恨（他广播的特征是演的，今后确认门槛+1）
+    if(G.aiLastGuessSoft && b.soft){
+        G.aiSoftSkeptic = G.aiSoftSkeptic||{};
+        ['lastDigit','tens','digitSum','parity','digits'].forEach(k=>{ if(b.soft[k]!==null) G.aiSoftSkeptic[k]=(G.aiSoftSkeptic[k]||0)+1; });
+        b.soft = null;
+        dlog('AI','跟猜/交集推理落空：被钓鱼实锤，软线索全扔（相关特征确认门槛+1）');
+    }
     const p = G.aiLastGuessP||0;
     if(p>0){
         b.staleScore = (b.staleScore||0)+p;

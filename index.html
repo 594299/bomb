@@ -515,7 +515,7 @@
             <button class="ai-level-btn" data-level="4">大师</button>
         </div>
         <div class="setting-row">
-            <label>技能数量（0-3）：</label><input type="number" id="skill-count-input" value="1" min="0" max="3">
+            <label>技能数量（0-3）：</label><input type="number" id="skill-count-input" value="3" min="0" max="3">
         </div>
         <button class="btn" id="start-game-btn">开始游戏</button>
         <button class="btn secondary" id="back-menu-btn1">返回</button>
@@ -581,10 +581,10 @@
                 <label>最大值：</label><input type="number" id="remote-max-input" value="100" min="2">
             </div>
             <div class="setting-row">
-                <label>生命值（1-100）：</label><input type="number" id="remote-hp-input" value="5" min="1" max="100">
+                <label>生命值（1-100）：</label><input type="number" id="remote-hp-input" value="15" min="1" max="100">
             </div>
             <div class="setting-row" id="remote-skill-count-row">
-                <label>技能数量（0-3）：</label><input type="number" id="remote-skill-count-input" value="1" min="0" max="3">
+                <label>技能数量（0-3）：</label><input type="number" id="remote-skill-count-input" value="3" min="0" max="3">
             </div>
         </div>
         <div class="setting-row">
@@ -969,7 +969,7 @@ Object.freeze(ALL_SKILLS);
 function rebirthHP(p){ return Math.max(3, Math.ceil(p.maxHP/2)); }
 function makePlayer(id) {
     // 使用简单的防篡改代理(Anti-cheat Proxy)监控核心属性
-    const player = { id:id, name:'', avatar:'', hp:5, maxHP:5,
+    const player = { id:id, name:'', avatar:'', hp:15, maxHP:15,
         shield:0, reflect:0, rebirth:false, lifesteal:false,
         double:false, pierce:false, anger:false, speed:0,
         skipNext:false, blind:false, lock:false, lockedSkill:null,
@@ -1036,7 +1036,7 @@ const G = {
     myRole:'', isHost:false,
     peer:null, conn:null, roomCode:'',
     pendingSkillSelect:null, pendingSkillOptions:null,
-    pendingSkillCount:1, skillCount:1, pendingRoundOptions:null,
+    pendingSkillCount:3, skillCount:3, pendingRoundOptions:null,
     skillDeck:[], // 技能牌堆：牌堆制发牌，保证所有技能轮流出现
     skillTimer:null, skillTimerCount:30, hostTimeout:null,
     players:{ p1:makePlayer('p1'), p2:makePlayer('p2') },
@@ -2078,7 +2078,8 @@ function vClick(el, dur){ // 移过去→按压动效→真实 .click()
         el.classList.add('vpress');
         playSound('click');
         setTimeout(function(){ el.classList.remove('vpress'); }, 160);
-        el.click();
+        G.demoAuto = true; // 演示脚本的点击盖戳：各输入入口的防乱点守卫只认这个戳
+        try{ el.click(); } finally { G.demoAuto = false; }
         return true;
     });
 }
@@ -2265,7 +2266,7 @@ function loadSettings() {
             return parsed;
         }
     } catch(e) {}
-    return { theme:'neon', customBg:'', name:'玩家', avatar:'🙂', minVal:1, maxVal:100, hp:5, skillCount:1, oppType:null, aiLevel:null, autoFs:false, music:true };
+    return { theme:'neon', customBg:'', name:'玩家', avatar:'🙂', minVal:1, maxVal:100, hp:15, skillCount:3, oppType:null, aiLevel:null, autoFs:false, music:true };
 }
 function saveSettings() {
     try { localStorage.setItem('bomb_settings', JSON.stringify(G.settings)); } catch(e) {}
@@ -2712,6 +2713,7 @@ function hideNumberPicker(){
     numberPickerCancelCallback = null;
 }
 numberSelectConfirm.addEventListener('click', function(){
+    if(G.demo && !G.demoAuto) return; // 演示中锁定：确定只认脚本点击
     const min = parseInt(numberSelectInput.min);
     const max = parseInt(numberSelectInput.max);
     const val = parseInt(numberSelectInput.value);
@@ -2724,11 +2726,13 @@ numberSelectConfirm.addEventListener('click', function(){
     if(cb) cb(val);
 });
 numberSelectCancel.addEventListener('click', function(){
+    if(G.demo && !G.demoAuto) return; // 演示中锁定：取消只认脚本点击
     const cancelCb = numberPickerCancelCallback;
     hideNumberPicker();
     if(cancelCb) cancelCb();
 });
 numberSelectInput.addEventListener('keydown', function(e){
+    if(G.demo){ e.preventDefault(); return; } // 演示中锁定：输入框只由脚本填数
     if(e.key==='Enter') numberSelectConfirm.click();
 });
 
@@ -3601,7 +3605,10 @@ function resetGameState(){
     if(aiLastCat!=='aiWin' && aiLastCat!=='aiLose'){ aiLastCat=null; aiLastLine=null; }
     G.roundStartHP = { p1: G.players.p1.maxHP, p2: G.players.p2.maxHP };
     G.skillSelectShown = false;
-    G.roundCount = 1; // 第1轮从1计起，startNewRound自增后才是第2轮
+    G.roundCount = 1;
+    // 技能模式（非教程）的首轮由选技完成后的 startNewRound 开启（那里不自增）；
+    // 其余模式首轮随 reset 直接开始（爆炸后的 startNewRound 要自增到第2轮）
+    G.roundStarted = !(G.isSkillMode && G.mode!=='tutorial');
     clearAllTimers();
     clearHistory();
     ['p1','p2'].forEach(id=>{
@@ -3651,7 +3658,8 @@ function startNewRound(){
     G.humanGuesses=0; G.humanShrink=0; G.humanSuspicion=0; G.humanGuessSeq=[]; G.humanTrap=false; G.humanForbid=false; // 对手行为观察每回合清空（读人习惯跨回合保留）
     G.roundStartHP = { p1: G.players.p1.hp, p2: G.players.p2.hp };
     G.skillSelectShown = false;
-    G.roundCount++;
+    if(G.roundStarted) G.roundCount++; // 首轮已开才自增：开局选技后的首轮调用不会跳成"第2轮"
+    G.roundStarted = true;
     ['p1','p2'].forEach(function(id){
         const p=G.players[id];
         p.speed=0; p.blind=false; p.fog=false; p.pierce=false; p.frozen=false;
@@ -3675,7 +3683,7 @@ function startNewRound(){
     }
     updateRange(); updateInputDisplay();
     dlog('ROUND','第 '+G.roundCount+' 轮开始 bomb='+G.bombNumbers.join(',')+' 先手='+G.currentPlayer);
-    messageDisplay.textContent='💥 炸弹重置！第 '+G.roundCount+' 轮';
+    messageDisplay.textContent= G.roundCount<=1 ? '💥 游戏开始！第 1 轮' : '💥 炸弹重置！第 '+G.roundCount+' 轮'; // 首轮没有"重置"可言
     renderSkills();
     renderSlashPanel(); // 清掉上一轮残留的数字斩面板
     updateTurnIndicator();
@@ -3975,6 +3983,12 @@ function showSkillSelectWithCallback(forPlayerId, skillCount, onComplete){
         G.processing = true;
         setKeypadEnabled(false);
 
+        // AI/教程模式：对手是AI不拖时间，选技不限时（倒计时只用于真人对抗防拖延）
+        if(G.mode.includes('ai') || G.mode==='tutorial'){
+            clearSkillTimer();
+            skillTimerEl.style.display = 'none';
+        } else {
+        skillTimerEl.style.display = '';
         G.skillTimerCount = 30;
         skillTimerEl.textContent = G.skillTimerCount;
         clearSkillTimer();
@@ -3988,6 +4002,7 @@ function showSkillSelectWithCallback(forPlayerId, skillCount, onComplete){
                 showRound();
             }
         }, 1000);
+        }
     }
 
     function completeSelection(){
@@ -4098,6 +4113,12 @@ function showSkillSelectWithOptions(forPlayerId, optionIds, skillCount){
         G.processing = true;
         setKeypadEnabled(false);
 
+        // AI/教程模式：对手是AI不拖时间，选技不限时（倒计时只用于真人对抗防拖延）
+        if(G.mode.includes('ai') || G.mode==='tutorial'){
+            clearSkillTimer();
+            skillTimerEl.style.display = 'none';
+        } else {
+        skillTimerEl.style.display = '';
         G.skillTimerCount = 30;
         skillTimerEl.textContent = G.skillTimerCount;
         clearSkillTimer();
@@ -4111,6 +4132,7 @@ function showSkillSelectWithOptions(forPlayerId, optionIds, skillCount){
                 showRound();
             }
         }, 1000);
+        }
     }
 
     function completeSelection(){
@@ -5373,6 +5395,7 @@ keypadButtons.forEach(function(btn){
     btn.addEventListener('click',function(){
         const val=btn.dataset.value;
         const action=btn.dataset.action;
+        if(G.demo && !G.demoAuto) return; // 技能演示：玩家输入锁定，只有演示脚本的虚拟点击放行
         if(!G.active||G.processing||!isMyTurn()) return;
         if(Privacy.isLocal()&&G.pendingSkillSelect) return;
         if(val!==undefined){
@@ -5567,8 +5590,8 @@ function updateInputDisplay(){
 }
 function updateTurnIndicator(){
     turnIndicator.classList.remove('turn-me','turn-opponent');
-    if(G.demo){ // 技能演示中：回合指示换成演示标题；技能栏/键盘保持真实可用（可跟着练手）
-        turnIndicator.textContent='🎬 演示中：'+G.demo.skillName+'（技能可点，可跟着练）';
+    if(G.demo){ // 技能演示中：回合指示换成演示标题；玩家输入全部锁定（防乱点打断脚本），由虚拟鼠标驱动
+        turnIndicator.textContent='🎬 演示中：'+G.demo.skillName+'（输入已锁定，看演示就好）';
         const demoCanAct = G.active && !G.processing && G.currentPlayer===getMyPlayer().id;
         setKeypadEnabled(demoCanAct);
         renderSkills();
@@ -5662,7 +5685,7 @@ function renderSkills(){
             btn.disabled=!canAct;
             if(canAct) btn.classList.add('ready');
         }
-        btn.addEventListener('click',function(){ useSkill(skill.id); });
+        btn.addEventListener('click',function(){ if(G.demo && !G.demoAuto) return; useSkill(skill.id); }); // 演示中玩家点技能=无效，只有脚本能放
         skillsBar.appendChild(btn);
     });
     const myBuffs=getActiveBuffs(owner);

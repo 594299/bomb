@@ -9,7 +9,7 @@ AI_LEVEL_PROFILES[2] = {
     maxSkills: 3,
     advanced: false, master: false,
     clueWanted: 2, verifierCandMax: 3, forecastDepth: 2,
-    useWeighted: false, softRate: 0.9, candJitter: true, guessSpread: 0.15,
+    useWeighted: false, softRate: 1, candJitter: true, guessSpread: 0.15,
     fishRate: 0, fishRange: 4, useKnown: true,
     useTopUp: true, topUpCap: 3, topUpAllinHp: 3, topUpSpeed: false, topUpFreeze: false,
     deposit: true, balanceDanger: true,

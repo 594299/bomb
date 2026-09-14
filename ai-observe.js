@@ -173,7 +173,7 @@ function aiPredictHumanGuess(low, high){
 function aiMinePatterns(guess){
     if(!G.mode.includes('ai')) return;
     const lvl = aiEffectiveLevel();
-    if(lvl<2) return; // 普通起就会读猜测流（宁可被钓也要跟猜——钓我两轮最多猜偏，真线索不跟=白送）
+    // 全难度都会读猜测流——跟猜是最基本的逻辑（简单AI的笨体现在用得少softRate低、猜得抖candJitter，而不是瞎）
     const b = G.aiBrain;
     if(!b) return;
     if(!b.soft) b.soft = aiEmptySoft();
@@ -187,9 +187,14 @@ function aiMinePatterns(guess){
     if(s.digitSum!==null && aiDigitSum(guess)!==s.digitSum){ s.digitSum=null; broke('digitSum'); }
     if(s.parity!==null && guess%2!==s.parity){ s.parity=null; broke('parity'); }
     if(s.digits!==null && String(guess).length!==s.digits){ s.digits=null; broke('digits'); }
+    // 特征↔提示技映射：对面技能栏是公开的——他捏着对应提示技，一次一致就多半是真看过了
+    const FEAT_SKILL = { lastDigit:'peek', tens:'precognition', digitSum:'digitsum', digits:'detect' };
+    const human = getPlayer('p1');
     // 确认新软线索：连续N次猜中同一特征才采信（N按巧合率定+被钓追加）；确认=对手在线索驱动，威胁拉满
     const confirm = (attr, val, need) => {
         need += Math.min(1, G.aiSoftSkeptic[attr]||0); // 被钓过一次：确认门槛+1
+        // 对面技能栏里有对应的提示技（公开信息）→ 门槛-1："他有预知还专猜5十位，多半真看过了"
+        if(FEAT_SKILL[attr] && human && human.skills.some(x=>x.id===FEAT_SKILL[attr])) need = Math.max(1, need-1);
         if(s[attr]!==null || seq.length<need) return;
         const tail = seq.slice(-need);
         const f = attr==='lastDigit' ? (n=>n%10) : attr==='tens' ? (n=>Math.floor(n/10)%10) : attr==='digitSum' ? aiDigitSum : attr==='digits' ? (n=>String(n).length) : (n=>n%2);
