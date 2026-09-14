@@ -104,10 +104,15 @@
         .key-btn.func { font-size:0.7rem; background:rgba(255,136,0,0.1); color:var(--orange); }
         .key-btn.confirm { font-size:0.75rem; background:rgba(0,255,136,0.12); color:var(--green); }
         .key-btn:disabled { opacity:0.25; pointer-events:none; }
-        .explosion { position:absolute; font-size:2.5rem; animation:explode 0.7s forwards; pointer-events:none; z-index:100; }
-        @keyframes explode { 0%{transform:scale(0.3);opacity:1;} 50%{transform:scale(1.4);} 100%{transform:scale(2);opacity:0;} }
-        .shake { animation:shakeAnim 0.5s both; }
-        @keyframes shakeAnim { 0%,100%{transform:translate(0,0);} 20%{transform:translate(-8px,6px);} 40%{transform:translate(7px,-5px);} 60%{transform:translate(-5px,-4px);} 80%{transform:translate(5px,4px);} }
+        .explosion { position:absolute; font-size:3rem; animation:explode 0.6s forwards; pointer-events:none; z-index:100; filter: drop-shadow(0 0 10px rgba(255, 50, 0, 0.8)); }
+        @keyframes explode { 0%{transform:scale(0); opacity:1;} 50%{transform:scale(1.8) rotate(15deg); opacity:1;} 100%{transform:scale(2.5) rotate(-15deg); opacity:0;} }
+        .shake { animation:shakeAnim 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shakeAnim { 10%,90%{transform:translate3d(-2px,0,0);} 20%,80%{transform:translate3d(3px,0,0);} 30%,50%,70%{transform:translate3d(-5px,0,0);} 40%,60%{transform:translate3d(5px,0,0);} }
+        .pop { animation:popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .heavy-pop { animation:heavyPopIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.5) forwards; font-weight: 900 !important; color: #ff5555 !important; text-shadow: 0 0 8px rgba(255,50,50,0.8) !important; }
+        @keyframes popIn { 0%{transform:scale(0.8);opacity:0.5;} 50%{transform:scale(1.05);opacity:1;} 100%{transform:scale(1);} }
+        @keyframes heavyPopIn { 0%{transform:scale(0.5);opacity:0;} 40%{transform:scale(1.15);} 70%{transform:scale(0.95);} 100%{transform:scale(1);opacity:1;} }
+        @keyframes turnPop { 0%{transform:scale(0.9);color:var(--neon);} 100%{transform:scale(1);color:#fff;} }
         #cheat-toast { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); border:1px solid rgba(0,240,255,0.3); padding:12px 24px; border-radius:10px; font-size:0.9rem; font-weight:700; z-index:3000; opacity:0; transition:opacity 0.3s; pointer-events:none; color:var(--neon); text-align:center; max-width:80%; }
         #cheat-toast.show { opacity:1; pointer-events:auto; }
         #cheat-toast .toast-close { position:absolute; top:4px; right:8px; cursor:pointer; font-size:1rem; color:#aaa; background:none; border:none; }
@@ -372,11 +377,11 @@
             70% { bottom:65%; opacity:1; }
             100% { bottom:65%; opacity:0; transform:translateX(-50%) scale(0.5); }
         }
-        .intro-explosion { position:absolute; top:30%; left:50%; transform:translate(-50%,-50%) scale(0); font-size:6rem; opacity:0; animation:boom 0.5s ease-out 1s forwards; z-index:4; }
+        .intro-explosion { position:absolute; top:30%; left:50%; transform:translate(-50%,-50%) scale(0); font-size:8rem; opacity:0; animation:boom 0.6s ease-out 1s forwards; z-index:4; filter: drop-shadow(0 0 20px rgba(255, 100, 0, 1)); }
         @keyframes boom {
             0% { transform:translate(-50%,-50%) scale(0.2); opacity:0; }
-            30% { transform:translate(-50%,-50%) scale(1.4); opacity:1; }
-            100% { transform:translate(-50%,-50%) scale(2.5); opacity:0; }
+            30% { transform:translate(-50%,-50%) scale(1.8); opacity:1; }
+            100% { transform:translate(-50%,-50%) scale(3.5); opacity:0; }
         }
         .intro-flash { position:absolute; inset:0; background:#fff; opacity:0; animation:flash 0.4s ease-out 1s forwards; z-index:1; }
         @keyframes flash {
@@ -1912,6 +1917,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if(btn) btn.addEventListener('click', () => setRandomAvatar(true));
 });
 const AVATAR_LIST = ['🙂','😎','🤠','👺','👻','🤖','👾','🦊','🐱','🐶','🐼','🦁','🐯','🐸','🦄','🐙','🦉','🐲','🦖','🐳','🦋','🐝','🌙','⭐','🔥','💎','🎮','🎯','🎲','⚔️','🛡️','💀'];
+
+// 获取随机二次元头像并返回 URL (同步模式)
+function getRandomAnimeAvatar() {
+    // 使用一个简单的免费二次元头像 API
+    // 每次添加随机时间戳避免浏览器缓存
+    return 'https://api.vvhan.com/api/avatar/anime?rand=' + Math.random();
+}
 let selectedAvatar = null;
 function renderAvatarPicker(){
     const picker = $('avatar-picker');
@@ -3697,13 +3709,13 @@ async function initGame(){
     } else if(G.mode.includes('ai')){
         getPlayer('p1').name='我'; getPlayer('p1').avatar=G.settings.avatar||'🙂';
         getPlayer('p2').name='AI';
-        getPlayer('p2').avatar= await setRandomAvatar(false) || '🤖';
+        getPlayer('p2').avatar= getRandomAnimeAvatar();
         G.aiAvatarUrl=null; G.aiAvatarOk=false;
         roomInfo.textContent=(G.aiDisguise?'对方':'🤖 AI') + ' ('+(['简单','普通','困难','大师'][G.aiLevel-1]||'困难')+')';
         if(G.aiDisguise){ // 大厅伪装房：对手显示房主名+人类头像，房间信息装成真远程
             getPlayer('p1').name = G.settings.name || '我';
             getPlayer('p2').name = G.aiDisguise.name;
-            getPlayer('p2').avatar = await setRandomAvatar(false) || G.aiDisguise.avatar;
+            getPlayer('p2').avatar = getRandomAnimeAvatar();
             roomInfo.textContent = '房间: ' + G.roomCode;
         }
         setTimeout(function(){
@@ -4786,31 +4798,64 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
 
     switch(skillId){
         case 'detect': {
-            const digs = String(G.bombNumbers[0]).length; // 多炸弹暂取第一个
-            if(aiIsUser(user)) aiBrain().digits = digs;
-            dlog('SKILL', user.id+' 探测结果：'+digs+'位数（仅'+user.id+'可见）');
-            reveal('📡探测','炸弹是 '+digs+' 位数'); break;
+            let msg = '';
+            if (G.bombNumbers.length === 1) {
+                const digs = String(G.bombNumbers[0]).length;
+                if(aiIsUser(user)) aiBrain().digits = digs;
+                msg = '炸弹是 '+digs+' 位数';
+            } else {
+                const digsList = G.bombNumbers.map(b => String(b).length);
+                msg = '炸弹分别是：' + digsList.join('位数, ') + '位数';
+            }
+            dlog('SKILL', user.id+' 探测结果：'+msg+'（仅'+user.id+'可见）');
+            reveal('📡探测', msg); 
+            break;
         }
         case 'peek': {
-            const d = G.bombNumbers[0]%10;
-            if(aiIsUser(user)) aiBrain().lastDigit = d;
-            dlog('SKILL', user.id+' 透视结果：个位是'+d+'（仅'+user.id+'可见）');
-            reveal('🔍透视','炸弹的个位是 '+d); break;
+            let msg = '';
+            if (G.bombNumbers.length === 1) {
+                const d = G.bombNumbers[0]%10;
+                if(aiIsUser(user)) aiBrain().lastDigit = d;
+                msg = '炸弹的个位是 '+d;
+            } else {
+                const dList = G.bombNumbers.map(b => b%10);
+                msg = '炸弹的个位分别是：' + dList.join(', ');
+            }
+            dlog('SKILL', user.id+' 透视结果：'+msg+'（仅'+user.id+'可见）');
+            reveal('🔍透视', msg); 
+            break;
         }
         case 'digitsum': {
-            const s=String(G.bombNumbers[0]);
-            let sum=0;
-            for(const c of s) sum += parseInt(c);
-            if(aiIsUser(user)) aiBrain().digitSum = sum;
-            dlog('SKILL', user.id+' 数字和结果：'+sum+'（仅'+user.id+'可见）');
-            reveal('➕数字和','炸弹各位数字之和：'+sum);
+            let msg = '';
+            if (G.bombNumbers.length === 1) {
+                let sum=0;
+                for(const c of String(G.bombNumbers[0])) sum += parseInt(c);
+                if(aiIsUser(user)) aiBrain().digitSum = sum;
+                msg = '炸弹各位数字之和：'+sum;
+            } else {
+                const sumList = G.bombNumbers.map(b => {
+                    let sum=0;
+                    for(const c of String(b)) sum += parseInt(c);
+                    return sum;
+                });
+                msg = '炸弹各位数字之和分别是：' + sumList.join(', ');
+            }
+            dlog('SKILL', user.id+' 数字和结果：'+msg+'（仅'+user.id+'可见）');
+            reveal('➕数字和', msg);
             break;
         }
         case 'precognition': {
-            const ten = Math.floor(G.bombNumbers[0]/10)%10; // 真正的十位：7→0，42→4，100→0（与描述一致）
-            if(aiIsUser(user)) aiBrain().tens = ten;
-            dlog('SKILL', user.id+' 预知结果：十位是'+ten+'（仅'+user.id+'可见）');
-            reveal('🔮预知','炸弹的十位数字是 '+ten);
+            let msg = '';
+            if (G.bombNumbers.length === 1) {
+                const ten = Math.floor(G.bombNumbers[0]/10)%10;
+                if(aiIsUser(user)) aiBrain().tens = ten;
+                msg = '炸弹的十位数字是 '+ten;
+            } else {
+                const tenList = G.bombNumbers.map(b => Math.floor(b/10)%10);
+                msg = '炸弹的十位数字分别是：' + tenList.join(', ');
+            }
+            dlog('SKILL', user.id+' 预知结果：'+msg+'（仅'+user.id+'可见）');
+            reveal('🔮预知', msg);
             break;
         }
         case 'verifier': {
@@ -5023,22 +5068,67 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
             break;
         }
         case 'sacrifice': {
-            user.hp = Math.max(1, user.hp - 1);
-            let newBomb;
-            do {
-                newBomb = Math.floor(Math.random()*(G.high-G.low+1))+G.low;
-            } while(G.bombNumbers.includes(newBomb) && (G.high-G.low+1) > G.bombNumbers.length);
-            if (!G.bombNumbers.includes(newBomb)) G.bombNumbers.push(newBomb);
-            messageDisplay.textContent='🩸 '+userName+' 献祭了1点生命！本轮额外生成一个炸弹！';
+            // 兼容性：如果玩家有护盾，优先消耗护盾而不是生命值
+            if (user.shield > 0) {
+                user.shield--;
+                messageDisplay.textContent='🩸 '+userName+' 使用了护盾献祭！本轮额外生成一个炸弹！';
+            } else {
+                // 如果只剩 1 血，不能使用献祭（防止自杀）
+                if (user.hp <= 1) {
+                    messageDisplay.textContent='⚠️ 生命不足，无法献祭！';
+                    user.cooldowns[skillId] = 0; // 恢复冷却
+                    user.skills.push(getSkillById(skillId)); // 退回技能
+                    break;
+                }
+                user.hp--;
+                messageDisplay.textContent='🩸 '+userName+' 献祭了1点生命！本轮额外生成一个炸弹！';
+            }
+            
+            // 兼容性：如果使用了“赋能”，则生成多个炸弹
+            const emp = user.empower;
+            if (emp) user.empower--;
+            const bombCount = emp ? 2 : 1;
+            
+            for (let b = 0; b < bombCount; b++) {
+                let newBomb;
+                let attempts = 0;
+                do {
+                    newBomb = Math.floor(Math.random()*(G.high-G.low+1))+G.low;
+                    attempts++;
+                } while(G.bombNumbers.includes(newBomb) && (G.high-G.low+1) > G.bombNumbers.length && attempts < 100);
+                if (!G.bombNumbers.includes(newBomb)) G.bombNumbers.push(newBomb);
+            }
+            
+            if (emp) {
+                messageDisplay.textContent = '🩸🌟 ' + userName + ' 赋能献祭！额外生成了2个炸弹！';
+            }
+            
+            // 如果对方使用了“反射”，将额外炸弹反弹给对方（逻辑较复杂，通过状态记录）
+            if (opponent.reflect) {
+                // 反射对全局炸弹生成无效，但可以给使用者挂上“易伤”作为反弹惩罚
+                user.vulnerable = (user.vulnerable || 0) + 1;
+                messageDisplay.textContent += ' (被反射！使用者受到易伤)';
+            }
+            
             updateStatsDisplay();
             break;
         }
         case 'balance': {
-            const totalHP = user.hp + opponent.hp;
-            const avgHP = Math.floor(totalHP / 2);
-            user.hp = Math.max(1, avgHP);
-            opponent.hp = Math.max(1, avgHP);
-            messageDisplay.textContent='⚖️ '+userName+' 使用天平！双方生命值平分！';
+            // 兼容性：如果有护盾，天平不会分掉护盾，只分血量
+            // 如果对方有反射，天平依然生效，但对方反射会抵消平分（对方不扣血，自己加血）
+            if (opponent.reflect) {
+                opponent.reflect--;
+                const totalHP = user.hp + opponent.hp;
+                const avgHP = Math.floor(totalHP / 2);
+                if (user.hp < avgHP) user.hp = Math.max(1, avgHP); // 只加不扣
+                messageDisplay.textContent='⚖️🛡️ '+userName+' 使用天平！但被对方反射！';
+            } else {
+                const totalHP = user.hp + opponent.hp;
+                const avgHP = Math.floor(totalHP / 2);
+                user.hp = Math.max(1, avgHP);
+                opponent.hp = Math.max(1, avgHP);
+                messageDisplay.textContent='⚖️ '+userName+' 使用天平！双方生命值平分！';
+            }
             updateStatsDisplay();
             break;
         }
@@ -6550,9 +6640,9 @@ function updateFullscreenIcon() {
     if (document.fullscreenElement || document.webkitFullscreenElement) {
         fullscreenBtn.textContent = '🗗';
         fullscreenBtn.title = '退出全屏';
-        // 移动端全屏时尝试锁定横屏 (需要HTTPS环境)
+        // 移动端全屏时尝试锁定竖屏，防止意外翻转
         if (screen.orientation && screen.orientation.lock && window.innerWidth < 900) {
-            screen.orientation.lock('landscape').catch(() => {});
+            screen.orientation.lock('portrait').catch(() => {});
         }
     } else {
         fullscreenBtn.textContent = '⛶';
@@ -7114,7 +7204,29 @@ $('menu-version').textContent = GAME_VERSION;
 [messageDisplay, rangeDisplay, turnIndicator].forEach(function(el){
     if(!el) return;
     new MutationObserver(function(){
-        el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+        // 移除动画类
+        el.classList.remove('pop', 'shake', 'heavy-pop'); 
+        void el.offsetWidth; // 触发重绘
+        
+        // 文本解析：根据内容强度赋予不同的动效
+        const text = el.textContent || '';
+        if (text.includes('💥') || text.includes('🩸') || text.includes('⚖️') || text.includes('💀')) {
+            el.classList.add('heavy-pop'); // 强打击感动效
+            
+            // 屏幕震动
+            if (text.includes('💥') || text.includes('💀')) {
+                const gameContainer = $('game-container');
+                if (gameContainer) {
+                    gameContainer.classList.remove('shake');
+                    void gameContainer.offsetWidth;
+                    gameContainer.classList.add('shake');
+                }
+            }
+        } else if (text.includes('⚠️') || text.includes('❌') || text.includes('🛡️')) {
+            el.classList.add('shake'); // 警告或抵挡时的轻微晃动
+        } else {
+            el.classList.add('pop'); // 普通弹性动效
+        }
     }).observe(el, { childList:true, characterData:true, subtree:true });
 });
 // 清除本页所有本地缓存并强制刷新（解决浏览器缓存旧版代码导致的卡死）
