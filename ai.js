@@ -99,8 +99,11 @@ function aiPlayNormal(){
             G.processing=false;
             dlog('AI','放技能 '+id+' ('+i+'/'+plan.length+')');
             useSkill(id, 'p2', true); // ignoreChecks：已预检，且让选数类技能走自动选数
-            // 反读心迷彩：刚用了秘密提示技，本回合猜数有概率故意偏离新线索——围观读猜测流的人一猜读不穿
-            if(['detect','peek','digitsum','precognition','verifier'].indexOf(id)>=0 && aiEffectiveLevel()>=3 && Math.random()<0.35){
+            if(id==='swap'){ for(const k in used) delete used[k]; dlog('AI','交换完成：技能归属易主，使用记录重置——换来的技能接着放'); } // 交换连招：换来的同id技能是另一张牌，不受"每回合一次"约束
+            // 反读心迷彩：刚用了秘密提示技，本回合猜数有概率故意偏离新线索——
+            // 但只对"证明过会读流/会反制"的对手演（可疑度≥2或用过反制技）；对没在看的人演戏=白送节奏
+            const readerProven = (G.humanSuspicion||0)>=2 || G.humanUsedCounter;
+            if(['detect','peek','digitsum','precognition','verifier'].indexOf(id)>=0 && aiEffectiveLevel()>=3 && readerProven && Math.random()<0.25){
                 G.aiCamo = true;
                 dlog('AI','反读心：本猜将故意偏离新线索（装糖）');
             }
@@ -123,10 +126,13 @@ function aiGuess(token){
     const guess = pick.guess;
     G.playerInput=String(guess);
     updateInputDisplay();
+    // 人类用迷雾冻结了AI视野：AI的猜测数字对人类保密——输入框与消息全部遮蔽
+    const aiFogged = getPlayer('p1').viewFog>0;
+    if(aiFogged) inputDisplay.textContent='🌫️';
     const _c = aiCandidates();
     const known = aiKnownBomb();
     dlog('AI','猜 '+guess+' range='+_aiRLo()+'~'+_aiRHi()+(pick.usedClues?'(线索)':'(盲猜)')+' 已知='+(known!==null?('确知'+known):('候选'+(_c?_c.length:'无线索'))));
-    messageDisplay.textContent= '对方输入了 '+guess;
+    messageDisplay.textContent= aiFogged ? '🌫️ 对方在迷雾中猜了一个数……' : '对方输入了 '+guess;
     setTimeout(function(){
         if(!G.active) return;
         if(token!==undefined && token!==G.aiTurnToken) return;
