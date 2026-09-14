@@ -2643,6 +2643,7 @@ function cleanupTurnStates(player) {
     player.anger = 0;
     player.volley = 0;
     player.pierce = false;
+    player.blind = false; // 致盲只遮"对手下回合"：被致盲者回合结束即解除（此前不清=全程致盲）
 }
 
 function clearHistory() {
@@ -3649,6 +3650,7 @@ function resetGameState(){
         p.fog=false; p.disguise=false; p.disguiseNumber=null;
         p.lie=false;
         p.empower=0; p.frozen=false; p.bomblet=false;
+        p.scoutVision=0; // 新局不继承上一局的侦察视野
         p.skills=[]; p.cooldowns={};
         p.trappedNumber=null; p.dormant=false; p.web=false;
         p.dormantBonus=false; p.doubleDamage=null;
@@ -3697,6 +3699,7 @@ function startNewRound(){
         p.rebirth = false;
         p.forbidNumber = null;
         p.diceBonus = 0;
+        p.scoutVision = 0; // 侦察视野随轮次终结：炸弹爆炸换轮后对手已换新技能，旧侦察不得跨轮白嫖
         p.slashActive=0; p.slashAtk=0; p.slashHeal=0; // 数字斩跨回合不保留：炸弹爆炸立即终止，不结算
         p.view=null; p.viewFog=0; // 双范围视图每轮重置
         // 教程模式：每回合重置冷却
