@@ -2345,6 +2345,7 @@ function showSettings(){
 
 // ========== 调试日志（仅内存收集，AI 推理自洽性用，无界面入口） ==========
 const DBG_LOGS = [];
+window.DBG = DBG_LOGS; // 控制台输入 DBG.join('\n') 可导出全部调试日志（AI卡死排查用）
 const DBG_T0 = Date.now();
 function dlog(cat, msg){
     try{
@@ -3594,7 +3595,7 @@ function resetGameState(){
     skillSelectPhase=null; G.hostSkillComplete=null;
     G.tideShrinkNext=false; G.tideCaster=null;
     G.demo=null; // 开新局：旧的技能演示状态一并作废
-    G.aiBrain=null; G.aiOppModel=null; G.aiSoftSkeptic={}; // 适应性防钓记忆也随新局清空
+    G.aiBrain=null; G.aiOppModel=null;
     G.aiSacUsed=0; // AI 自己用裂变埋的炸弹计数也随新局清空
     G.skillDeck=[]; // 每局重洗技能牌堆
     G.aiTurnToken=0; // 每局重置令牌，杜绝NaN
@@ -3652,7 +3653,6 @@ function startNewRound(){
     if(G.mode==='tutorial' && G.tutorial && G.tutorial.levelData.bomb!==undefined) G.bombNumbers=[G.tutorial.levelData.bomb]; // 教程关卡：每轮仍是同一颗固定炸弹，脚本才能精确对应
     G.playerInput=''; G.processing=false;
     G.tideShrinkNext=false; G.tideCaster=null;
-    G.aiCamo=false; // 反读心迷彩标记每回合清空
     G.aiBrain=null; // AI的线索记忆每回合清空
     G.aiSacUsed=0; // AI 自己的裂变计数每回合清空（炸弹随新轮重置）
     G.humanGuesses=0; G.humanShrink=0; G.humanSuspicion=0; G.humanGuessSeq=[]; G.humanTrap=false; G.humanForbid=false; // 对手行为观察每回合清空（读人习惯跨回合保留）
@@ -5033,10 +5033,19 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
                 renderSkills(); updateTurnIndicator(); syncIfRemote();
                 return;
             }
-            let newBomb;
+            // 裂变时代：炸弹可能已填满范围——没有非炸弹数可当假身，禁用并退冷却
+            // （否则下面的 do-while 永远找不到空位 = 同步死循环，整页卡死）
+            if (G.bombNumbers.length >= G.high-G.low+1) {
+                delete user.cooldowns[skillId];
+                messageDisplay.textContent='⚠️ 炸弹已填满整个范围，没有假身可换，无法伪装';
+                renderSkills(); updateTurnIndicator(); syncIfRemote();
+                return;
+            }
+            let newBomb, dAttempts = 0;
             do {
                 newBomb = Math.floor(Math.random()*(G.high-G.low+1))+G.low;
-            } while(G.bombNumbers.includes(newBomb));
+                dAttempts++;
+            } while(G.bombNumbers.includes(newBomb) && dAttempts < 200); // 双保险：永不死循环
             user.disguise = true;
             user.disguiseNumber = G.bombNumbers[0]; // 将第一个真身藏起来
             G.bombNumbers[0] = newBomb; // 换成假身

@@ -544,34 +544,6 @@ function aiChooseGuess(ai){
     } else if(ai.blind){
         guess = Math.floor(Math.random()*range)+_aiRLo(); // 被致盲：只能瞎猜
     } else {
-        // 反读心迷彩（装糖）：刚用秘密提示技——这一猜故意避开刚拿到的线索，
-        // 让围观读猜测流的人读到假规律。代价：本猜只吃范围收缩的诚实收益
-        let camoGuess = null;
-        if(G.aiCamo && adv){
-            const _hc = aiCandidates(true);
-            if(_hc && _hc.length<=3){
-                G.aiCamo = false; // 快赢了不装糖：候选≤3还故意偏离线索=白送节奏（防钓鱼别把自己防傻）
-            } else {
-            G.aiCamo = false;
-            const b = G.aiBrain;
-            const pool = [];
-            for(let n=_aiRLo(); n<=_aiRHi(); n++){
-                if(b){
-                    if(b.lastDigit!==null && n%10===b.lastDigit) continue;
-                    if(b.digitSum!==null && aiDigitSum(n)===b.digitSum) continue;
-                    if(b.digits!==null && String(n).length===b.digits) continue;
-                    if(b.tens!==null && Math.floor(n/10)%10===b.tens) continue;
-                    if(b.parity!==null && n%2===b.parity) continue;
-                }
-                pool.push(n);
-            }
-            if(pool.length>0) camoGuess = pool[Math.floor(Math.random()*pool.length)];
-            // 池空=线索已锁死全部候选，放弃迷彩正常打
-            }
-        }
-        if(camoGuess!==null){
-            guess = camoGuess; // usedClues保持false：迷彩猜不计入线索制导，SPRT污染检测不误判
-        } else {
         let cands = null, wc = null;
         if(prof.useWeighted) wc = aiWeightedCands(); // 困难起：硬线索过滤 + 软线索概率加权
         else if(Math.random()<prof.softRate) cands = aiCandidates(); // 低难度会用线索，只是经常想不起来
@@ -620,7 +592,6 @@ function aiChooseGuess(ai){
             }
             guess = Math.max(_aiRLo(), Math.min(_aiRHi(), guess));
         }
-        } // /迷彩落空时的正常猜法分支
     }
     // 对手本回合发动了陷阱/禁猜（动作公开、数字保密），人类最爱埋正中点——AI避开
     // 仅限盲猜：确知/有候选时躲雷=放弃稳杀，聪明反被聪明误（踩雷掉1血也远小于放过必中）
@@ -632,8 +603,5 @@ function aiChooseGuess(ai){
         const adj = prof.guessAdjust({ guess:guess, usedClues:usedClues, known:known, lo:_aiRLo(), hi:_aiRHi(), range:range, ai:ai });
         if(typeof adj==='number') guess = Math.max(_aiRLo(), Math.min(_aiRHi(), Math.round(adj)));
     }
-    // 记录本猜是否软线索驱动（跟猜/交集推理）：落空=被钓鱼实锤，aiRegisterMiss 当场清软线索
-    const _b = G.aiBrain;
-    G.aiLastGuessSoft = !!(usedClues && _b && _b.soft && aiMatchFeatureSet(guess, _b.soft));
     return { guess:guess, usedClues:usedClues };
 }

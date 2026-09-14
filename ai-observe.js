@@ -179,9 +179,8 @@ function aiMinePatterns(guess){
     if(!b.soft) b.soft = aiEmptySoft();
     const s = b.soft;
     const seq = G.humanGuessSeq || [];
-    // 已确认的软线索被新猜测打破 → 当场作废；同一特征被骗过一次，下次要多1次一致性才再采信（适应性防钓，跨回合记忆）
-    G.aiSoftSkeptic = G.aiSoftSkeptic||{};
-    const broke = attr => { G.aiSoftSkeptic[attr]=(G.aiSoftSkeptic[attr]||0)+1; dlog('AI','软线索['+attr+']被打破，丢弃（该特征今后需多1次确认）'); };
+    // 已确认的软线索被新猜测打破 → 当场作废（对面要么换线索了要么装过，不追旧账）
+    const broke = attr => { dlog('AI','软线索['+attr+']被打破，丢弃'); };
     if(s.lastDigit!==null && guess%10!==s.lastDigit){ s.lastDigit=null; broke('lastDigit'); }
     if(s.tens!==null && Math.floor(guess/10)%10!==s.tens){ s.tens=null; broke('tens'); }
     if(s.digitSum!==null && aiDigitSum(guess)!==s.digitSum){ s.digitSum=null; broke('digitSum'); }
@@ -190,9 +189,8 @@ function aiMinePatterns(guess){
     // 特征↔提示技映射：对面技能栏是公开的——他捏着对应提示技，一次一致就多半是真看过了
     const FEAT_SKILL = { lastDigit:'peek', tens:'precognition', digitSum:'digitsum', digits:'detect' };
     const human = getPlayer('p1');
-    // 确认新软线索：连续N次猜中同一特征才采信（N按巧合率定+被钓追加）；确认=对手在线索驱动，威胁拉满
+    // 确认新软线索：连续N次猜中同一特征就采信（N按巧合率定）——看对面有没有对应提示技，直接跟就是，不防钓
     const confirm = (attr, val, need) => {
-        need += Math.min(1, G.aiSoftSkeptic[attr]||0); // 被钓过一次：确认门槛+1
         // 对面技能栏里有对应的提示技（公开信息）→ 门槛-1："他有预知还专猜5十位，多半真看过了"
         if(FEAT_SKILL[attr] && human && human.skills.some(x=>x.id===FEAT_SKILL[attr])) need = Math.max(1, need-1);
         if(s[attr]!==null || seq.length<need) return;

@@ -337,13 +337,6 @@ function aiRegisterMiss(guess){
         return;
     }
     if(b.verified[guess]===undefined) b.verified[guess]=false;
-    // 跟猜/交集推理的数落空 = 被钓鱼实锤：软线索当场全扔并记恨（他广播的特征是演的，今后确认门槛+1）
-    if(G.aiLastGuessSoft && b.soft){
-        G.aiSoftSkeptic = G.aiSoftSkeptic||{};
-        ['lastDigit','tens','digitSum','parity','digits'].forEach(k=>{ if(b.soft[k]!==null) G.aiSoftSkeptic[k]=(G.aiSoftSkeptic[k]||0)+1; });
-        b.soft = null;
-        dlog('AI','跟猜/交集推理落空：被钓鱼实锤，软线索全扔（相关特征确认门槛+1）');
-    }
     const p = G.aiLastGuessP||0;
     if(p>0){
         b.staleScore = (b.staleScore||0)+p;

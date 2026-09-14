@@ -56,8 +56,25 @@ function aiTurn(){
     if(G.mode==='tutorial'){ tutorialAI(); return; }
     aiPlayNormal();
 }
+// 决策链异常兜底：绝不能卡死——降级为直接猜视图范围中点，保住回合流转。
+// 真实异常已记入 DBG_LOGS（[ERROR] 前缀），事后可翻日志定位
+function aiFallbackGuess(){
+    if(!G.active || G.currentPlayer!=='p2') return;
+    G.processing = false;
+    const g = Math.max(_aiRLo(), Math.min(_aiRHi(), Math.round((_aiRLo()+_aiRHi())/2)));
+    dlog('AI','兜底猜 '+g+'（决策链异常降级）');
+    setTimeout(function(){ if(G.active && G.currentPlayer==='p2'){ G.processing=false; processGuess(g, false, 'p2'); } }, 600);
+}
 // 通用AI回合（教程模式脚本用完后也走这里）：规划技能连放 → 策略猜数
 function aiPlayNormal(){
+    try { aiPlayNormalImpl(); }
+    catch(e){
+        dlog('ERROR','AI回合异常：'+((e&&e.message)||e)+' '+(e&&e.stack ? String(e.stack).split('\n')[1] : ''));
+        G.processing = false;
+        aiFallbackGuess();
+    }
+}
+function aiPlayNormalImpl(){
     if(!G.active||G.processing||G.currentPlayer!=='p2') return;
     if(G.mode!=='tutorial' && !G.mode.includes('ai')) return;
     const token = ++G.aiTurnToken; // 回合令牌：看门狗重启回合后，旧执行链自动失效
@@ -87,8 +104,10 @@ function aiPlayNormal(){
         if(i>=plan.length && !topUpDone){
             topUpDone = true;
             // 信息技能已放完，候选集已收敛——动态追加斩杀/确认技能（真正的“看着线索打”）
-            const extra = aiTopUp(ai, human, used);
-            if(extra.length){ plan.push.apply(plan, extra); dlog('AI','追加技能 ['+extra.join(',')+']'); }
+            try {
+                const extra = aiTopUp(ai, human, used);
+                if(extra.length){ plan.push.apply(plan, extra); dlog('AI','追加技能 ['+extra.join(',')+']'); }
+            } catch(e){ dlog('ERROR','AI追加决策异常：'+((e&&e.message)||e)); }
         }
         if(i>=plan.length){ G.processing=false; const _think = G.aiDisguise ? 1500+Math.random()*2500 : 500; dlog('AI','技能放完，'+_think+'ms后猜数'); setTimeout(function(){ if(token===G.aiTurnToken) aiGuess(token); }, _think); return; } // 必须复位processing，否则aiGuess的守卫会拒绝执行导致卡死；伪装模式加真人思考延迟
         const id = plan[i++];
@@ -98,15 +117,10 @@ function aiPlayNormal(){
             used[id]=true;
             G.processing=false;
             dlog('AI','放技能 '+id+' ('+i+'/'+plan.length+')');
-            useSkill(id, 'p2', true); // ignoreChecks：已预检，且让选数类技能走自动选数
-            if(id==='swap'){ for(const k in used) delete used[k]; dlog('AI','交换完成：技能归属易主，使用记录重置——换来的技能接着放'); } // 交换连招：换来的同id技能是另一张牌，不受"每回合一次"约束
-            // 反读心迷彩：刚用了秘密提示技，本回合猜数有概率故意偏离新线索——
-            // 但只对"证明过会读流/会反制"的对手演（可疑度≥2或用过反制技）；对没在看的人演戏=白送节奏
-            const readerProven = (G.humanSuspicion||0)>=2 || G.humanUsedCounter;
-            if(['detect','peek','digitsum','precognition','verifier'].indexOf(id)>=0 && aiEffectiveLevel()>=3 && readerProven && Math.random()<0.25){
-                G.aiCamo = true;
-                dlog('AI','反读心：本猜将故意偏离新线索（装糖）');
-            }
+            try {
+                useSkill(id, 'p2', true); // ignoreChecks：已预检，且让选数类技能走自动选数
+                if(id==='swap'){ for(const k in used) delete used[k]; dlog('AI','交换完成：技能归属易主，使用记录重置——换来的技能接着放'); } // 交换连招：换来的同id技能是另一张牌，不受"每回合一次"约束
+            } catch(e){ dlog('ERROR','AI放技能异常 '+id+'：'+((e&&e.message)||e)); } // 单个技能炸了跳过它，链子不能断
             // skip/终局类技能可能已换边或结束游戏，此时绝不能恢复processing（否则人类回合被锁死）
             if(G.active && G.currentPlayer==='p2') G.processing=true;
             else { dlog('AI','技能改变了回合/游戏状态 processing保持false turn='+G.currentPlayer); return; }
@@ -122,8 +136,16 @@ function aiGuess(token){
     if(G.mode!=='tutorial' && !G.mode.includes('ai')) return;
     aiMarkProgress();
     const ai=getPlayer('p2');
-    const pick = aiChooseGuess(ai); // 决策层纯选择：返回 {guess, usedClues}
-    const guess = pick.guess;
+    let guess, usedClues = false;
+    try {
+        const pick = aiChooseGuess(ai); // 决策层纯选择：返回 {guess, usedClues}
+        guess = pick.guess; usedClues = !!pick.usedClues;
+    } catch(e){
+        dlog('ERROR','AI猜数决策异常：'+((e&&e.message)||e)+' '+(e&&e.stack ? String(e.stack).split('\n')[1] : ''));
+        guess = Math.round((_aiRLo()+_aiRHi())/2); // 降级：中点切割，回合必须流转
+    }
+    if(typeof guess!=='number' || isNaN(guess)){ dlog('ERROR','AI猜数得到非法值 '+guess+'，降级中点'); guess = Math.round((_aiRLo()+_aiRHi())/2); }
+    guess = Math.max(_aiRLo(), Math.min(_aiRHi(), guess));
     G.playerInput=String(guess);
     updateInputDisplay();
     // 人类用迷雾冻结了AI视野：AI的猜测数字对人类保密——输入框与消息全部遮蔽
@@ -131,7 +153,7 @@ function aiGuess(token){
     if(aiFogged) inputDisplay.textContent='🌫️';
     const _c = aiCandidates();
     const known = aiKnownBomb();
-    dlog('AI','猜 '+guess+' range='+_aiRLo()+'~'+_aiRHi()+(pick.usedClues?'(线索)':'(盲猜)')+' 已知='+(known!==null?('确知'+known):('候选'+(_c?_c.length:'无线索'))));
+    dlog('AI','猜 '+guess+' range='+_aiRLo()+'~'+_aiRHi()+(usedClues?'(线索)':'(盲猜)')+' 已知='+(known!==null?('确知'+known):('候选'+(_c?_c.length:'无线索'))));
     messageDisplay.textContent= aiFogged ? '🌫️ 对方在迷雾中猜了一个数……' : '对方输入了 '+guess;
     setTimeout(function(){
         if(!G.active) return;
