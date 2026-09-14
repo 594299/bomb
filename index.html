@@ -2401,9 +2401,13 @@ useSkill = function(skillId){
     finally{ if(secret) G._aiSecretAct = Math.max(0,(G._aiSecretAct||1)-1); }
 };
 // 秘密技能的消息播报：远程/同屏只弹本地瞬时提示（绝不写 messageDisplay——它会经 sync 泄露给对手和观战者）；
+// 主机代算的客机秘密技能（裂变/移动等）：结果经 private 通道回传给客机本人，否则他点了技能毫无反馈
 // AI模式随便显示（AI不读屏幕，它的"看"只走代码状态；AI自己用时由 _aiSecretAct 抑制上屏）
 function secretSkillMsg(user, text){
-    if(G.mode.includes('remote')){ if(user.id===getMyPlayer().id) showCheatToast(text, 3000); }
+    if(G.mode.includes('remote')){
+        if(user.id===getMyPlayer().id) showCheatToast(text, 3000);
+        else if(G.isHost && user.id==='p2' && G.conn && G.conn.open){ try{ G.conn.send({type:'private', title:'🤫 你的秘密行动', text:text}); }catch(e){} }
+    }
     else if(Privacy.isLocal()){ showCheatToast(text, 3000); }
     else messageDisplay.textContent=text;
 }
@@ -5212,8 +5216,9 @@ function useSkill(skillId, playerId, ignoreChecks, copyDepth){
                 const avgHP = Math.floor(totalHP / 2);
                 user.hp = Math.max(1, avgHP);
                 opponent.hp = Math.max(1, avgHP);
-                messageDisplay.textContent='⚖️ '+userName+' 使用天平！双方生命值平分！';
+                messageDisplay.textContent='⚖️ '+userName+' 使用天平！双方生命值平分（各'+avgHP+'血）！';
             }
+            renderPlayers(); // 血量条必须立即重绘——否则数值变了界面不动，看起来像技能无效
             updateStatsDisplay();
             break;
         }
