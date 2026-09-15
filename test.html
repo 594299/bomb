@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>后端测试</title>
+<style>
+body{background:#111;color:#eee;font-family:system-ui,sans-serif;padding:20px;font-size:16px;line-height:1.7;}
+h1{color:#0ff;font-size:20px;}
+.box{background:#1a1a2e;border:1px solid #333;border-radius:10px;padding:14px;margin:12px 0;}
+.ok{color:#0f0;font-weight:bold;}
+.fail{color:#f66;font-weight:bold;}
+.warn{color:#fc0;font-weight:bold;}
+pre{white-space:pre-wrap;word-break:break-all;font-size:12px;color:#aaa;margin-top:6px;}
+</style>
+</head>
+<body>
+<h1>🎯 后端连接测试</h1>
+<div id="result">正在测试...请稍等（大约10秒）</div>
+
+<script>
+const BASE = 'https://haododoya.ct.ws';
+const out = document.getElementById('result');
+const lines = [];
+
+function add(cls, title, detail){
+  lines.push('<div class="box"><span class="'+cls+'">'+title+'</span>'+(detail?'<pre>'+detail+'</pre>':'')+'</div>');
+  out.innerHTML = lines.join('');
+}
+
+async function run(){
+  // 测试1：简单GET
+  try{
+    const r = await fetch(BASE + '/settings.php');
+    const t = await r.text();
+    try{
+      const j = JSON.parse(t);
+      add('ok', '✅ 测试1 通过：settings.php', JSON.stringify(j).slice(0,300));
+    }catch(e){
+      add('warn', '⚠️ 测试1：返回的不是JSON（可能被InfinityFree挑战页拦截）', t.slice(0,300));
+    }
+  }catch(e){
+    add('fail', '❌ 测试1 失败：网络/CORS错误', e.message);
+  }
+
+  // 测试2：带参数GET
+  try{
+    const r = await fetch(BASE + '/bans.php?action=check&fp=test123');
+    const j = await r.json();
+    add('ok', '✅ 测试2 通过：bans.php 封禁自查', JSON.stringify(j));
+  }catch(e){
+    add('fail', '❌ 测试2 失败', e.message);
+  }
+
+  // 测试3：POST + 自定义头（触发预检）
+  try{
+    const r = await fetch(BASE + '/settings.php', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Account-Token':'test'},
+      body:'{}'
+    });
+    const t = await r.text();
+    add('ok', '✅ 测试3 通过：POST+预检', t.slice(0,200));
+  }catch(e){
+    add('fail', '❌ 测试3 失败：预检被拦', e.message);
+  }
+
+  add('ok', '🏁 测试结束', '把这一整页截图发给AI看就行');
+}
+
+run();
+</script>
+</body>
+</html>
