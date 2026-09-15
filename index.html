@@ -131,6 +131,12 @@
         .training-slot-row { display:flex; gap:8px; justify-content:center; margin:8px 0; }
         .training-slot { min-width:86px; padding:8px 10px; border:1.5px dashed rgba(0,240,255,0.4); border-radius:10px; font-size:0.7rem; color:#9adcff; text-align:center; }
         .training-slot.filled { border-style:solid; color:var(--neon); background:rgba(0,240,255,0.08); }
+        .training-section-label { margin-top:12px; font-size:0.7rem; color:#888; font-weight:700; letter-spacing:1px; }
+        .training-hp-row { display:flex; flex-wrap:wrap; gap:6px; align-items:center; justify-content:center; margin:8px 0; max-width:440px; font-size:0.75rem; color:#aaa; }
+        .training-hp-row input[type=number] { width:64px; padding:7px 6px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:8px; color:#fff; font-size:0.85rem; text-align:center; outline:none; }
+        .training-hp-row input[type=number]:focus { border-color:var(--neon); }
+        .training-mini-btn { padding:7px 12px; border-radius:8px; border:1.5px solid rgba(0,240,255,0.4); background:rgba(0,240,255,0.08); color:var(--neon); font-size:0.72rem; font-weight:700; cursor:pointer; }
+        .training-mini-btn:active { transform:scale(0.94); }
         /* 技能演示：中央技能大卡（开局亮相 → 缩小飞进技能栏里那个能按的真按钮，然后消失） */
         #demo-card { position:fixed; left:50%; top:36%; transform:translate(-50%,-50%); z-index:1400; background:rgba(8,12,18,0.93); border:2px solid var(--neon); border-radius:16px; padding:18px 32px; text-align:center; pointer-events:none; transition:left 0.7s ease, top 0.7s ease, transform 0.7s ease, opacity 0.7s ease; box-shadow:0 0 30px rgba(0,240,255,0.25); }
         #demo-card.hidden { display:none; }
@@ -420,6 +426,39 @@
         .avatar-option { width:44px; height:44px; border:2px solid rgba(255,255,255,0.2); border-radius:10px; background:rgba(255,255,255,0.05); font-size:1.5rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
         .avatar-option:hover { border-color:var(--neon); transform:scale(1.1); }
         .avatar-option.selected { border-color:var(--neon); background:rgba(0,240,255,0.15); box-shadow:0 0 10px rgba(0,240,255,0.4); }
+
+        /* ========== 账号体系 / 公告 / 排行榜 ========== */
+        #account-chip { position:absolute; top:12px; left:12px; z-index:10; padding:7px 14px; border-radius:20px; border:1.5px solid rgba(0,240,255,0.5); background:rgba(0,240,255,0.08); color:var(--neon); font-size:0.78rem; font-weight:700; cursor:pointer; transition:all 0.2s; max-width:46vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        #account-chip:hover { background:rgba(0,240,255,0.18); box-shadow:0 0 12px rgba(0,240,255,0.3); }
+        #account-chip.logged { border-color:rgba(0,255,136,0.5); color:var(--green); background:rgba(0,255,136,0.08); }
+        #announcement-bar { display:flex; align-items:center; gap:8px; max-width:92%; margin-bottom:12px; padding:8px 12px 8px 14px; border-radius:12px; border:1px solid rgba(255,204,102,0.45); background:rgba(255,204,102,0.1); color:#ffcc66; font-size:0.78rem; line-height:1.5; text-align:left; animation:announceGlow 2.5s ease-in-out infinite; }
+        @keyframes announceGlow { 0%,100% { box-shadow:0 0 6px rgba(255,204,102,0.15); } 50% { box-shadow:0 0 16px rgba(255,204,102,0.4); } }
+        #announcement-bar.hidden { display:none; }
+        #announcement-text { flex:1; word-break:break-all; }
+        #announcement-close { flex:none; background:none; border:none; color:#ffcc66; font-size:0.9rem; cursor:pointer; opacity:0.7; padding:2px 4px; }
+        #announcement-close:hover { opacity:1; }
+        .auth-tabs { display:flex; gap:8px; margin-bottom:16px; }
+        .auth-tab { padding:8px 26px; border-radius:20px; border:1.5px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.04); color:#999; font-size:0.88rem; font-weight:700; cursor:pointer; transition:all 0.2s; }
+        .auth-tab.active { border-color:var(--neon); color:var(--neon); background:rgba(0,240,255,0.12); box-shadow:0 0 12px rgba(0,240,255,0.25); }
+        .auth-input { width:240px; padding:11px 14px; margin-top:10px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:10px; color:#fff; font-size:0.95rem; outline:none; text-align:center; }
+        .auth-input:focus { border-color:var(--neon); box-shadow:0 0 10px rgba(0,240,255,0.25); }
+        .auth-msg { min-height:1.2em; margin-top:10px; font-size:0.78rem; color:#ff6666; }
+        .auth-tip { margin-top:12px; font-size:0.68rem; color:#888; line-height:1.7; text-align:center; max-width:280px; }
+        .lb-online { font-size:0.82rem; color:var(--green); margin-bottom:10px; font-weight:700; }
+        .lb-table { width:100%; max-width:340px; border-collapse:collapse; font-size:0.82rem; }
+        .lb-table th { color:#888; font-weight:400; font-size:0.68rem; padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.12); }
+        .lb-table td { padding:7px 8px; border-bottom:1px solid rgba(255,255,255,0.06); text-align:center; }
+        .lb-table tr.me td { color:var(--neon); font-weight:700; background:rgba(0,240,255,0.06); }
+        .lb-medal { display:inline-block; min-width:1.6em; }
+        .account-stat-row { display:flex; gap:14px; margin:14px 0 4px; }
+        .account-stat { min-width:76px; padding:12px 8px; border-radius:12px; border:1px solid rgba(0,240,255,0.25); background:rgba(0,240,255,0.06); text-align:center; }
+        .account-stat b { display:block; font-size:1.3rem; color:var(--neon); }
+        .account-stat span { font-size:0.66rem; color:#999; }
+        #version-update-bar { position:fixed; top:0; left:50%; transform:translateX(-50%); z-index:9000; display:flex; align-items:center; gap:10px; padding:10px 18px; background:rgba(8,12,26,0.96); border:1px solid rgba(0,240,255,0.55); border-top:none; border-radius:0 0 14px 14px; color:#cde; font-size:0.8rem; box-shadow:0 4px 22px rgba(0,240,255,0.35); white-space:nowrap; }
+        #version-update-bar.hidden { display:none; }
+        #version-update-bar b { color:var(--neon); }
+        #version-update-bar button { padding:6px 14px; border-radius:8px; border:1px solid rgba(0,240,255,0.5); background:rgba(0,240,255,0.15); color:var(--neon); cursor:pointer; font-size:0.72rem; font-weight:700; }
+        #version-later-btn { border-color:rgba(255,255,255,0.25) !important; background:rgba(255,255,255,0.06) !important; color:#aab !important; }
     </style>
 </head>
 <body>
@@ -429,6 +468,8 @@
     <div class="intro-bomb">💣</div>
     <div class="intro-explosion">💥</div>
 </div>
+<!-- 版本更新提示条：后台改版本号后，旧客户端收到的刷新提示（每5分钟检查一次） -->
+<div id="version-update-bar" class="hidden">🔄 游戏已更新到 <b id="version-update-new"></b><button id="version-reload-btn">立即刷新</button><button id="version-later-btn">稍后</button></div>
 <!-- 后台入口已移至 haododoya/admin.html -->
 <div id="game-container">
     <div id="header">
@@ -446,14 +487,16 @@
     <div id="main-menu" class="overlay">
         <button class="help-btn" id="help-btn">?</button>
         <button class="help-btn" id="codex-btn" style="right:54px;">📖</button>
+        <button id="account-chip">👤 登录 / 注册</button>
         <div class="menu-floaters"><span>💣</span><span>💥</span><span>🎲</span><span>⚔️</span><span>🧨</span></div>
+        <div id="announcement-bar" class="hidden"><span>📢</span><span id="announcement-text"></span><button id="announcement-close" title="关闭">✕</button></div>
         <div class="overlay-title">选择模式</div>
         <button class="btn" id="normal-mode-btn">🎮 开始游戏</button>
-        <button class="btn secondary" id="training-mode-btn">🏋️ 训练场</button>
         <button class="btn secondary" id="tutorial-mode-btn">🎓 教程模式</button>
         <button class="btn secondary" id="settings-btn">⚙️ 设置</button>
         <div id="skill-marquee"><div id="skill-marquee-track"></div></div>
         <div id="stats-display"></div>
+        <button class="btn small secondary" id="leaderboard-btn" style="margin-top:6px;min-width:140px;">🏆 全服排行榜</button>
         <div id="menu-version"></div>
     </div>
     <div id="settings-overlay" class="overlay hidden">
@@ -509,6 +552,7 @@
         <div style="font-size:0.6rem;color:#666;">遇到卡死/异常时先点上面按钮，强制加载最新代码</div>
     </div>
     <div id="setup-overlay" class="overlay hidden">
+        <button class="help-btn" id="training-mode-btn" style="right:12px;" title="训练场（自选技能+作弊控制台）">🏋️</button>
         <div class="overlay-title">⚙️ 游戏设置</div>
         <div class="setting-row" id="opponent-row">
             <label>对战对象：</label>
@@ -581,6 +625,25 @@
             <button class="training-toggle-btn" id="tg-no-cd">⏱️ 无冷却：关</button>
             <button class="training-toggle-btn" id="tg-show-bomb">💣 显示炸弹：关</button>
         </div>
+        <div class="training-section-label">❤️ 生命值（随便调，可超上限）</div>
+        <div class="training-hp-row">
+            <label>我：</label>
+            <input type="number" id="tg-hp-self" min="1" max="999" value="15">
+            <button class="training-mini-btn" id="tg-hp-self-set">设定</button>
+            <label>对面：</label>
+            <input type="number" id="tg-hp-opp" min="1" max="999" value="15">
+            <button class="training-mini-btn" id="tg-hp-opp-set">设定</button>
+            <button class="training-mini-btn" id="tg-hp-full">双方回满</button>
+        </div>
+        <div class="training-section-label">🎛️ 对局操控</div>
+        <div class="training-toggle-row">
+            <button class="training-toggle-btn" id="tg-reroll-bomb">🎲 换个炸弹</button>
+            <button class="training-toggle-btn" id="tg-restart-round">🔄 重开本轮</button>
+            <button class="training-toggle-btn" id="tg-clear-cd">🔁 冷却全清</button>
+            <button class="training-toggle-btn" id="tg-my-turn">⏭️ 轮到我出手</button>
+            <button class="training-toggle-btn" id="tg-win">🏆 直接获胜</button>
+            <button class="training-toggle-btn" id="tg-lose">💀 直接判负</button>
+        </div>
         <div class="setting-row" id="training-panel-ai-row">
             <label>AI难度：</label>
             <button class="ai-level-btn" data-level="1">简单</button>
@@ -624,6 +687,45 @@
         <div id="lobby-list-status" style="margin:10px 0;color:#888;font-size:0.8rem;"></div>
         <button class="btn" id="refresh-lobby-btn">🔄 刷新列表</button>
         <button class="btn secondary" id="back-lobby-btn">返回</button>
+    </div>
+    <div id="auth-overlay" class="overlay hidden" style="z-index:2500;">
+        <div class="overlay-title">👤 账号</div>
+        <div class="auth-tabs">
+            <button class="auth-tab active" id="auth-tab-login">登 录</button>
+            <button class="auth-tab" id="auth-tab-register">注 册</button>
+        </div>
+        <input type="text" class="auth-input" id="auth-username" placeholder="用户名（2-12个字符）" maxlength="12" autocomplete="username">
+        <input type="password" class="auth-input" id="auth-password" placeholder="密码（至少4位）" maxlength="32" autocomplete="current-password">
+        <input type="password" class="auth-input hidden" id="auth-password2" placeholder="再输一遍密码" maxlength="32" autocomplete="new-password">
+        <div class="auth-msg" id="auth-msg"></div>
+        <button class="btn" id="auth-submit-btn" style="margin-top:6px;">登 录</button>
+        <button class="btn small secondary" id="auth-guest-btn">暂不登录，游客游玩</button>
+        <div class="auth-tip">注册后战绩存到云端，清缓存/换设备登录即找回；<br>账号被封禁时清缓存也解不开。不登录也能正常玩。</div>
+    </div>
+    <div id="account-overlay" class="overlay hidden" style="z-index:2500;">
+        <div class="overlay-title">👤 我的账号</div>
+        <div id="account-name" style="font-size:1.15rem;font-weight:900;color:var(--green);"></div>
+        <div class="account-stat-row">
+            <div class="account-stat"><b id="account-wins">0</b><span>胜场</span></div>
+            <div class="account-stat"><b id="account-losses">0</b><span>负场</span></div>
+            <div class="account-stat"><b id="account-rate">--</b><span>胜率</span></div>
+        </div>
+        <div class="auth-tip">战绩存云端，换设备/清缓存后登录自动找回</div>
+        <button class="btn small danger" id="account-logout-btn" style="margin-top:14px;">退出登录</button>
+        <button class="btn small secondary" id="account-close-btn">关闭</button>
+    </div>
+    <div id="leaderboard-overlay" class="overlay hidden" style="z-index:2500;">
+        <div class="overlay-title">🏆 全服排行榜</div>
+        <div class="lb-online" id="lb-online">🟢 当前在线：--</div>
+        <div style="max-height:46vh;overflow-y:auto;width:100%;display:flex;justify-content:center;">
+            <table class="lb-table">
+                <thead><tr><th>名次</th><th>玩家</th><th>胜</th><th>负</th><th>胜率</th></tr></thead>
+                <tbody id="lb-list"></tbody>
+            </table>
+        </div>
+        <div class="auth-msg" id="lb-msg" style="color:#888;"></div>
+        <button class="btn small" id="lb-refresh-btn" style="margin-top:10px;">🔄 刷新</button>
+        <button class="btn small secondary" id="lb-close-btn">返回</button>
     </div>
     <div id="password-prompt-overlay" class="overlay hidden">
         <div class="overlay-title">🔒 房间需要密码</div>
@@ -962,6 +1064,22 @@ document.addEventListener('keydown', function(e){
         e.preventDefault();
     }
 });
+
+// ========== 自建 PHP 后端（云端封禁名单 + 大厅房间列表） ==========
+// php-api 已部署到虚拟主机（宝塔 haodododya.gn0.cc，需先开SSL才能被GitHub Pages调用）
+// 留空 = 纯公共通道（公共PeerJS信令 + 公共MQTT大厅 + 本地封禁名单），一切照旧
+const BOMB_SERVER_URL = 'https://haodododya.gn0.cc';
+function bombServerOn(){ return !!BOMB_SERVER_URL; }
+// 带8秒超时的后端请求助手：后端挂了/没填时静默降级，绝不影响公共通道与本地名单
+function serverFetch(path, opts, cb){
+    if(!bombServerOn()){ if(cb) cb(null); return; }
+    const ctrl = new AbortController();
+    const timer = setTimeout(function(){ ctrl.abort(); }, 8000);
+    fetch(BOMB_SERVER_URL + path, Object.assign({ signal: ctrl.signal }, opts || {}))
+        .then(function(r){ clearTimeout(timer); return r.ok ? r.json() : null; })
+        .then(function(j){ if(cb) cb(j); })
+        .catch(function(){ clearTimeout(timer); if(cb) cb(null); });
+}
 
 // ========== 信令服务器与 ICE 配置 ==========
 const PEER_SERVERS = [
@@ -1852,6 +1970,31 @@ G.currentUser = {
     firstVisit: new Date().toLocaleString(),
     lastVisit: new Date().toLocaleString()
 };
+// ========== 账号体系（可选登录，游客照玩；token+战绩存云端，清缓存后登录即找回） ==========
+G.account = null; // {username, token} — 已登录才有值
+function loadAccount(){
+    try{
+        const a = JSON.parse(localStorage.getItem('bomb_account')||'null');
+        if(a && typeof a.username === 'string' && typeof a.token === 'string' && a.username && a.token) return a;
+    }catch(e){}
+    return null;
+}
+function saveAccount(){
+    try{
+        if(G.account) localStorage.setItem('bomb_account', JSON.stringify(G.account));
+        else localStorage.removeItem('bomb_account');
+    }catch(e){}
+}
+G.account = loadAccount();
+function accountName(){ return G.account ? G.account.username : ''; }
+// 账号请求统一入口：自动带 token；后端没上线/超时静默回 null（账户功能全部可选降级）
+function accountFetch(path, opts, cb){
+    if(G.account && G.account.token){
+        opts = opts || {};
+        opts.headers = Object.assign({'X-Account-Token': G.account.token}, opts.headers || {});
+    }
+    serverFetch(path, opts, cb);
+}
 // 本机用户留档：不等IP，打开页面先记一笔（IP接口挂起也不会漏记）
 function saveLocalUserRecord(){
     const existing = G.banData.userRecords.find(u=>u.fingerprint===G.currentUser.fingerprint || u.deviceCode===G.currentUser.deviceCode);
@@ -1870,6 +2013,8 @@ function saveLocalUserRecord(){
 }
 // 页面加载时先按指纹/设备码检查（此时G已定义）
 checkBanned();
+serverSelfBanCheck(); // 云端第五副本复检：本地名单被清也封得住
+serverCheckin(); // 云端签到：真后台玩家列表留档
 saveLocalUserRecord();
 // IP获取（失败自动重试2次，拿到后补报给已连接的对方）
 (function fetchIPWithRetry(retries){
@@ -1879,6 +2024,7 @@ saveLocalUserRecord();
         // IP获取后再次检查封禁
         checkBanned();
         broadcastIdentity(); // 联机/观战中补报真实IP
+        serverCheckin(); // 拿到真实IP后补一次签到（覆盖掉首次的"未知"）
         if(ip==='未知' && retries > 0){
             setTimeout(function(){ fetchIPWithRetry(retries-1); }, 15000);
         }
@@ -1909,6 +2055,61 @@ function isIdentityBanned(idc){
     if(idc.fp && G.banData.bannedFingerprints.indexOf(idc.fp) >= 0) return true;
     if(idc.ip && G.banData.bannedIPs.indexOf(idc.ip) >= 0) return true;
     return false;
+}
+// 云端封禁校验（PHP后端第五副本）：本地名单只存在于本机浏览器——云端名单对全端生效，清本地数据也封得住
+function serverSelfBanCheck(){
+    if(!bombServerOn()) return;
+    const u = G.currentUser || {};
+    serverFetch('/bans.php?action=check&fp='+encodeURIComponent(u.fingerprint||'')+'&dc='+encodeURIComponent(u.deviceCode||'')+'&ip='+encodeURIComponent(u.ip||'')+'&acc='+encodeURIComponent(accountName()), null, function(j){
+        if(j && j.banned) showBanScreen(j.reason, j.time);
+    });
+}
+// ---- 实时状态轮询：每15秒自查封禁——管理员在后台一封你，不刷新页面也会被立即踢出 ----
+// 标签页不可见时暂停（省资源），切回来自动恢复；共享主机做不了WebSocket，15秒轮询是性价比最优解
+function serverStatePoll(){
+    if(!bombServerOn()) return;
+    if(document.hidden) return;
+    const u = G.currentUser || {};
+    serverFetch('/bans.php?action=check&fp='+encodeURIComponent(u.fingerprint||'')+'&dc='+encodeURIComponent(u.deviceCode||'')+'&ip='+encodeURIComponent(u.ip||'')+'&acc='+encodeURIComponent(accountName()), null, function(j){
+        if(!(j && j.banned)) return;
+        lobbyServerUnpublish(); // 被封的是房主：撤下大厅房间卡，别留死房
+        try{ if(G.conn) G.conn.close(); }catch(e){}
+        try{ if(G.specConn) G.specConn.close(); }catch(e){}
+        try{ if(G.specHostConns) G.specHostConns.forEach(function(c){ try{c.close();}catch(e){} }); }catch(e){}
+        showBanScreen(j.reason, j.time);
+    });
+}
+// 房主侧云端复检：本地闸放行后再异步查云端——命中则拒收，并顺手把名单复活回本地
+function serverBanCheckAndKick(idc, conn){
+    if(!bombServerOn() || !idc || !conn) return;
+    serverFetch('/bans.php?action=check&fp='+encodeURIComponent(idc.fp||'')+'&dc='+encodeURIComponent(idc.dc||'')+'&ip='+encodeURIComponent(idc.ip||''), null, function(j){
+        if(!(j && j.banned)) return;
+        try{ conn.send({type:'banned', reason:j.reason||'违反社区规定', time:j.time||''}); }catch(e){}
+        setTimeout(function(){ try{conn.close();}catch(e){} }, 400);
+        let dirty = false;
+        if(idc.fp && G.banData.bannedFingerprints.indexOf(idc.fp)<0){ G.banData.bannedFingerprints.push(idc.fp); dirty=true; }
+        if(idc.dc && G.banData.bannedDevices.indexOf(idc.dc)<0){ G.banData.bannedDevices.push(idc.dc); dirty=true; }
+        if(idc.ip && G.banData.bannedIPs.indexOf(idc.ip)<0){ G.banData.bannedIPs.push(idc.ip); dirty=true; }
+        if(idc.fp){ G.banData.banReasons[idc.fp]={reason:j.reason||'违反社区规定', time:j.time||''}; dirty=true; }
+        if(dirty) saveBanData();
+    });
+}
+// 云端签到：真后台（admin.php）的用户列表来源——每个打开游戏的玩家都在此留档
+function serverCheckin(){
+    if(!bombServerOn()) return;
+    const u = G.currentUser || {};
+    serverFetch('/users.php?action=checkin', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+        fp:u.fingerprint||'', dc:u.deviceCode||'', ip:u.ip||'', name:(G.settings&&G.settings.name)||'', acc:accountName(), ua:navigator.userAgent, di:u.deviceInfo||null
+    })});
+}
+// 举报上云：后端在线时举报进云端待审列表（伪后台复核后同步进正式名单，防恶意举报直接封好人）
+function serverReportBan(reported, reason){
+    if(!bombServerOn() || !reported) return;
+    const fp = reported.fingerprint||'', dc = reported.deviceCode||'', ip = reported.ip||'';
+    if(!fp && !dc && !ip) return;
+    serverFetch('/bans.php?action=report', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+        fp:fp, dc:dc, ip:ip, name:(reported.name||'').slice(0,20), reason:(reason||'玩家举报').slice(0,200)
+    })});
 }
 
 // 远程加入者留档：指纹/设备码/IP/UA/设备信息 写进用户记录（后台可查可封）
@@ -2400,7 +2601,7 @@ function applySettings() {
 function showSettings(){
     hideAll();
     $('settings-overlay').classList.remove('hidden');
-    $('version-display').textContent = '版本：' + GAME_VERSION;
+    $('version-display').textContent = '版本：' + GAME_VERSION + ' · 发布 ' + GAME_RELEASE;
     const s=G.settings;
     $('set-name-input').value=s.name||'';
     $('custom-bg-input').value=s.customBg||'';
@@ -2568,6 +2769,7 @@ function startTurnTimer(){
     if(!G.active || !G.mode.includes('remote')) return;
     if(G.noTimer) return; // 房间未勾选倒计时：猜数不限时
     if(G.pendingSkillSelect || skillSelectPhase) return; // 选技阶段不计时（本来也不能猜）
+    if(G.oppAway && G.currentPlayer === (G.isHost ? 'p2' : 'p1')) return; // 对手切后台：他的回合计时冻结，回来再续
     G.turnTimerPlayer = G.currentPlayer;
     G.turnDeadline = Date.now() + 60000;
     G.turnTimer = setInterval(function(){
@@ -2602,7 +2804,7 @@ function setConnStatus(msg){ if(connStatus) connStatus.textContent = msg || ''; 
 function cleanupRemote(){
     clearAllTimers();
     setJoinBtnState(true); // 断线/退房：恢复加入按钮
-    if(G.lobbyPeer) unpublishLobbyMqtt(); // 关房：从MQTT公共频道撤下房间卡
+    if(G.lobbyShared){ lobbyServerUnpublish(); unpublishLobbyMqtt(); G.lobbyShared=false; } // 关房：从PHP后端与MQTT公共频道撤下房间卡
     if(G.spectators && G.spectators.length){ G.spectators.forEach(function(c){ try{c.close();}catch(e){} }); } // 观战连接一并清掉
     G.spectators = [];
     if(G.peer){ try{G.peer.destroy();}catch(e){} G.peer=null; }
@@ -2629,8 +2831,10 @@ function startPing(){
     pingInterval = setInterval(function(){
         if(G.conn && G.conn.open){
             try { G.conn.send({type:'ping'}); } catch(e) {}
-            // 超过15秒没收到对端任何消息 → 判定断线
-            if(Date.now() - lastRemoteMsgTime > 15000){
+            if(G.oppAway) return; // 对面明说了在后台：永不判掉线，等它回来
+            if(document.hidden) return; // 自己在后台：定时器被节流，没资格判别人（回来时有宽限重置）
+            // 超过45秒没收到对端任何消息 → 判定断线（45秒容忍后台节流/网络抖动）
+            if(Date.now() - lastRemoteMsgTime > 45000){
                 stopPing();
                 roomInfo.textContent='连接超时';
                 showCheatToast('⚠️ 对端无响应，连接已断开');
@@ -2641,6 +2845,29 @@ function startPing(){
     }, 3000);
 }
 function stopPing(){ if(pingInterval){ clearInterval(pingInterval); pingInterval=null; } }
+
+// ========== 后台保活：切后台 = "暂时离开"，不是掉线 ==========
+// 浏览器节流的只是定时器，WebRTC连接和消息事件都活着——
+// 切后台主动发 away：对面冻结你的回合计时/代选、心跳永不判你掉线；
+// 回来发 back：房主立即全量同步，接着打。两人都切后台也互不误判。
+G.oppAway = false;
+document.addEventListener('visibilitychange', function(){
+    if(!G.mode || !G.mode.includes('remote')) return;
+    if(!G.conn || !G.conn.open) return;
+    if(document.hidden){
+        try{ G.conn.send({type:'away'}); }catch(e){}
+    } else {
+        lastRemoteMsgTime = Date.now(); // 宽限：自己刚回来，别立刻误判对面
+        try{ G.conn.send({type:'back'}); }catch(e){}
+        if(G.isHost){
+            syncIfRemote(); // 我（房主）回来了：立刻给对方补全量状态
+            if(G.active && !G.pendingSkillSelect && !skillSelectPhase) startTurnTimer();
+            if(G.pendingSkillSelect) startHostTimeout(G.pendingSkillSelect, G.hostSkillComplete);
+        } else {
+            clearTurnTimer(); // 等房主sync来重启，避免本地残留过期倒计时
+        }
+    }
+});
 
 function showChatNotification(sender, text) {
     chatNotifBody.textContent = sender + ': ' + text;
@@ -2940,6 +3167,7 @@ function attemptJoinRoom(code, retryCount) {
 
 function setupConnection(conn){
     G.conn=conn;
+    G.oppAway=false; // 新连接：离开状态清零
     function handleOpen(){
         roomInfo.textContent='房间: '+G.roomCode;
         if(G.isHost){
@@ -2995,6 +3223,31 @@ function setupConnection(conn){
             if(typeof data.text==='string') data.text=data.text.slice(0,200);
             if(typeof data.avatar==='string' && data.avatar.length>120000) data.avatar='🙂';
         }
+        // 对方切后台/回来：冻结与恢复一切"针对他"的计时（回合计时/选技代选），心跳同时豁免
+        if(data.type==='away'){
+            G.oppAway = true;
+            roomInfo.textContent='⏸ 对方暂时离开';
+            if(G.isHost){
+                if(G.currentPlayer==='p2') clearTurnTimer();
+                if(G.pendingSkillSelect==='p2') clearHostTimeout();
+            } else {
+                clearTurnTimer(); // 客机侧计时只是显示，清了省得误导
+            }
+            showCheatToast('⏸ 对方切到后台了，等他回来继续', 3000);
+            return;
+        }
+        if(data.type==='back'){
+            G.oppAway = false;
+            roomInfo.textContent='房间: '+G.roomCode;
+            lastRemoteMsgTime = Date.now();
+            if(G.isHost){
+                syncIfRemote(); // 给刚回来的对方补全量状态
+                if(G.active && !G.pendingSkillSelect && !skillSelectPhase) startTurnTimer();
+                if(G.pendingSkillSelect) startHostTimeout(G.pendingSkillSelect, G.hostSkillComplete);
+            }
+            showCheatToast('✅ 对方回来了，继续！', 2500);
+            return;
+        }
         // 身份补报：对方连上后才拿到IP，更新玩家卡和留档
         if(data.type==='identity_update'){
             const rp = G.isHost ? getPlayer('p2') : getPlayer('p1');
@@ -3014,7 +3267,8 @@ function setupConnection(conn){
                 setTimeout(function(){ try{conn.close();}catch(e){} }, 400);
                 return;
             }
-            
+            serverBanCheckAndKick(idc, conn); // 云端复检：本地名单被清也拦得住
+
             // 使用 SHA-256 散列对比房间密码，防止明文密码被网络嗅探
             const hashPassword = async (pwd) => {
                  if(!pwd) return '';
@@ -3152,6 +3406,7 @@ function setupConnection(conn){
 // 统一断线处理：房主保留 peer 等重连，客机清理全部
 function handleRemoteDisconnect(){
     stopPing();
+    G.oppAway=false;
     roomInfo.textContent='对手已断开';
     setConnStatus('连接已断开');
     chatToggleBtn.style.display='none';
@@ -3588,6 +3843,7 @@ reportSubmitBtn.addEventListener('click', function(){
     const reported = getMyOpponent();
 
     submitReport(reporter, reported, fullReason);
+    serverReportBan(reported, fullReason); // 后端在线时同步到云端待审列表
     reportOverlay.classList.add('hidden');
     showCheatToast('✅ 举报已提交，管理员会尽快处理');
     addLog('warn', '用户举报：' + reporter.name + ' 举报 ' + reported.name + '，原因：' + fullReason);
@@ -3802,6 +4058,7 @@ function endGame(){
         else stats.losses++;
         saveStats(stats);
         updateStatsDisplay();
+        serverReportGameResult(winner === me.id ? 'win' : 'loss'); // 上报云端排行榜（未登录/后端挂了静默跳过）
     }
 
     setKeypadEnabled(false);
@@ -4119,6 +4376,7 @@ function showSkillSelectWithCallback(forPlayerId, skillCount, onComplete){
 function startHostTimeout(playerId, onComplete){
     clearHostTimeout();
     if(G.noTimer) return; // 房间未勾选倒计时：选技不代选、不限时
+    if(G.oppAway && playerId==='p2') return; // 客机切后台：不代选，等他回来自己选
     G.hostTimeout=setTimeout(function(){
         if(G.active&&G.pendingSkillSelect===playerId&&G.isHost){
             const player=getPlayer(playerId);
@@ -6143,6 +6401,8 @@ $('training-pick-cancel').addEventListener('click',function(){
 $('training-panel-btn').addEventListener('click',function(){
     if(G.mode!=='training' || !G.training) return;
     trainingPanelRefresh();
+    $('tg-hp-self').value = getPlayer('p1').hp; // 开面板时填入当前血量（不放进refresh，避免打字被覆盖）
+    $('tg-hp-opp').value = getPlayer('p2').hp;
     $('training-panel-overlay').classList.remove('hidden');
 });
 $('training-panel-close').addEventListener('click',function(){ $('training-panel-overlay').classList.add('hidden'); });
@@ -6150,6 +6410,64 @@ $('tg-god-self').addEventListener('click',function(){ trainingToggle('godSelf');
 $('tg-god-opp').addEventListener('click',function(){ trainingToggle('godOpp'); });
 $('tg-no-cd').addEventListener('click',function(){ trainingToggle('noCd'); });
 $('tg-show-bomb').addEventListener('click',function(){ trainingToggle('showBomb'); });
+// ---- 生命值随便调：可超上限（maxHP 自动跟着抬，血条不会显示异常） ----
+function trainingSetHp(pid, v){
+    if(G.mode!=='training' || !G.training) return;
+    const p = getPlayer(pid);
+    if(!p) return;
+    v = Math.max(1, Math.min(999, parseInt(v)||1));
+    p.hp = v;
+    if(p.maxHP < v) p.maxHP = v;
+    renderPlayers();
+    showCheatToast('❤️ '+(p.name||pid)+' 生命值 → '+v, 1500);
+}
+$('tg-hp-self-set').addEventListener('click',function(){ trainingSetHp('p1', $('tg-hp-self').value); });
+$('tg-hp-opp-set').addEventListener('click',function(){ trainingSetHp('p2', $('tg-hp-opp').value); });
+$('tg-hp-full').addEventListener('click',function(){
+    if(G.mode!=='training' || !G.training) return;
+    const p1=getPlayer('p1'), p2=getPlayer('p2');
+    p1.hp=p1.maxHP; p2.hp=p2.maxHP;
+    renderPlayers();
+    $('tg-hp-self').value=p1.hp; $('tg-hp-opp').value=p2.hp;
+    showCheatToast('❤️ 双方已回满', 1500);
+});
+// ---- 对局操控 ----
+$('tg-reroll-bomb').addEventListener('click',function(){ // 换炸弹：只重掷雷，已收窄的范围不动
+    if(G.mode!=='training' || !G.active) return;
+    G.bombNumbers = G.bombNumbers.map(function(){ return Math.floor(Math.random()*(G.high-G.low+1))+G.low; });
+    updateRange(); // 显示炸弹开着时立即反映新雷
+    showCheatToast('🎲 炸弹已更换'+(G.training.showBomb ? '：'+G.bombNumbers.join('、') : '（范围不变）'), 2000);
+});
+$('tg-restart-round').addEventListener('click',function(){ // 重开本轮：范围重置+新雷，血量和技能不动
+    if(G.mode!=='training' || !G.active) return;
+    $('training-panel-overlay').classList.add('hidden');
+    startNewRound();
+    showCheatToast('🔄 本轮已重开', 1500);
+});
+$('tg-clear-cd').addEventListener('click',function(){ // 双方技能冷却立刻清零（一次性按钮，与"无冷却"开关互补）
+    if(G.mode!=='training' || !G.training) return;
+    getPlayer('p1').cooldowns={}; getPlayer('p2').cooldowns={};
+    renderSkills();
+    showCheatToast('🔁 双方冷却已清零', 1500);
+});
+$('tg-my-turn').addEventListener('click',function(){ // 抢回合：AI 的待发回合因 currentPlayer 变了自动作废
+    if(G.mode!=='training' || !G.active) return;
+    if(G.processing){ showCheatToast('结算中，稍等一下', 1500); return; }
+    G.currentPlayer='p1';
+    updateTurnIndicator();
+    setKeypadEnabled(true);
+    showCheatToast('⏭️ 轮到你了', 1500);
+});
+$('tg-win').addEventListener('click',function(){
+    if(G.mode!=='training' || !G.active) return;
+    $('training-panel-overlay').classList.add('hidden');
+    getPlayer('p2').hp=0; renderPlayers(); endGame();
+});
+$('tg-lose').addEventListener('click',function(){
+    if(G.mode!=='training' || !G.active) return;
+    $('training-panel-overlay').classList.add('hidden');
+    getPlayer('p1').hp=0; renderPlayers(); endGame();
+});
 $('training-panel-ai-row').querySelectorAll('.ai-level-btn').forEach(function(b){
     b.addEventListener('click',function(){ // 对局中随时换 AI 难度
         G.aiLevel=parseInt(b.dataset.level);
@@ -6356,7 +6674,8 @@ function lobbyRoomCard(){
     };
 }
 function publishLobbyMqtt(){
-    if(!G.isHost || !G.lobbyPeer || !G.roomCode) return; // 只有"已分享到大厅"的房才发布
+    if(!G.isHost || !G.lobbyShared || !G.roomCode) return; // 只有"已分享到大厅"的房才发布
+    lobbyServerPublish(); // 自建PHP后端通道（最优先，填了 BOMB_SERVER_URL 才生效）
     withMqttClient(function(c){
         if(!c) return;
         try{ c.publish(MQTT_TOPIC_PREFIX + G.roomCode, JSON.stringify(lobbyRoomCard()), { retain: true, qos: 0 }); }catch(e){}
@@ -6378,6 +6697,23 @@ function unpublishLobbyMqtt(){
         if(!c) return;
         try{ c.publish(MQTT_TOPIC_PREFIX + code, '', { retain: true, qos: 0 }); }catch(e){} // 空载荷清除 retained
     });
+}
+
+// ---- 自建PHP后端大厅通道（BOMB_SERVER_URL 填了才启用，与MQTT并行互补、拉取时优先展示） ----
+function lobbyServerPublish(){
+    if(!bombServerOn()) return;
+    const c = lobbyRoomCard();
+    serverFetch('/lobby.php?action=publish', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+        code:c.code, name:c.name, host:c.host, hasPwd:c.hasPwd, status:c.status, spectators:c.spec
+    })});
+}
+function lobbyServerUnpublish(){
+    if(!bombServerOn() || !G.roomCode) return;
+    serverFetch('/lobby.php?action=unpublish&code=' + encodeURIComponent(G.roomCode));
+}
+function fetchServerLobbyRooms(cb){
+    if(!bombServerOn()){ cb([]); return; }
+    serverFetch('/lobby.php?action=list', null, function(j){ cb(j && Array.isArray(j.rooms) ? j.rooms : []); });
 }
 
 // ---- 大厅侧：订阅频道收集房间卡（retained 秒到，等2.5秒收齐） ----
@@ -6421,6 +6757,7 @@ function fetchMqttLobbyRooms(cb){
 
 // ========== 联机大厅 ==========
 G.lobbyPeer = null;
+G.lobbyShared = false; // 本机房间是否已分享到大厅（发布房间卡的总开关，与大厅peer的成败解耦）
 G.spectators = []; // 观战连接列表（仅房主使用）
 G.spectating = false; // 本机是否处于观战模式
 function lobbyPeerIdWith(status){ // status: 'w'=等待中 'p'=已开始
@@ -6431,7 +6768,9 @@ function lobbyPeerIdWith(status){ // status: 'w'=等待中 'p'=已开始
 }
 function shareToLobby(){
     if(!G.isHost || !G.peer){ showCheatToast('❌ 只有房主才能分享'); return; }
-    if(G.lobbyPeer){ showCheatToast('🌐 已在大厅中'); return; }
+    if(G.lobbyShared){ showCheatToast('🌐 已在大厅中'); return; }
+    G.lobbyShared = true;
+    startLobbyMqttHeartbeat(); // 立即发布房间卡：PHP/MQTT通道都不再依赖大厅peer的成败（老通道挂了房间照样在大厅可见）
     const savedPeer = G.peer; // 保存当前房间 peer
     createPeer(lobbyPeerIdWith(G.active?'p':'w'), function(){
         G.lobbyPeer = G.peer;
@@ -6439,17 +6778,19 @@ function shareToLobby(){
         const btn = $('share-to-lobby-btn');
         if(btn){ btn.textContent='✅ 已分享到大厅'; btn.disabled=true; }
         showCheatToast('🌐 已分享到联机大厅');
-        startLobbyMqttHeartbeat(); // 同步发布到MQTT公共频道，真人房间稳定可见
     }, function(err){
         G.peer = savedPeer;
-        showCheatToast('❌ 分享失败: ' + err);
+        // 大厅peer只影响老的listAllPeers展示通道：房间卡已发，不再判定分享失败
+        const btn = $('share-to-lobby-btn');
+        if(btn){ btn.textContent='✅ 已分享到大厅'; btn.disabled=true; }
+        showCheatToast('🌐 已分享到联机大厅');
     });
 }
 // 对局状态变化（开始/对手离开）时重注册大厅id，让大厅显示 已开始/等待中
 function updateLobbyStatus(){
-    if(!G.lobbyPeer || !G.isHost) return;
+    if(!G.lobbyShared || !G.isHost) return;
     const savedPeer = G.peer;
-    try{ G.lobbyPeer.destroy(); }catch(e){}
+    try{ if(G.lobbyPeer) G.lobbyPeer.destroy(); }catch(e){}
     G.lobbyPeer = null;
     createPeer(lobbyPeerIdWith(G.active?'p':'w'), function(){
         G.lobbyPeer = G.peer;
@@ -6545,14 +6886,17 @@ function fetchLobbyList(){
     }
     renderAiOnly(false);
     function finish(){ finished = true; }
-    // 双通道并行：PeerJS listAllPeers（老通道，可能被禁用）+ MQTT公共频道（新通道，稳定）
-    let peerRooms = null, mqttRooms = null, tempPeerRef = null;
+    // 三通道并行：自建PHP后端（最优先）+ MQTT公共频道 + PeerJS listAllPeers（老通道，可能被禁用）
+    let peerRooms = null, mqttRooms = null, serverRooms = null, tempPeerRef = null;
     function tryRenderFinal(){
-        if(finished || peerRooms === null || mqttRooms === null) return;
+        if(finished || peerRooms === null || mqttRooms === null || serverRooms === null) return;
         finish();
         const map = {};
-        mqttRooms.forEach(function(r){ // MQTT优先：信息更全（房主名/状态/观战数）
+        serverRooms.forEach(function(r){ // 自建后端最优先：信息全且不受公共频道波动影响
             map[r.code] = {code:r.code, name:r.name||'玩家', host:r.host||'', hasPwd:!!r.hasPwd, isAi:false, status:r.status==='p'?'p':'w'};
+        });
+        mqttRooms.forEach(function(r){ // MQTT次之：信息更全（房主名/状态/观战数）
+            if(!map[r.code]) map[r.code] = {code:r.code, name:r.name||'玩家', host:r.host||'', hasPwd:!!r.hasPwd, isAi:false, status:r.status==='p'?'p':'w'};
         });
         peerRooms.forEach(function(r){ if(!map[r.code]) map[r.code] = r; });
         const rooms = Object.keys(map).map(function(k){ return map[k]; });
@@ -6563,6 +6907,7 @@ function fetchLobbyList(){
         statusEl.textContent = '共 ' + rooms.length + ' 个房间' + (rooms.length > 0 ? '（已发现真人房间）' : '');
         if(tempPeerRef){ try{ tempPeerRef.destroy(); }catch(e){} tempPeerRef = null; }
     }
+    fetchServerLobbyRooms(function(rooms){ serverRooms = rooms || []; tryRenderFinal(); });
     fetchMqttLobbyRooms(function(rooms){ mqttRooms = rooms || []; tryRenderFinal(); });
     const savedPeer = G.peer || null; // 保护房主/连接中的 peer，别让大厅探测顶掉
     const tempId = 'lb-' + Math.random().toString(36).slice(2, 10);
@@ -6691,6 +7036,178 @@ $('show-lobby-btn').addEventListener('click', showLobbyListOverlay);
 $('refresh-lobby-btn').addEventListener('click', function(){ refreshAiFakeRooms(); fetchLobbyList(); });
 $('back-lobby-btn').addEventListener('click', function(){ $('lobby-list-overlay').classList.add('hidden'); });
 
+// ========== 账号体系 / 全服设置 / 公告 / 排行榜 ==========
+// 全部走 serverFetch：后端没上线/超时静默降级，游客游玩不受任何影响
+const authOverlay=$('auth-overlay'), accountOverlay=$('account-overlay'), leaderboardOverlay=$('leaderboard-overlay');
+let authMode = 'login';
+
+function updateAccountChip(){
+    const chip = $('account-chip');
+    if(G.account){ chip.textContent = '👤 ' + G.account.username; chip.classList.add('logged'); chip.title = '点击查看账号'; }
+    else { chip.textContent = '👤 登录 / 注册'; chip.classList.remove('logged'); chip.title = '登录后战绩存云端，清缓存不丢'; }
+}
+function setAuthMode(m){
+    authMode = m;
+    $('auth-tab-login').classList.toggle('active', m==='login');
+    $('auth-tab-register').classList.toggle('active', m==='register');
+    $('auth-password2').classList.toggle('hidden', m!=='register');
+    $('auth-submit-btn').textContent = m==='register' ? '注 册' : '登 录';
+    $('auth-msg').textContent = '';
+}
+function applyCloudStats(st){
+    const wins = parseInt(st.wins)||0, losses = parseInt(st.losses)||0;
+    const local = loadStats();
+    saveStats({ wins: Math.max(wins, local.wins||0), losses: Math.max(losses, local.losses||0) }); // 取大者防数字回退
+    updateStatsDisplay();
+}
+function submitAuth(){
+    const name = $('auth-username').value.trim();
+    const pwd = $('auth-password').value;
+    const msg = $('auth-msg');
+    if(name.length < 2){ msg.textContent = '用户名至少 2 个字符'; return; }
+    if(pwd.length < 4){ msg.textContent = '密码至少 4 位'; return; }
+    if(authMode==='register' && pwd !== $('auth-password2').value){ msg.textContent = '两次密码不一致'; return; }
+    if(!bombServerOn()){ msg.textContent = '服务器未连接，暂时无法登录'; return; }
+    const btn = $('auth-submit-btn');
+    btn.disabled = true; msg.style.color = '#888'; msg.textContent = '连接服务器中...';
+    accountFetch('/auth.php?action='+authMode, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+        username:name, password:pwd, fp:G.currentUser.fingerprint||'', dc:G.currentUser.deviceCode||''
+    })}, function(j){
+        btn.disabled = false; msg.style.color = '';
+        if(!j){ msg.textContent = '服务器无响应，请稍后再试'; return; }
+        if(j.error){ msg.textContent = j.msg || '操作失败'; return; }
+        if(j.banned){ showBanScreen(j.reason, j.time); return; } // 账号被封：登录即拦，清缓存也绕不过
+        G.account = { username:j.username||name, token:j.token||'' };
+        saveAccount();
+        updateAccountChip();
+        authOverlay.classList.add('hidden');
+        $('auth-username').value=''; $('auth-password').value=''; $('auth-password2').value='';
+        if(j.stats) applyCloudStats(j.stats);
+        serverCheckin();      // 签到补登账号名，真后台用户列表能按账号封人
+        serverSelfBanCheck(); // 登录态复检：账号在名单里立即拦
+    });
+}
+function logoutAccount(){
+    accountFetch('/auth.php?action=logout', { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+    G.account = null;
+    saveAccount();
+    updateAccountChip();
+    accountOverlay.classList.add('hidden');
+}
+function renderAccountStats(){
+    const st = loadStats();
+    $('account-wins').textContent = st.wins||0;
+    $('account-losses').textContent = st.losses||0;
+    const total = (st.wins||0)+(st.losses||0);
+    $('account-rate').textContent = total ? Math.round((st.wins||0)/total*100)+'%' : '--';
+}
+function showAccountOverlay(){
+    $('account-name').textContent = G.account ? G.account.username : '';
+    renderAccountStats();
+    accountOverlay.classList.remove('hidden');
+    accountFetch('/auth.php?action=me', null, function(j){ // 拉云端最新战绩刷新显示
+        if(j && j.stats){ applyCloudStats(j.stats); renderAccountStats(); }
+        if(j && j.banned) showBanScreen(j.reason, j.time);
+    });
+}
+// ---- 战绩上报：每局结束调用（未登录按指纹匿名计，登录后按账号累计） ----
+function serverReportGameResult(result){
+    if(!bombServerOn()) return;
+    serverFetch('/stats.php?action=report', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+        token: G.account ? G.account.token : '',
+        fp: G.currentUser.fingerprint||'', dc: G.currentUser.deviceCode||'',
+        name: accountName() || (G.settings&&G.settings.name) || '匿名', result: result
+    })}, function(j){ if(j && j.stats) applyCloudStats(j.stats); });
+}
+// ---- 排行榜 ----
+function fetchLeaderboard(){
+    const list = $('lb-list'), msg = $('lb-msg');
+    msg.textContent = '加载中...';
+    serverFetch('/stats.php?action=leaderboard', null, function(j){
+        if(!j || !Array.isArray(j.top)){
+            list.innerHTML=''; $('lb-online').textContent='🟢 当前在线：--';
+            msg.textContent = bombServerOn() ? '服务器无响应，请稍后再试' : '未连接服务器';
+            return;
+        }
+        $('lb-online').textContent = '🟢 当前在线：' + (j.online!=null ? j.online : '--') + ' 人';
+        msg.textContent = j.top.length ? '' : '还没有人上榜，快来打第一局';
+        const meName = accountName() || (G.settings && G.settings.name) || '';
+        const medals = ['🥇','🥈','🥉'];
+        list.innerHTML = j.top.map(function(r, i){
+            const total = (r.wins||0)+(r.losses||0);
+            const rate = total ? Math.round((r.wins||0)/total*100)+'%' : '--';
+            const me = meName && r.name===meName ? ' class="me"' : '';
+            return '<tr'+me+'><td><span class="lb-medal">'+(medals[i]||(i+1))+'</span></td><td>'+escapeHtml(r.name||'匿名')+'</td><td>'+(r.wins||0)+'</td><td>'+(r.losses||0)+'</td><td>'+rate+'</td></tr>';
+        }).join('');
+    });
+}
+// ---- 版本检查：后台改版本号（≠前端 GAME_RELEASE）→ 顶部弹刷新提示，玩家可稍后 ----
+let versionPending = '';
+function checkVersionPrompt(serverVersion){
+    if(!serverVersion || serverVersion === GAME_RELEASE) return;
+    if(G.versionDismissed === serverVersion) return; // 这条提示已被玩家"稍后"过，别再烦人
+    versionPending = serverVersion;
+    $('version-update-new').textContent = serverVersion;
+    $('version-update-bar').classList.remove('hidden');
+}
+// ---- 在线心跳：4分钟一次刷 lastVisit（在线=最近5分钟内活跃），后端挂了静默 ----
+function serverPing(){
+    if(!bombServerOn()) return;
+    const u = G.currentUser || {};
+    serverFetch('/users.php?action=ping', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ fp:u.fingerprint||'', dc:u.deviceCode||'' }) });
+}
+// ---- 全服设置同步：审核词库/AI房间配置/默认房间标题后台改完全服生效；公告有更新才弹出 ----
+function serverSettingsSync(){
+    if(!bombServerOn()) return;
+    serverFetch('/settings.php', null, function(j){
+        if(!j || !j.settings) return;
+        const s = j.settings;
+        try{
+            if(Array.isArray(s.customWords)) localStorage.setItem('bomb_custom_words', JSON.stringify(s.customWords));
+            if(s.aiRooms && typeof s.aiRooms==='object') localStorage.setItem('bomb_ai_rooms', JSON.stringify(s.aiRooms));
+            if(typeof s.defaultRoomTitle === 'string' && s.defaultRoomTitle){
+                const adm = JSON.parse(localStorage.getItem('bomb_admin_settings')||'{}');
+                adm.defaultRoomTitle = s.defaultRoomTitle;
+                localStorage.setItem('bomb_admin_settings', JSON.stringify(adm));
+            }
+        }catch(e){}
+        showAnnouncement(s.announcement);
+        checkVersionPrompt(s.version);
+    });
+}
+function showAnnouncement(a){
+    const bar = $('announcement-bar');
+    if(!a || !a.text){ bar.classList.add('hidden'); return; }
+    let read = '';
+    try{ read = localStorage.getItem('bomb_announce_read')||''; }catch(e){}
+    if(a.id && a.id === read){ bar.classList.add('hidden'); return; } // 本条已读不再弹
+    $('announcement-text').textContent = a.text;
+    bar.dataset.aid = a.id || '';
+    bar.classList.remove('hidden');
+}
+$('account-chip').addEventListener('click', function(){ if(G.account) showAccountOverlay(); else { setAuthMode('login'); authOverlay.classList.remove('hidden'); } });
+$('auth-tab-login').addEventListener('click', function(){ setAuthMode('login'); });
+$('auth-tab-register').addEventListener('click', function(){ setAuthMode('register'); });
+$('auth-submit-btn').addEventListener('click', submitAuth);
+$('auth-guest-btn').addEventListener('click', function(){ authOverlay.classList.add('hidden'); });
+$('auth-password2').addEventListener('keydown', function(e){ if(e.key==='Enter') submitAuth(); });
+$('auth-password').addEventListener('keydown', function(e){ if(e.key==='Enter' && authMode==='login') submitAuth(); });
+$('account-logout-btn').addEventListener('click', logoutAccount);
+$('account-close-btn').addEventListener('click', function(){ accountOverlay.classList.add('hidden'); });
+$('leaderboard-btn').addEventListener('click', function(){ leaderboardOverlay.classList.remove('hidden'); fetchLeaderboard(); });
+$('lb-refresh-btn').addEventListener('click', fetchLeaderboard);
+$('lb-close-btn').addEventListener('click', function(){ leaderboardOverlay.classList.add('hidden'); });
+$('announcement-close').addEventListener('click', function(){
+    const bar = $('announcement-bar');
+    bar.classList.add('hidden');
+    try{ localStorage.setItem('bomb_announce_read', bar.dataset.aid||''); }catch(e){}
+});
+$('version-reload-btn').addEventListener('click', function(){ location.reload(); }); // 后台改了版本号：一键拿最新代码
+$('version-later-btn').addEventListener('click', function(){
+    $('version-update-bar').classList.add('hidden');
+    G.versionDismissed = versionPending; // 同一条提示只烦一次，新版本再来再弹
+});
+
 // 从大厅加入房间
 function joinRoomFromLobby(code, hasPwd){
     if(hasPwd){
@@ -6748,6 +7265,7 @@ function setupSpectator(conn){
                 setTimeout(function(){ try{conn.close();}catch(e){} }, 400);
                 return;
             }
+            serverBanCheckAndKick({ fp:data.fp, dc:data.dc, ip:data.ip }, conn); // 观战同样走云端复检
             if(!G.roomPassword || data.password === G.roomPassword){
                 recordRemoteUser(data); // 观战者也留档（后台可查可封）
                 grabRemoteIP(conn, function(realIP){ // 抠观战者真实公网IP
@@ -6788,7 +7306,7 @@ function updateSpectatorCount(n){
     const inBattle = battleArea.style.display==='flex';
     el.style.display = (inBattle && n>0) ? 'block' : 'none';
     el.textContent = '👁️ ' + n + ' 人观战';
-    if(G.isHost && G.lobbyPeer) publishLobbyMqtt(); // 观战人数同步到大厅房间卡
+    if(G.isHost && G.lobbyShared) publishLobbyMqtt(); // 观战人数同步到大厅房间卡
 }
 // 观战者侧：从大厅进入已开始的对局
 function spectateRoom(code, hasPwd){
@@ -7550,6 +8068,7 @@ $('clear-bg-btn').addEventListener('click', function(){
 });
 // 版本号=日期：年.月.日的个位（如 2026年9月12日 → v2026.9.2），每次加载自动更新
 const _verDate = new Date();
+const GAME_RELEASE = 'v1.0'; // 发布号：与真后台「设置」页的版本号对应；后台改成不一样的值，所有玩家会收到刷新提示。发布新前端时两边一起改！
 const GAME_VERSION = 'v'+_verDate.getFullYear()+'.'+(_verDate.getMonth()+1)+'.'+(_verDate.getDate()%10);
 // 主菜单底部版本栏（醒目）+ 设置页版本行
 $('menu-version').textContent = GAME_VERSION;
@@ -7595,7 +8114,7 @@ $('settings-clear-cache-btn').addEventListener('click', function(){
     if(!confirm('最后确认：一切从头开始。真的要按下这个按钮吗？')) return;
     try {
         // 封禁名单/后台配置不属于"缓存"，清缓存不能解封——先备份再恢复
-        const KEEP_KEYS = ['bomb_ban_data','bomb_admin_settings','bomb_admin_logs','bomb_reports','bomb_moderation','bomb_custom_words','bomb_ai_rooms'];
+        const KEEP_KEYS = ['bomb_ban_data','bomb_admin_settings','bomb_admin_logs','bomb_reports','bomb_moderation','bomb_custom_words','bomb_ai_rooms','bomb_account'];
         const kept = {};
         KEEP_KEYS.forEach(function(k){ const v = localStorage.getItem(k); if(v !== null) kept[k] = v; });
         localStorage.clear();
@@ -7626,6 +8145,11 @@ if(G.oppType==='local') G.oppType='ai'; // 本地双人已下线：旧存档兜�
 showMainMenu();
 checkUrlRoom();
 updateStatsDisplay();
+updateAccountChip();
+serverSettingsSync(); // 拉全服设置（词库/AI房/标题/公告/版本号），后端没上线静默跳过
+setInterval(serverSettingsSync, 5*60*1000); // 每5分钟复查：公告/词库/版本号更新即时生效
+setInterval(serverPing, 4*60*1000); // 在线心跳（在线=最近5分钟内活跃的玩家）
+setInterval(serverStatePoll, 15000); // 实时封禁闸：后台一封你，15秒内踢出（不刷新也生效）
 startIntro();
 
 // ========== AI 模块桥接 ==========

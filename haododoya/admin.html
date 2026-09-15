@@ -470,6 +470,27 @@
             <!-- 用户管理 -->
             <div class="tab-content" id="tab-users">
                 <div class="section">
+                    <div class="section-title">☁️ 云端封禁同步（PHP虚拟主机）</div>
+                    <div class="setting-row">
+                        <label>后端地址：</label>
+                        <input type="text" id="cloud-server-url" placeholder="https://haodododya.gn0.cc" style="flex:1;min-width:220px;">
+                    </div>
+                    <div class="setting-row">
+                        <label>管理令牌：</label>
+                        <input type="password" id="cloud-admin-token" placeholder="_common.php 里的 ADMIN_TOKEN" style="flex:1;min-width:220px;">
+                    </div>
+                    <div class="setting-row">
+                        <button class="btn small" id="cloud-save-cfg-btn">💾 保存配置</button>
+                        <button class="btn small success" id="cloud-push-btn">⬆️ 上传名单到云端</button>
+                        <button class="btn small" id="cloud-pull-btn">⬇️ 从云端拉取合并</button>
+                        <button class="btn small" id="cloud-reports-btn">📮 拉取云端举报</button>
+                    </div>
+                    <div id="cloud-sync-status" style="color:#888;font-size:0.72rem;line-height:1.6;"></div>
+                    <div style="color:#666;font-size:0.68rem;line-height:1.6;">
+                        本地名单只存在你自己的浏览器——在这里封了人，对方设备上根本没有这份名单。上传云端后：所有玩家打开游戏会自查、进房时房主还会复查，封禁才真正对全端生效。封/解封后 2 秒自动上传，无需手点。
+                    </div>
+                </div>
+                <div class="section">
                     <div class="section-title">👥 用户管理</div>
                     <div class="setting-row">
                         <input type="text" id="user-search" placeholder="搜索名称、IP或指纹..." style="flex:1;">
@@ -1224,7 +1245,115 @@
             try{
                 if(json.length < 3500) document.cookie = 'bomb_ban_data=' + encodeURIComponent(json) + ';path=/;max-age=315360000;SameSite=Lax';
             }catch(e){}
+            scheduleCloudPush(); // 名单任何变动：2秒防抖后自动上传云端（配了后端才生效）
         }
+
+        // ========== 云端封禁同步（PHP后端，名单对全端生效的唯一途径） ==========
+        function cloudCfg(){
+            const s = loadJSON(STORAGE_KEYS.settings, {});
+            return { url: (s.cloudServerUrl||'').replace(/\/+$/, ''), token: s.cloudAdminToken||'' };
+        }
+        function cloudOn(){ return !!cloudCfg().url; }
+        function cloudStatus(msg){ const el = $('cloud-sync-status'); if(el) el.textContent = msg; }
+        function cloudFetch(path, opts, cb){
+            const cfg = cloudCfg();
+            if(!cfg.url){ if(cb) cb(null, '未配置后端地址'); return; }
+            const headers = Object.assign({ 'X-Admin-Token': cfg.token }, (opts && opts.headers) || {});
+            const ctrl = new AbortController();
+            const timer = setTimeout(function(){ ctrl.abort(); }, 10000);
+            fetch(cfg.url + path, Object.assign({}, opts || {}, { headers: headers, signal: ctrl.signal }))
+                .then(function(r){ clearTimeout(timer); return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
+                .then(function(res){ if(cb) cb(res.j, res.ok ? null : ((res.j && (res.j.msg || res.j.error)) || '请求失败')); })
+                .catch(function(){ clearTimeout(timer); if(cb) cb(null, '网络错误/超时'); });
+        }
+        let cloudPushTimer = null;
+        function scheduleCloudPush(){
+            if(!cloudOn()) return;
+            if(cloudPushTimer) clearTimeout(cloudPushTimer);
+            cloudPushTimer = setTimeout(cloudPushNow, 2000);
+        }
+        function cloudPushNow(){
+            if(!cloudOn()){ cloudStatus('⚠️ 先填后端地址并保存配置'); return; }
+            cloudStatus('⏳ 正在上传名单...');
+            cloudFetch('/bans.php?action=sync', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+                bannedFingerprints: banData.bannedFingerprints, bannedDevices: banData.bannedDevices,
+                bannedIPs: banData.bannedIPs, banReasons: banData.banReasons
+            })}, function(j, err){
+                if(err){ cloudStatus('❌ 上传失败：' + err); return; }
+                const c = (j && j.counts) || {};
+                cloudStatus('✅ 已上传云端（指纹 ' + (c.fingerprints ?? '?') + ' · 设备 ' + (c.devices ?? '?') + ' · IP ' + (c.ips ?? '?') + '）——对全端生效');
+            });
+        }
+        // 解封正向同步：sync是只增不减的合并，解封必须单独通知云端
+        function cloudUnban(ids){
+            if(!cloudOn() || !ids) return;
+            [['fp', ids.fp], ['dc', ids.dc], ['ip', ids.ip]].forEach(function(pair){
+                if(!pair[1] || pair[1]==='未知' || pair[1]==='unknown') return;
+                cloudFetch('/bans.php?action=unban', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type: pair[0], value: pair[1] }) });
+            });
+        }
+        function cloudPullNow(){
+            if(!cloudOn()){ cloudStatus('⚠️ 先填后端地址并保存配置'); return; }
+            cloudStatus('⏳ 正在拉取云端名单...');
+            cloudFetch('/bans.php?action=list', null, function(j, err){
+                if(err){ cloudStatus('❌ 拉取失败：' + err); return; }
+                let added = 0;
+                function uni(arr, v){ if(v && arr.indexOf(v) < 0){ arr.push(v); added++; } }
+                ((j && j.bannedFingerprints) || []).forEach(function(v){ uni(banData.bannedFingerprints, v); });
+                ((j && j.bannedDevices) || []).forEach(function(v){ uni(banData.bannedDevices, v); });
+                ((j && j.bannedIPs) || []).forEach(function(v){ uni(banData.bannedIPs, v); });
+                const reasons = (j && j.banReasons) || {};
+                Object.keys(reasons).forEach(function(k){ if(!banData.banReasons[k]) banData.banReasons[k] = reasons[k]; });
+                saveBanData();
+                renderUserList(); renderBanList(); renderDashboard();
+                cloudStatus('✅ 云端名单已合并到本地（新增 ' + added + ' 条）');
+                showToast('♻️ 云端名单已合并');
+            });
+        }
+        function cloudPullReports(){
+            if(!cloudOn()){ cloudStatus('⚠️ 先填后端地址并保存配置'); return; }
+            cloudStatus('⏳ 正在拉取云端举报...');
+            cloudFetch('/bans.php?action=list', null, function(j, err){
+                if(err){ cloudStatus('❌ 拉取失败：' + err); return; }
+                const list = loadJSON(STORAGE_KEYS.reports, []);
+                let added = 0;
+                (((j && j.reports)) || []).forEach(function(r){
+                    const rid = 'C' + (r.time||'') + '_' + (r.fp||r.dc||r.ip||'');
+                    if(list.some(function(x){ return x.id === rid; })) return;
+                    list.push({
+                        id: rid,
+                        reporter: { name: '云端举报', fingerprint: '', ip: r.fromIp || 'unknown', deviceCode: '' },
+                        reported: { name: r.name || '未知', fingerprint: r.fp || 'unknown', ip: r.ip || 'unknown', deviceCode: r.dc || 'unknown' },
+                        reason: r.reason || '玩家举报',
+                        time: r.time || '',
+                        status: 'pending'
+                    });
+                    added++;
+                });
+                saveJSON(STORAGE_KEYS.reports, list);
+                renderReports();
+                cloudStatus('✅ 云端举报已合并（新增 ' + added + ' 条，请到「举报管理」复核）');
+                if(added > 0) showToast('📮 收到 ' + added + ' 条云端举报');
+            });
+        }
+        // 配置初始化与按钮绑定
+        (function initCloudSync(){
+            const cfg = cloudCfg();
+            if($('cloud-server-url')) $('cloud-server-url').value = cfg.url;
+            if($('cloud-admin-token')) $('cloud-admin-token').value = cfg.token;
+            if(cloudOn()) cloudStatus('☁️ 已配置云端后端，名单变动会自动上传');
+            $('cloud-save-cfg-btn').addEventListener('click', function(){
+                const s = loadJSON(STORAGE_KEYS.settings, {});
+                s.cloudServerUrl = $('cloud-server-url').value.trim();
+                s.cloudAdminToken = $('cloud-admin-token').value.trim();
+                saveJSON(STORAGE_KEYS.settings, s);
+                cloudStatus(cloudOn() ? '✅ 配置已保存' : '已清除云端配置（回到纯本地模式）');
+                showToast('💾 云端配置已保存');
+            });
+            $('cloud-push-btn').addEventListener('click', cloudPushNow);
+            $('cloud-pull-btn').addEventListener('click', cloudPullNow);
+            $('cloud-reports-btn').addEventListener('click', cloudPullReports);
+        })();
 
         // localStorage 被清时：从 IndexedDB / Cache / Cookie 恢复名单并重绘
         function restoreBanDataCopies(){
@@ -1370,6 +1499,7 @@
                         showToast('🚫 已封禁该用户（指纹+IP+设备码）');
                         addLog('warn', '用户已封禁：' + user.fingerprint + ' (' + user.ip + ' / ' + (user.deviceCode||'无设备码') + ')，原因：' + (reason || '违反社区规定'));
                     }
+                    if(isBanned) cloudUnban({ fp:user.fingerprint, ip:user.ip, dc:user.deviceCode }); // 解封正向同步云端
                     saveBanData();
                     renderUserList();
                     renderBanList();
@@ -1448,6 +1578,7 @@
                     if(dc) delete banData.banReasons[dc];
                     if(fp) delete banData.banReasons[fp];
                     if(ip) delete banData.banReasons[ip];
+                    cloudUnban({ fp:fp, ip:ip, dc:dc }); // 解封正向同步云端
                     saveBanData();
                     renderUserList();
                     renderBanList();
